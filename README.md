@@ -1,11 +1,14 @@
 ### Triggear
 
-__Triggear__ is a service that integrates GitHub with Jenkins pipelines. 
+__Triggear v0.4__ is a service that integrates GitHub with Jenkins pipelines. 
 It provides ways of registering Jenkins pipelines for specific events
 in GitHub and reporting job statuses and details back to GitHub.
 If you ever thought about running Jenkins jobs without entering Jenkins
 and remembering about all the jobs that you need to run - __Triggear__
 is the guy you were looking for.
+
+It should not be confused with GitHub plugins/service integration
+with Jenkins as Triggear can do much more for you.
 
 The example usage flow is following:
 
