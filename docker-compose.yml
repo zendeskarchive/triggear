@@ -1,0 +1,19 @@
+version: "2"
+services:
+    app:
+        build: .
+        command: python app/main.py
+        depends_on:
+          - mongodb
+        ports:
+            - 8080:8080
+        volumes:
+            - ./configs/creds.yml:/usr/src/creds/creds.yml
+        environment:
+          - COMPOSE=true
+    mongodb:
+        image: "bitnami/mongodb:latest"
+        ports:
+            - 27017:27017
+        networks:
+         - default
