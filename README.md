@@ -143,7 +143,7 @@ are supposed to trigger Jenkins jobs
       - Set Content type to `application/json`
       - Set secret to value of your `triggear_token`
       - Select individual hook elements: __Issue comment__,
-      __Pull request__, __Push__
+      __Pull request__, __Push__, __Create__
       
    3. Save - at this point test payload should be sent to 
    Triggear and response 200 should be returned to GitHub (can
