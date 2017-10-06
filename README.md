@@ -1,6 +1,6 @@
 ### Triggear
 
-__Triggear v0.4__ is a service that integrates GitHub with Jenkins pipelines. 
+__Triggear__ is a service that integrates GitHub with Jenkins pipelines. 
 It provides ways of registering Jenkins pipelines for specific events
 in GitHub and reporting job statuses and details back to GitHub.
 If you ever thought about running Jenkins jobs without entering Jenkins
@@ -172,14 +172,14 @@ var `triggearRegister`:
 
 ```groovy
 // Assuming you called this shared library "Triggear" in Jenkins
+// Ommit this line if you add Triggear as shared library implicitly
 @Library(['Triggear']) _
 
-triggearRegister(
-    eventType: "push",
-    // note that repo below is path in GH without http://github.com
-    repository: "X", 
-    requested_params: []
-)
+import com.futuresimple.triggear.RequestParam
+import com.futuresimple.triggear.Triggear
+
+Triggear triggear = new Triggear(this, 'org/repo')
+triggear.registerForPushes([])
 ```
 
 Now you need to run your job once to call register properly. From
@@ -195,14 +195,14 @@ var `triggearRegister`:
 
 ```groovy
 // Assuming you called this shared library "Triggear" in Jenkins
+// Ommit this line if you add Triggear as shared library implicitly
 @Library(['Triggear']) _
 
-triggearRegister(
-    eventType: "push",
-    // note that repo below is path in GH without http://github.com
-    repository: "X", 
-    requested_params: ["branch", "sha"]
-)
+import com.futuresimple.triggear.RequestParam
+import com.futuresimple.triggear.Triggear
+
+Triggear triggear = new Triggear(this, 'X')
+triggear.registerForPushes([RequestParam.BRANCH, RequestParam.SHA])
 ```
 
 Now you need to run your job once to call register properly. From
@@ -228,15 +228,14 @@ var `triggearRegister`:
 
 ```groovy
 // Assuming you called this shared library "Triggear" in Jenkins
+// Ommit this line if you add Triggear as shared library implicitly
 @Library(['Triggear']) _
 
-triggearRegister(
-    eventType: "labeled",
-    // note that repo below is path in GH without http://github.com
-    repository: "X",
-    labels: ["Y"],
-    requested_params: []
-)
+import com.futuresimple.triggear.RequestParam
+import com.futuresimple.triggear.Triggear
+
+Triggear triggear = new Triggear(this, 'X')
+triggear.registerForLabel('Y', [])
 ```
 
 Now run you pipeline once to make register call. From then on
@@ -252,15 +251,14 @@ var `triggearRegister`:
 
 ```groovy
 // Assuming you called this shared library "Triggear" in Jenkins
+// Ommit this line if you add Triggear as shared library implicitly
 @Library(['Triggear']) _
 
-triggearRegister(
-    eventType: "labeled",
-    // note that repo below is path in GH without http://github.com
-    repository: "X",
-    labels: ["Y"],
-    requested_params: ["branch", "sha"]
-)
+import com.futuresimple.triggear.RequestParam
+import com.futuresimple.triggear.Triggear
+
+Triggear triggear = new Triggear(this, 'X')
+triggear.registerForLabel('Y', [RequestParam.BRANCH, RequestParam.SHA])
 ```
 
 Now run you pipeline once to make register call. From then on
@@ -286,15 +284,14 @@ At first you need to register your job for label Y in repo X:
 
 ```groovy
 // Assuming you called this shared library "Triggear" in Jenkins
+// Ommit this line if you add Triggear as shared library implicitly
 @Library(['Triggear']) _
 
-triggearRegister(
-    eventType: "labeled",
-    // note that repo below is path in GH without http://github.com
-    repository: "X",
-    labels: ["Y"],
-    requested_params: []
-)
+import com.futuresimple.triggear.RequestParam
+import com.futuresimple.triggear.Triggear
+
+Triggear triggear = new Triggear(this, 'X')
+triggear.registerForLabel('Y', [])
 ```
 
 Then, you'll need a special label in your GitHub repo. It's name
@@ -349,15 +346,14 @@ To do so - in your Pipeline, once it's done call `triggearStatus`
 var:
 
 ```groovy
-triggearStatus(
-    // this is the case when your job handles sha as param
-    sha: params.sha, 
-    repository: 'X',
-    // assuming result is already set at this point
-    state: currentBuild.result != "SUCCESS" ? 'failure' : 'success', 
-    description: "Unittests report for commit ${params.sha}",
-    url: "${BUILD_URL}report",
-    context: "Unittests report"
+import com.futuresimple.triggear.CommitState
+
+// this is the case when your job handles sha as param
+triggear.addCommitStatus(params.sha, 
+    currentBuild.result == "SUCCESS" ? CommitState.SUCCESS : CommitState.FAILURE, 
+    "Unittests report for commit ${params.sha}",
+    "Unittests report",
+    "${BUILD_URL}report"
 )
 ```
 
@@ -383,13 +379,8 @@ To do so, use `triggearComment` var at some point in your
 pipeline:
 
 ```groovy
-triggearComment(
-    // this is the case when your job handles sha as param
-    sha: params.sha, 
-    repository: 'X',
-    // assuming result is already set at this point
-    body: 'Very important info about the build'
-)
+// this is the case when your job handles sha as param
+triggear.addComment(params.sha, 'Very important info about the build')
 ```
 
 By doing so you will see the following results:
@@ -409,12 +400,11 @@ To do so you need to register your job for `tagged` events in repo X:
 // Assuming you called this shared library "Triggear" in Jenkins
 @Library(['Triggear']) _
 
-triggearRegister(
-    eventType: "tagged",
-    // note that repo below is path in GH without http://github.com
-    repository: "X",
-    requested_params: ["branch", "sha", "tag"]
-)
+import com.futuresimple.triggear.RequestParam
+import com.futuresimple.triggear.Triggear
+
+Triggear triggear = new Triggear(this, 'X')
+triggear.registerForTags([RequestParam.BRANCH, RequestParam.SHA, RequestParam.TAG])
 ```
 
 By running your job once, you'll enable functionality of running

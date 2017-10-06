@@ -1,0 +1,158 @@
+package com.futuresimple.triggear
+
+import groovy.json.JsonOutput
+
+class Triggear implements Serializable {
+    private String repository
+    private Object context
+
+    /**
+     * Create a Triggear object for specific repository
+     *
+     * @param repositoryFullName full name of GitHub repository, e.g. "futuresimple/triggear"
+     */
+    Triggear(context, String repositoryFullName) {
+        this.context = context
+        this.repository = repositoryFullName
+    }
+
+    /**
+     * Register for pushes in repository. If anyone pushes anything to repo this pipeline will be triggered.
+     *
+     * @param requestedParams Parameters that your job will be run with
+     */
+    void registerForPushes(List<RequestParam> requestedParams) {
+        raiseIfTagRequested(requestedParams)
+        register(EventType.PUSH,
+            [],
+            requestedParams
+        )
+    }
+
+    /**
+     * Register for tags in repository. If anyone pushes a tag into repo this pipeline will be triggered.
+     *
+     * @param requestedParams Parameters that your job will be run with
+     */
+    void registerForTags(List<RequestParam> requestedParams) {
+        register(EventType.TAG,
+            [],
+            requestedParams
+        )
+    }
+
+    /**
+     * Register for PR labels in repository. If anyone adds such label to PR in repo this pipeline will be triggered.
+     *
+     * @param label Triggering label name
+     * @param requestedParams Parameters that your job will be run with
+     */
+    void registerForLabel(String label,
+                          List<RequestParam> requestedParams) {
+        registerForLabels([label], requestedParams)
+    }
+
+    /**
+     * Register for multiple PR labels in repository. If anyone adds any of that labels to PR in repo this pipeline
+     * will be triggered.
+     *
+     * @param labels Triggering labels names
+     * @param requestedParams Parameters that your job will be run with
+     */
+    void registerForLabels(List<String> labels,
+                           List<RequestParam> requestedParams) {
+        raiseIfTagRequested(requestedParams)
+        register(EventType.LABEL,
+            labels,
+            requestedParams
+        )
+    }
+
+    /**
+     * Add a GitHub status to commit identified by SHA
+     *
+     * @param sha SHA of the commit to add status to
+     * @param state State that should be shown on comment
+     * @param description Short description of status
+     * @param statusName Name of status to add. JOB_NAME taken by default
+     * @param statusUrl URL that this status should direct to. Current BUILD_URL by default
+     */
+    void addCommitStatus(String sha,
+                         CommitState state,
+                         String description,
+                         String statusName = '',
+                         String statusUrl = '') {
+        statusName = statusName != '' ? statusName : context.env.JOB_NAME
+        statusUrl = statusUrl != '' ? statusUrl : context.env.BUILD_URL
+        sendRequestToTriggearService('status',
+            [
+                sha        : sha,
+                repository : repository.repositoryFullName,
+                state      : state.getGitHubStateName(),
+                description: description,
+                url        : statusUrl,
+                context    : statusName
+            ]
+        )
+    }
+
+    /**
+     * Add a GitHub comment to commit identified by SHA
+     *
+     * @param sha SHA of the commit to add comment to
+     * @param body Comment content
+     */
+    void addComment(String sha,
+                    String body){
+        sendRequestToTriggearService('comment',
+        [
+            sha: sha,
+            repository: repository,
+            jobName: context.env.JOB_NAME,
+            body: body
+        ])
+    }
+
+    private void register(EventType eventType,
+                          List<String> labels,
+                          List<RequestParam> requestedParams) {
+        sendRequestToTriggearService('register',
+            [
+                eventType       : eventType.getEventName(),
+                repository      : repository.repositoryFullName,
+                jobName         : context.env.JOB_NAME,
+                labels          : labels,
+                requested_params: requestedParams.collect { it.getRequestParam() }
+            ]
+        )
+    }
+
+    private void sendRequestToTriggearService(String methodName, Map<String, Object> payload){
+        try {
+            context.withCredentials([context.string(credentialsId: 'triggear_token', variable: 'triggear_token')]) {
+                URLConnection post = new URL("$context.env.TRIGGEAR_URL" + "${methodName}").openConnection()
+                String payloadAsString = JsonOutput.toJson(payload)
+                context.println("${methodName} call to Triggear service (payload: " + payload + ")")
+                post.setRequestMethod("POST")
+                post.setDoOutput(true)
+                post.setRequestProperty("Content-Type", "application/json")
+                post.setRequestProperty("Authorization", "Token ${context.triggear_token}")
+                post.getOutputStream().write(payloadAsString.getBytes("UTF-8"))
+                int postResponseCode = post.getResponseCode()
+                if (postResponseCode == 200) {
+                    context.println(post.getInputStream().getText())
+                } else {
+                    context.println("Calling Triggears ${methodName} failed with code " + postResponseCode.toString())
+                }
+            }
+        } catch(e) {
+            context.println("Calling Triggears ${methodName} failed! " + e)
+        }
+    }
+
+    static private void raiseIfTagRequested(List<RequestParam> requestedParams) {
+        if (RequestParam.TAG in requestedParams) {
+            throw new Exception("Triggear: Tag cannot be requested from push hooks")
+        }
+    }
+}
