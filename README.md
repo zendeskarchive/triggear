@@ -1,3 +1,5 @@
+![Triggear](https://d1ro8r1rbfn3jf.cloudfront.net/ms_147854/PhVcvTkZsFfrXz4WB18J9dnmq6JpON/triggear.png?Expires=1507399646&Signature=a0VmF~wDthgghf1Fz8HyLmUHEV57b0Y8uETNIoaS64faz~O~oFh8gNewJ-a3ypMRl3oCXhNGySPUWA9-Rx89rQzus7OfhoLE8mzameUfr11GOkAnrZQxeQrvBdnhxULc4Fy56Sf-JHmFCUX3ZflAS3DQ8bshPkTZjG0gbuuT5U9ZtUOldWpFyTf~3ksVt1eb3rXIH1D~iBqpgIHPXQ7i3lu44a8hwl~ZeDB2hgVJ55N7z0-5IYvMEEmHhuWW8eqwGsVpcMZmed2Z5xtIn8Lbh8deGBBIQzIy5K8GNMasFGJfHZFyc0D9zgsTwXaCEzR-b~e5a-IMEJI1gqEz7JLkdw__&Key-Pair-Id=APKAJHEJJBIZWFB73RSA "Triggear")
+
 ### Triggear
 
 __Triggear__ is a service that integrates GitHub with Jenkins pipelines. 
@@ -432,3 +434,4 @@ from that line. Once the job is executed you will get a PR comment
 with it's status and URL to it.
 
 ![Triggear run by comment](https://d1ro8r1rbfn3jf.cloudfront.net/ms_147854/gG77zYRx1OkBwUq5jrqrQmpL33AyLy/run-by-comment.png?Expires=1502468864&Signature=BfZT74y168DtsUm4cMegy1IruwolTeffERmdOME25yFenx3rdO86eIO-BV-WYa8INYUiu9NSLqVqMBqwZq1kImqI-Gs6m8GmQuan2qFW5RU2wpwWhimvwfyQi6pPYibff9I~ha-N~B8HvcDqs09q4JhWGoYkZYMI7n4Ap7XWDeTJgpFkAkf9-suJxAd1iXFPhJzJnU-UuG-Uwprboy~yAG3nrIuOVk2ymjktz8zEexnEEwgXmClY~nYs1aYMtVFa~mShbWhAg7EuwU-ihcbSdnGhjZCLop1Vi8e~PSaJ17yo2Y9iYmWhNDDbIYHsRTCvdfyf0FxlJ9PYPyLxCyTwDw__&Key-Pair-Id=APKAJHEJJBIZWFB73RSA)
+
