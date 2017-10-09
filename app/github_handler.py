@@ -194,13 +194,11 @@ class GithubHandler:
             job_name = document['job']
             job_requested_params = document['requested_params']
             try:
-                next_build_number = self.get_jobs_next_build_number(job_name)
                 if await self.can_trigger_job_by_branch(job_name, branch):
                     await BackgroundTask().run(self.trigger_registered_job,
                                                (
                                                    job_name,
                                                    job_requested_params,
-                                                   next_build_number,
                                                    document['repository'],
                                                    sha,
                                                    branch,
@@ -230,30 +228,49 @@ class GithubHandler:
 
             while await self.is_job_building(job_name, next_build_number):
                 await asyncio.sleep(1)
-            job_info = await self.get_job_info(job_name, next_build_number)
+            build_info = await self.get_build_info(job_name, next_build_number)
 
-            final_state = "success" if job_info['result'] == "SUCCESS" \
-                else "failure" if job_info['result'] == "FAILURE" \
-                else "error"
-            final_description = "build succeeded" if job_info['result'] == "SUCCESS" \
-                else "build failed" if job_info['result'] == "FAILURE" \
-                else "build error"
-            self.create_pr_comment(
-                pr_number,
-                repository,
-                body=f"Job {job_name} finished with status {final_state} - {final_description} ({job_info['url']})"
-            )
+            if build_info is not None:
+                final_state = "success" if build_info['result'] == "SUCCESS" \
+                    else "failure" if build_info['result'] == "FAILURE" \
+                    else "error"
+                final_description = "build succeeded" if build_info['result'] == "SUCCESS" \
+                    else "build failed" if build_info['result'] == "FAILURE" \
+                    else "build error"
+                self.create_pr_comment(
+                    pr_number,
+                    repository,
+                    body=f"Job {job_name} finished with status {final_state} - "
+                         f"{final_description} ({build_info['url']})"
+                )
+            else:
+                logging.error(f"Triggear was not able to find build number {next_build_number} for job {job_name}."
+                              f"Task aborted.")
+                return
 
     def create_pr_comment(self, pr_number, repository, body):
         self.__gh_client.get_repo(repository).get_issue(pr_number).create_comment(
             body=body
         )
 
-    async def get_job_info(self, job_name, build_number):
-        return self.__jenkins_client.get_build_info(job_name, build_number)
+    async def get_build_info(self, job_name, build_number):
+        timeout = time.monotonic() + 30
+        while time.monotonic() < timeout:
+            try:
+                return self.__jenkins_client.get_build_info(job_name, build_number)
+            except jenkins.NotFoundException:
+                logging.warning(f"Build number {build_number} was not yet found for job {job_name}."
+                                f"Probably because of high load on Jenkins build is stuck in pre-run state and it is"
+                                f"not available in history. We will retry for 30 sec for it to appear.")
+                await asyncio.sleep(1)
+        return None
 
     async def is_job_building(self, job_name, build_number):
-        return self.__jenkins_client.get_build_info(job_name, build_number)['building']
+        build_info = await self.get_build_info(job_name, build_number)
+        if build_info is not None:
+            return build_info['building']
+        else:
+            return None
 
     def build_jenkins_job(self, job_name, job_params):
         self.__jenkins_client.build_job(job_name, parameters=job_params)
@@ -282,15 +299,7 @@ class GithubHandler:
                 logging.info(f"Updated {repr(result.matched_count)} last run documents")
         return True
 
-    async def trigger_registered_job(self,
-                                     job_name,
-                                     job_requested_params,
-                                     next_build_number,
-                                     repository,
-                                     sha,
-                                     pr_branch,
-                                     tag=None):
-        logging.warning(f"Scheduling build of: {job_name} #{next_build_number}")
+    async def trigger_registered_job(self, job_name, job_requested_params, repository, sha, pr_branch, tag=None):
 
         job_params = None
         if job_requested_params:
@@ -302,36 +311,44 @@ class GithubHandler:
             if 'tag' in job_requested_params:
                 job_params['tag'] = tag
 
+        next_build_number = self.get_jobs_next_build_number(job_name)
         try:
             self.build_jenkins_job(job_name, job_params)
+            logging.warning(f"Scheduled build of: {job_name} #{next_build_number}")
         except jenkins.JenkinsException as jexp:
             logging.error(f"Job {job_name} did not accept {job_params} "
                           f"as parameters but it requested them (Error: {jexp})")
             self.__gh_client.get_repo(repository).get_commit(sha).create_status(
                 state="error",
                 target_url=self.__jenkins_client.get_job_info(job_name).get('url'),
-                description=f"job did not accept requested parameters {job_params.keys()}!",
+                description=f"Job {job_name} did not accept requested parameters {job_params.keys()}!",
                 context=job_name)
             return
 
-        job_info = await self.get_job_info(job_name, next_build_number)
-        self.__gh_client.get_repo(repository).get_commit(sha).create_status(
-            state="pending",
-            target_url=job_info['url'],
-            description="build in progress",
-            context=job_name)
-        while await self.is_job_building(job_name, next_build_number):
-            await asyncio.sleep(1)
-        job_info = await self.get_job_info(job_name, next_build_number)
+        build_info = await self.get_build_info(job_name, next_build_number)
+        if build_info is not None:
+            self.__gh_client.get_repo(repository).get_commit(sha).create_status(
+                state="pending",
+                target_url=build_info['url'],
+                description="build in progress",
+                context=job_name)
+            while await self.is_job_building(job_name, next_build_number):
+                await asyncio.sleep(1)
+            build_info = await self.get_build_info(job_name, next_build_number)
 
-        final_state = "success" if job_info['result'] == "SUCCESS" \
-            else "failure" if job_info['result'] == "FAILURE" \
-            else "error"
-        final_description = "build succeeded" if job_info['result'] == "SUCCESS" \
-            else "build failed" if job_info['result'] == "FAILURE" \
-            else "build error"
-        self.__gh_client.get_repo(repository).get_commit(sha).create_status(
-            state=final_state,
-            target_url=job_info['url'],
-            description=final_description,
-            context=job_name)
+            final_state = "success" if build_info['result'] == "SUCCESS" \
+                else "failure" if build_info['result'] == "FAILURE" \
+                else "error"
+            final_description = "build succeeded" if build_info['result'] == "SUCCESS" \
+                else "build failed" if build_info['result'] == "FAILURE" \
+                else "build error"
+            self.__gh_client.get_repo(repository).get_commit(sha).create_status(
+                state=final_state,
+                target_url=build_info['url'],
+                description=final_description,
+                context=job_name)
+        else:
+            logging.error(f"Triggear was not able to find build number {next_build_number} for job {job_name}."
+                          f"Task aborted.")
+            return
+

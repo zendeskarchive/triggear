@@ -1,6 +1,5 @@
 import jenkins
 import pytest
-import asyncio
 
 import time
 from asynctest import MagicMock, call, patch
@@ -149,8 +148,8 @@ async def test_unregistered_job_was_run(gh_sut: GithubHandler,
     mock_build_job: MagicMock = mocker.patch.object(gh_sut, 'build_jenkins_job')
     mock_create_pr_comment: MagicMock = mocker.patch.object(gh_sut, 'create_pr_comment')
 
-    with patch.object(gh_sut, 'get_job_info',
-                      return_value={'result': job_result, 'url': 'test_url'}) as mock_get_job_info:
+    with patch.object(gh_sut, 'get_build_info',
+                      return_value={'result': job_result, 'url': 'test_url'}) as mock_get_build_info:
         await gh_sut.trigger_unregistered_job(job_name='test_job',
                                               pr_branch='test_branch',
                                               job_params={'param': 'value'},
@@ -164,7 +163,7 @@ async def test_unregistered_job_was_run(gh_sut: GithubHandler,
         calls = [call('test_job', 1),
                  call('test_job', 1)]
         mock_is_job_building.assert_has_calls(calls)
-        mock_get_job_info.assert_called_once_with('test_job', 1)
+        mock_get_build_info.assert_called_once_with('test_job', 1)
         mock_create_pr_comment.assert_called_once_with(
             1, 'test_repo',
             body=f"Job test_job finished with status {expected_state} - {expected_description} (test_url)"

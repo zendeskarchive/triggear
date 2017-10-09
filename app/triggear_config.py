@@ -21,3 +21,4 @@ class TriggearConfig:
                 self.rerun_time_limit = config['rerun_time_limit']
             except yaml.YAMLError as exc:
                 logging.error(f"Config YAML parsing error: {exc}")
+                self.rerun_time_limit = 30
