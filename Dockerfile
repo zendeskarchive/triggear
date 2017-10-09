@@ -1,4 +1,4 @@
-FROM python:3.6.2-alpine
+FROM python:3.6.3-alpine
 
 MAINTAINER Karol Gil <karol.gil@getbase.com>
 

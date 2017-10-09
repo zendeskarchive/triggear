@@ -43,7 +43,7 @@ To build triggear:
     
    * manually
    
-You need to have Python 3.6.2 installed with pip. Then you download dependencies with:
+You need to have Python 3.6.3 installed with pip. Then you download dependencies with:
 ```bash
 pip install -r requirements.txt
 ```
