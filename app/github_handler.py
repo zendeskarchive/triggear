@@ -194,6 +194,7 @@ class GithubHandler:
             job_name = document['job']
             job_requested_params = document['requested_params']
             try:
+                self.get_jobs_next_build_number(job_name) # Raises if job does not exist on Jenkins
                 if await self.can_trigger_job_by_branch(job_name, branch):
                     await BackgroundTask().run(self.trigger_registered_job,
                                                (
@@ -310,7 +311,6 @@ class GithubHandler:
                 job_params['sha'] = sha
             if 'tag' in job_requested_params:
                 job_params['tag'] = tag
-
         next_build_number = self.get_jobs_next_build_number(job_name)
         try:
             self.build_jenkins_job(job_name, job_params)
