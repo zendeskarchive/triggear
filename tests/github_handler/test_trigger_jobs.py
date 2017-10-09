@@ -165,3 +165,35 @@ async def test_unregistered_job_was_run(gh_sut: GithubHandler,
             1, 'test_repo',
             body=f"Job test_job finished with status {expected_state} - {expected_description} (test_url)"
         )
+
+
+async def test_trigger_registered_job(gh_sut: GithubHandler,
+                                      mocker: MockFixture):
+    mock_get_next_build: MagicMock = mocker.patch.object(gh_sut, 'get_jobs_next_build_number', return_value=1)
+    with patch.object(gh_sut, 'build_jenkins_job') as mock_build_jenkins_job:
+        with patch.object(gh_sut, 'is_job_building', return_value=False) as mock_is_job_building:
+            await gh_sut.trigger_registered_job('job_name',
+                                                ['branch', 'sha'],
+                                                'test_repo',
+                                                'test_sha',
+                                                'test_branch')
+            mock_is_job_building.assert_called_once()
+            mock_get_next_build.assert_called_once()
+            mock_build_jenkins_job.assert_called_once()
+
+
+async def test_trigger_registered_job_build_not_found(gh_sut: GithubHandler,
+                                                      mocker: MockFixture):
+    mock_get_next_build: MagicMock = mocker.patch.object(gh_sut, 'get_jobs_next_build_number', return_value=1)
+    with patch.object(gh_sut, 'build_jenkins_job') as mock_build_jenkins_job:
+        with patch.object(gh_sut, 'get_build_info', return_value=None) as mock_get_build_info:
+            with patch.object(gh_sut, 'is_job_building', return_value=None) as mock_is_job_building:
+                await gh_sut.trigger_registered_job('job_name',
+                                                    ['branch', 'sha'],
+                                                    'test_repo',
+                                                    'test_sha',
+                                                    'test_branch')
+                mock_is_job_building.assert_not_called()
+                mock_get_build_info.assert_called_once()
+                mock_get_next_build.assert_called_once()
+                mock_build_jenkins_job.assert_called_once()

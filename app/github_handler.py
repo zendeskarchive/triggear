@@ -301,7 +301,6 @@ class GithubHandler:
         return True
 
     async def trigger_registered_job(self, job_name, job_requested_params, repository, sha, pr_branch, tag=None):
-
         job_params = None
         if job_requested_params:
             job_params = {}
