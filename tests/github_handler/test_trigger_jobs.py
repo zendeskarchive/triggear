@@ -1,6 +1,5 @@
 import jenkins
 import pytest
-import asyncio
 
 import time
 from asynctest import MagicMock, call, patch
@@ -57,14 +56,12 @@ async def test_can_trigger_two_jobs(gh_sut: GithubHandler,
     assert mock_trigger_registered_job.call_count == 2
     calls = [call('test_job_1',
                   [],
-                  2,
                   'test_repo_1',
                   'test_sha',
                   'test_branch',
                   None),
              call('test_job_2',
                   ['branch'],
-                  2,
                   'test_repo_2',
                   'test_sha',
                   'test_branch',
@@ -90,7 +87,6 @@ async def test_one_of_jobs_not_found(gh_sut: GithubHandler,
     mock_can_trigger_job_by_branch.assert_called_once_with('test_job_2', 'test_branch')
     mock_trigger_registered_job.assert_called_once_with('test_job_2',
                                                         ['branch'],
-                                                        3,
                                                         'test_repo_2',
                                                         'test_sha',
                                                         'test_branch',
@@ -149,8 +145,8 @@ async def test_unregistered_job_was_run(gh_sut: GithubHandler,
     mock_build_job: MagicMock = mocker.patch.object(gh_sut, 'build_jenkins_job')
     mock_create_pr_comment: MagicMock = mocker.patch.object(gh_sut, 'create_pr_comment')
 
-    with patch.object(gh_sut, 'get_job_info',
-                      return_value={'result': job_result, 'url': 'test_url'}) as mock_get_job_info:
+    with patch.object(gh_sut, 'get_build_info',
+                      return_value={'result': job_result, 'url': 'test_url'}) as mock_get_build_info:
         await gh_sut.trigger_unregistered_job(job_name='test_job',
                                               pr_branch='test_branch',
                                               job_params={'param': 'value'},
@@ -164,8 +160,40 @@ async def test_unregistered_job_was_run(gh_sut: GithubHandler,
         calls = [call('test_job', 1),
                  call('test_job', 1)]
         mock_is_job_building.assert_has_calls(calls)
-        mock_get_job_info.assert_called_once_with('test_job', 1)
+        mock_get_build_info.assert_called_once_with('test_job', 1)
         mock_create_pr_comment.assert_called_once_with(
             1, 'test_repo',
             body=f"Job test_job finished with status {expected_state} - {expected_description} (test_url)"
         )
+
+
+async def test_trigger_registered_job(gh_sut: GithubHandler,
+                                      mocker: MockFixture):
+    mock_get_next_build: MagicMock = mocker.patch.object(gh_sut, 'get_jobs_next_build_number', return_value=1)
+    with patch.object(gh_sut, 'build_jenkins_job') as mock_build_jenkins_job:
+        with patch.object(gh_sut, 'is_job_building', return_value=False) as mock_is_job_building:
+            await gh_sut.trigger_registered_job('job_name',
+                                                ['branch', 'sha'],
+                                                'test_repo',
+                                                'test_sha',
+                                                'test_branch')
+            mock_is_job_building.assert_called_once()
+            mock_get_next_build.assert_called_once()
+            mock_build_jenkins_job.assert_called_once()
+
+
+async def test_trigger_registered_job_build_not_found(gh_sut: GithubHandler,
+                                                      mocker: MockFixture):
+    mock_get_next_build: MagicMock = mocker.patch.object(gh_sut, 'get_jobs_next_build_number', return_value=1)
+    with patch.object(gh_sut, 'build_jenkins_job') as mock_build_jenkins_job:
+        with patch.object(gh_sut, 'get_build_info', return_value=None) as mock_get_build_info:
+            with patch.object(gh_sut, 'is_job_building', return_value=None) as mock_is_job_building:
+                await gh_sut.trigger_registered_job('job_name',
+                                                    ['branch', 'sha'],
+                                                    'test_repo',
+                                                    'test_sha',
+                                                    'test_branch')
+                mock_is_job_building.assert_not_called()
+                mock_get_build_info.assert_called_once()
+                mock_get_next_build.assert_called_once()
+                mock_build_jenkins_job.assert_called_once()
