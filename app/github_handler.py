@@ -16,6 +16,8 @@ from app.event_types import EventTypes
 
 
 class GithubHandler:
+    BRANCH_DELETED_SHA = '0000000000000000000000000000000000000000'
+
     def __init__(self,
                  github_client: github.Github,
                  mongo_client: motor.motor_asyncio.AsyncIOMotorClient,
@@ -176,13 +178,16 @@ class GithubHandler:
         registration_query = {
             "repository": data['repository']['full_name']
         }
-        logging.warning(f"Hook details: push for query {registration_query} and branch {branch}")
-        await self.trigger_registered_jobs(
-            collection=collection,
-            query=registration_query,
-            sha=commit_sha,
-            branch=branch
-        )
+        logging.warning(f"Hook details: push for query {registration_query} and branch {branch} with SHA: {commit_sha}")
+        if commit_sha != self.BRANCH_DELETED_SHA:
+            await self.trigger_registered_jobs(
+                collection=collection,
+                query=registration_query,
+                sha=commit_sha,
+                branch=branch
+            )
+        else:
+            logging.warning(f"Branch {branch} was deleted as SHA was zeros only!")
 
     async def trigger_registered_jobs(self, collection, query, sha, branch, tag=None):
         async for document in collection.find(query):
