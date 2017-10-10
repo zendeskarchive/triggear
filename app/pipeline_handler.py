@@ -13,7 +13,13 @@ class PipelineHandler:
         self.__mongo_client = mongo_client
         self.api_token = api_token
 
-    async def add_registration_if_not_exists(self, event_type, repository, job_name, labels, requested_params):
+    async def add_registration_if_not_exists(self,
+                                             event_type,
+                                             repository,
+                                             job_name,
+                                             labels,
+                                             requested_params,
+                                             branch_restrictions):
         collection = self.__mongo_client.registered[event_type]
         job_registration = {
             "repository": repository,
@@ -22,6 +28,7 @@ class PipelineHandler:
         found_doc = await collection.find_one(job_registration)
         job_registration['labels'] = labels
         job_registration['requested_params'] = requested_params
+        job_registration['branch_restrictions'] = branch_restrictions if branch_restrictions is not None else []
         if not found_doc:
             result = await collection.insert_one(job_registration)
             logging.info(f"Inserted document with ID {repr(result.inserted_id)}")
@@ -39,7 +46,8 @@ class PipelineHandler:
             repository=data['repository'],
             job_name=data['jobName'],
             labels=data['labels'],
-            requested_params=data['requested_params']
+            requested_params=data['requested_params'],
+            branch_restrictions=data.get('branch_restrictions')
         )
         return aiohttp.web.Response(text='Register ACK')
 

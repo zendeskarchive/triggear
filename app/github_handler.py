@@ -192,26 +192,33 @@ class GithubHandler:
     async def trigger_registered_jobs(self, collection, query, sha, branch, tag=None):
         async for document in collection.find(query):
             job_name = document['job']
-            job_requested_params = document['requested_params']
-            try:
-                self.get_jobs_next_build_number(job_name) # Raises if job does not exist on Jenkins
-                if await self.can_trigger_job_by_branch(job_name, branch):
-                    await BackgroundTask().run(self.trigger_registered_job,
-                                               (
-                                                   job_name,
-                                                   job_requested_params,
-                                                   document['repository'],
-                                                   sha,
-                                                   branch,
-                                                   tag
-                                               ),
-                                               callback=None)
-            except jenkins.NotFoundException as e:
-                delete_query = query
-                delete_query['job'] = job_name
-                logging.error(f"Job {job_name} was not found on Jenkins anymore - deleting by query: {query}\n"
-                              f"(Exception: {str(e)}")
-                await collection.delete_one(delete_query)
+            branch_restrictions = document.get('branch_restrictions')
+            branch_restrictions = branch_restrictions if branch_restrictions is not None else []
+            if branch_restrictions == [] or branch in branch_restrictions:
+                job_requested_params = document['requested_params']
+                try:
+                    self.get_jobs_next_build_number(job_name)  # Raises if job does not exist on Jenkins
+                    if await self.can_trigger_job_by_branch(job_name, branch):
+                        await BackgroundTask().run(self.trigger_registered_job,
+                                                   (
+                                                       job_name,
+                                                       job_requested_params,
+                                                       document['repository'],
+                                                       sha,
+                                                       branch,
+                                                       tag
+                                                   ),
+                                                   callback=None)
+                except jenkins.NotFoundException as e:
+                    delete_query = query
+                    delete_query['job'] = job_name
+                    logging.error(f"Job {job_name} was not found on Jenkins anymore - deleting by query: {query}\n"
+                                  f"(Exception: {str(e)}")
+                    await collection.delete_one(delete_query)
+            else:
+                logging.warning(f"Job {job_name} was registered with following branch restrictions: "
+                                f"{branch_restrictions}. Current push was on {branch} branch, so Triggear will not "
+                                f"build this job.")
 
     def get_jobs_next_build_number(self, job_name):
         return self.__jenkins_client.get_job_info(job_name)['nextBuildNumber']

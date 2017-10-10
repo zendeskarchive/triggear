@@ -21,11 +21,12 @@ class Triggear implements Serializable {
      *
      * @param requestedParams Parameters that your job will be run with
      */
-    void registerForPushes(List<RequestParam> requestedParams) {
+    void registerForPushes(List<RequestParam> requestedParams, List<String> branchRestrictions = []) {
         raiseIfTagRequested(requestedParams)
         register(EventType.PUSH,
             [],
-            requestedParams
+            requestedParams,
+            branchRestrictions
         )
     }
 
@@ -34,10 +35,11 @@ class Triggear implements Serializable {
      *
      * @param requestedParams Parameters that your job will be run with
      */
-    void registerForTags(List<RequestParam> requestedParams) {
+    void registerForTags(List<RequestParam> requestedParams, List<String> branchRestrictions = []) {
         register(EventType.TAG,
             [],
-            requestedParams
+            requestedParams,
+            branchRestrictions
         )
     }
 
@@ -115,14 +117,16 @@ class Triggear implements Serializable {
 
     private void register(EventType eventType,
                           List<String> labels,
-                          List<RequestParam> requestedParams) {
+                          List<RequestParam> requestedParams,
+                          List<String> branchRestrictions = []) {
         sendRequestToTriggearService('register',
             [
-                eventType       : eventType.getEventName(),
-                repository      : repository.repositoryFullName,
-                jobName         : context.env.JOB_NAME,
-                labels          : labels,
-                requested_params: requestedParams.collect { it.getRequestParam() }
+                eventType           : eventType.getEventName(),
+                repository          : repository.repositoryFullName,
+                jobName             : context.env.JOB_NAME,
+                labels              : labels,
+                requested_params    : requestedParams.collect { it.getRequestParam() },
+                branch_restrictions : branchRestrictions
             ]
         )
     }
