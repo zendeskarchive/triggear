@@ -88,16 +88,24 @@ class GithubHandler:
         }
         logging.warning(f"Hook details: pr_opened for query {registration_query} (branch: {branch}, sha: {sha})")
 
-        if 'triggear-sync' in self.get_repo_labels(repo):
-            pr_number = data['pull_request']['number']
-            logging.warning(f"Setting 'triggear-sync' label on PR {pr_number} in repo {repo}")
-            self.add_triggear_sync_label_to_pr(repo, pr_number)
-            logging.warning('Label set')
+        # we need to set triggear-sync label only on PRs opened in repos, where something is actually registered
+        # for this kind of events
+        await self.set_sync_label(collection=collection,
+                                  query=registration_query,
+                                  pr_number=data['pull_request']['number'])
 
         await self.trigger_registered_jobs(collection=collection,
                                            query=registration_query,
                                            sha=sha,
                                            branch=branch)
+
+    async def set_sync_label(self, collection, query, pr_number):
+        async for _ in collection.find(query):
+            repo = query['repository']
+            if 'triggear-sync' in self.get_repo_labels(repo):
+                logging.warning(f"Setting 'triggear-sync' label on PR {pr_number} in repo {repo}")
+                self.add_triggear_sync_label_to_pr(repo, pr_number)
+                logging.warning('Label set')
 
     def add_triggear_sync_label_to_pr(self, repo, pr_number):
         self.__gh_client.get_repo(repo).get_issue(pr_number).set_labels('triggear-sync')
