@@ -173,7 +173,7 @@ class GithubHandler:
                     branch=pr_branch
                 )
         except Exception as e:
-            print(f"Unexpected exception caught when triggering PR syncs: {e}")
+            logging.error(f"Unexpected exception caught when triggering PR syncs: {e}")
 
     async def trigger_jobs_related_to_label_syncs(self, commit_sha, pr_branch, pr_labels, repository):
         try:
@@ -191,7 +191,7 @@ class GithubHandler:
                         branch=pr_branch
                     )
         except Exception as e:
-            print(f"Unexpected exception caught when triggering label syncs: {e}")
+            logging.error(f"Unexpected exception caught when triggering label syncs: {e}")
 
     def get_pr_labels(self, pr_number, repository):
         return [label.name for label in self.__gh_client.get_repo(repository).get_issue(pr_number).labels]
