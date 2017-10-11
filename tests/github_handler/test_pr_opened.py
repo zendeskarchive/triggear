@@ -8,28 +8,24 @@ pytestmark = pytest.mark.asyncio
 
 
 async def test_triggear_sync_label_found(gh_sut: GithubHandler,
-                                         valid_pr_opened_data: dict,
                                          mocker: MockFixture,
-                                         mock_trigger_registered_jobs: MagicMock):
+                                         mock_collection_with_branch_restriction: MagicMock):
     repo_labels_mock = mocker.patch.object(gh_sut, 'get_repo_labels', return_value=['triggear-sync'])
     set_label_mock = mocker.patch.object(gh_sut, 'add_triggear_sync_label_to_pr')
 
-    await gh_sut.handle_pr_opened(valid_pr_opened_data)
+    await gh_sut.set_sync_label(mock_collection_with_branch_restriction, {'repository': 'test_repo_1'}, 38)
 
-    repo_labels_mock.assert_called_once_with('test_repo')
-    set_label_mock.assert_called_once_with('test_repo', 38)
-    mock_trigger_registered_jobs.assert_called_once()
+    repo_labels_mock.assert_called_once_with('test_repo_1')
+    set_label_mock.assert_called_once_with('test_repo_1', 38)
 
 
 async def test_triggear_sync_label_not_found(gh_sut: GithubHandler,
-                                             valid_pr_opened_data: dict,
                                              mocker: MockFixture,
-                                             mock_trigger_registered_jobs: MagicMock):
+                                             mock_collection_with_branch_restriction: MagicMock):
     repo_labels_mock = mocker.patch.object(gh_sut, 'get_repo_labels', return_value=['other', 'labels'])
     set_label_mock = mocker.patch.object(gh_sut, 'add_triggear_sync_label_to_pr')
 
-    await gh_sut.handle_pr_opened(valid_pr_opened_data)
+    await gh_sut.set_sync_label(mock_collection_with_branch_restriction, {'repository': 'test_repo_1'}, 38)
 
-    repo_labels_mock.assert_called_once_with('test_repo')
+    repo_labels_mock.assert_called_once_with('test_repo_1')
     set_label_mock.assert_not_called()
-    mock_trigger_registered_jobs.assert_called_once()
