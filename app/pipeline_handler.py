@@ -5,6 +5,7 @@ import aiohttp.web_request
 
 from app.auth_validation import validate_auth_header
 from app.err_handling import handle_exceptions
+from app.requested_params import RequestedParams
 
 
 class PipelineHandler:
@@ -41,6 +42,8 @@ class PipelineHandler:
     async def handle_register(self, request: aiohttp.web_request.Request):
         data = await request.json()
         logging.warning(f"Register REQ received: {data}")
+        if not self.are_params_valid(data):
+            return aiohttp.web.Response(reason='Invalid requested params!', status=400)
         await self.add_registration_if_not_exists(
             event_type=data['eventType'],
             repository=data['repository'],
@@ -50,6 +53,14 @@ class PipelineHandler:
             branch_restrictions=data.get('branch_restrictions')
         )
         return aiohttp.web.Response(text='Register ACK')
+
+    @staticmethod
+    def are_params_valid(data: dict):
+        allowed_params = RequestedParams.get_allowed()
+        for param in data['requested_params']:
+            if param not in allowed_params:
+                return False
+        return True
 
     async def __create_or_update_status(self, repository, sha, state, description, url, context):
         self.__gh_client.get_repo(repository).get_commit(sha).create_status(
