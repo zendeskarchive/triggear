@@ -30,6 +30,7 @@ For overview of Triggear features please read [6. Workflows](#workflows) section
    1. [Running jobs on pushes](#push)
    1. [Running jobs when PR is labeled](#label)
    1. [Running jobs on PR sync](#sync)
+   1. [Running jobs on PR opened](#opened)
    1. [Re-running failed jobs](#rerun)
    1. [Setting custom commit statuses](#status)
    1. [Commenting PRs](#comment_pr)
@@ -306,8 +307,33 @@ Set label Y and `triggear-sync` on one of your PRs.
 From then on
 every push to this PRs branch will trigger your job. Removing
 `triggear-sync` label will stop this behaviour.
+<a name="opened"/>
+#### iv. Running jobs on PR opened
+
+__Case #1__ You want to run job on every PR opened in repo X. 
+Also you  would like for it to be rerun if anything is pushed 
+to that PR (so called `synchronize` events):
+
+At first you need to register your job for PR opened events in repo X:
+
+```groovy
+// Assuming you called this shared library "Triggear" in Jenkins
+// Ommit this line if you add Triggear as shared library implicitly
+@Library(['Triggear']) _
+
+import com.futuresimple.triggear.RequestParam
+import com.futuresimple.triggear.Triggear
+
+Triggear triggear = new Triggear(this, 'X')
+triggear.registerForPrOpened()
+```
+
+Then, you'll need a special label in your GitHub repo. It's name
+should be `triggear-sync`. If that label is present triggear will
+set in on PR automatically. It will cause all synchronize events
+to re-run the job.
 <a name="rerun"/>
-#### iv. Re-running failed jobs
+#### v. Re-running failed jobs
 
 __Case #1__ You labeled PR with label Y which triggered some jobs
 and reported status back to PR. Commit status is set to fail,
@@ -331,7 +357,7 @@ with context of specified SHA.
 
 ![Triggear resync](https://d1ro8r1rbfn3jf.cloudfront.net/ms_147854/G34ADXnkixu0wydeWFXZSOlAVQTZcI/triggearresync.png?Expires=1502469108&Signature=Po-BPBmkwNYFm1X2WV2NkQS97wPe8FiA3~lPKzWMBjkFfJoLbuPURayCpn8mfFRgUm8auwNew4AtdryyTqLCo20K6Ww0EqQ-MPj93KnI6EezcU-JOy2VL3hvFUgtz6ylKHy65miClWiYqvqkJdMMj35QcW1phQCu83ON5HlNs4hlrVBxNN3s6fjX2hd5BrALYsXMMSR374M0L1t2OovjGC1yWT3Jirvfs~Po02YYIud4Ic3B9us6DhP2upkzUXDNEXwaO5L~W0JSAd8OZSBHgvEdrIYHz74qL7F2AbFZXY-hPoVXVEOJ10Dfuxb4YN4zC9pE-4YL9k17U1QkdB2sGQ__&Key-Pair-Id=APKAJHEJJBIZWFB73RSA)
 <a name="status"/>
-#### v. Setting custom commit statuses
+#### vi. Setting custom commit statuses
 
 __Case #1__ Some event (push/labeled) triggered your job and it
 produced an artifact in Jenkins available at some URL. You want
@@ -367,7 +393,7 @@ is done:
 Of course this status will only be visible __after__ job is done
 so there won't be any pending state visible in GH for it at any time.
 <a name="comment_pr"/>
-#### vi. Commenting PRs
+#### vii. Commenting PRs
 
 __Case #1__ You want your job to create a comment on PR/commit with some
 details that are too long to be presented as commit statuses
@@ -391,7 +417,7 @@ By doing so you will see the following results:
 
 Of course one pipeline can create multiple comments.
 <a name="tags_run"/>
-#### vii. Running jobs with tags
+#### viii. Running jobs with tags
 __Case #1__ You want your job to run at the time when someone
 pushes a new tag to repository. At Base we use that to create
 app's with given tag for reference
@@ -414,7 +440,7 @@ your job every time new tag is pushed to origin. Your job will
 receive tag name and branch/sha of tagged commit as parameters, so
 make sure that it accepts them and can handle such params.
 <a name="comment_run"/>
-#### viii. Running jobs with PR comments
+#### ix. Running jobs with PR comments
 
 __Case #1__ You want to run specific job by writing comment on
 you PR, not having to enter Jenkins
