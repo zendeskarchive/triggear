@@ -64,6 +64,9 @@ class GithubHandler:
             await self.handle_synchronize(data)
         elif action == EventTypes.comment:
             await self.handle_comment(data)
+        elif await self.get_request_event_header(request) == EventTypes.pull_request:
+            if action == EventTypes.pr_opened:
+                await self.handle_pr_opened(data)
         elif await self.get_request_event_header(request) == EventTypes.push:
             if data['ref'].startswith('refs/heads/'):
                 await self.handle_push(data)
@@ -75,6 +78,33 @@ class GithubHandler:
     async def get_request_event_header(request):
         return request.headers['X-GitHub-Event']
 
+    async def handle_pr_opened(self, data: dict):
+        collection = self.__mongo_client.registered[EventTypes.pr_opened]
+        repo = data['repository']['full_name']
+        branch = data['pull_request']['head']['ref']
+        sha = data['pull_request']['head']['sha']
+        registration_query = {
+            "repository": repo,
+        }
+        logging.warning(f"Hook details: pr_opened for query {registration_query} (branch: {branch}, sha: {sha})")
+
+        if 'triggear-sync' in self.get_repo_labels(repo):
+            pr_number = data['pull_request']['number']
+            logging.warning(f"Setting 'triggear-sync' label on PR {pr_number} in repo {repo}")
+            self.add_triggear_sync_label_to_pr(repo, pr_number)
+            logging.warning('Label set')
+
+        await self.trigger_registered_jobs(collection=collection,
+                                           query=registration_query,
+                                           sha=sha,
+                                           branch=branch)
+
+    def add_triggear_sync_label_to_pr(self, repo, pr_number):
+        self.__gh_client.get_repo(repo).get_issue(pr_number).set_labels('triggear-sync')
+
+    def get_repo_labels(self, repo: str):
+        return [label.name for label in self.__gh_client.get_repo(repo).get_labels()]
+
     async def handle_tagged(self, data: dict):
         collection = self.__mongo_client.registered[EventTypes.tagged]
         tag = data['ref'][10:]
@@ -84,7 +114,8 @@ class GithubHandler:
         registration_query = {
             "repository": repo,
         }
-        logging.warning(f"Hook details: labeled for query {registration_query}")
+        logging.warning(f"Hook details: tagged for query {registration_query} "
+                        f"(branch: {branch}, sha: {sha}, tag: {tag})")
         await self.trigger_registered_jobs(
             collection=collection,
             query=registration_query,
@@ -101,7 +132,8 @@ class GithubHandler:
             "repository": data['pull_request']['head']['repo']['full_name'],
             "labels": data['label']['name']
         }
-        logging.warning(f"Hook details: labeled for query {registration_query}")
+        logging.warning(f"Hook details: labeled for query {registration_query} "
+                        f"(branch: {pr_branch}, sha: {commit_sha})")
         await self.trigger_registered_jobs(
             collection=collection,
             query=registration_query,
@@ -357,4 +389,3 @@ class GithubHandler:
             logging.error(f"Triggear was not able to find build number {next_build_number} for job {job_name}."
                           f"Task aborted.")
             return
-

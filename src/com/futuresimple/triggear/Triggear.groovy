@@ -17,9 +17,25 @@ class Triggear implements Serializable {
     }
 
     /**
+     * Register for PR opened events in repository. If anyone opens new PR, Triggear will trigger this job and try to
+     * assign 'triggear-sync' label to PR. If such label does not exist, trigger for sync events won't work.
+     *
+     * @param requestedParams Parameters that your job will be run with
+     */
+    void registerForPrOpened(List<RequestParam> requestedParams){
+        raiseIfTagRequested(requestedParams)
+        register(EventType.PR_OPEN,
+            [],
+            requestedParams
+        )
+    }
+
+    /**
      * Register for pushes in repository. If anyone pushes anything to repo this pipeline will be triggered.
      *
      * @param requestedParams Parameters that your job will be run with
+     * @param branchRestrictions Branches for which this job should be triggered. Pushes to other branches will be
+     * ignored
      */
     void registerForPushes(List<RequestParam> requestedParams, List<String> branchRestrictions = []) {
         raiseIfTagRequested(requestedParams)
@@ -34,6 +50,7 @@ class Triggear implements Serializable {
      * Register for tags in repository. If anyone pushes a tag into repo this pipeline will be triggered.
      *
      * @param requestedParams Parameters that your job will be run with
+     * @param branchRestrictions Branches for which this job should be triggered. Pushes to other branches will be ignored
      */
     void registerForTags(List<RequestParam> requestedParams, List<String> branchRestrictions = []) {
         register(EventType.TAG,
