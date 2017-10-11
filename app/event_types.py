@@ -4,3 +4,5 @@ class EventTypes:
     labeled = 'labeled'
     tagged = 'tagged'
     push = 'push'
+    pr_opened = 'opened'
+    pull_request = 'pull_request'

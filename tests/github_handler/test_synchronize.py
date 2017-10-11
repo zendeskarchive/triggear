@@ -1,5 +1,5 @@
 import pytest
-from asynctest import patch, MagicMock, ANY, call
+from asynctest import MagicMock, ANY, call
 from pytest_mock import MockFixture
 
 from app.github_handler import GithubHandler
@@ -7,7 +7,7 @@ from app.github_handler import GithubHandler
 pytestmark = pytest.mark.asyncio
 
 
-async def test_no_valid_labels_found(gh_sut,
+async def test_no_valid_labels_found(gh_sut: GithubHandler,
                                      valid_synchronize_data: dict,
                                      mocker: MockFixture,
                                      mock_trigger_registered_jobs: MagicMock):
@@ -20,9 +20,9 @@ async def test_no_valid_labels_found(gh_sut,
 
 
 async def test_triggear_sync(gh_sut: GithubHandler,
-                                                       valid_synchronize_data: dict,
-                                                       mocker: MockFixture,
-                                                       mock_trigger_registered_jobs: MagicMock):
+                             valid_synchronize_data: dict,
+                             mocker: MockFixture,
+                             mock_trigger_registered_jobs: MagicMock):
     pr_labels_mock = mocker.patch.object(gh_sut, 'get_pr_labels', return_value=['triggear-sync'])
 
     await gh_sut.handle_synchronize(valid_synchronize_data)

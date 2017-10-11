@@ -55,6 +55,14 @@ def valid_synchronize_data():
 
 
 @pytest.fixture
+def valid_pr_opened_data():
+    yield {
+        'pull_request': {'head': {'ref': 'test_branch', 'sha': 'test_sha'}, 'number': 38},
+        'repository': {'full_name': 'test_repo'}
+    }
+
+
+@pytest.fixture
 def valid_labeled_data():
     yield {'pull_request': {'head': {'sha': 'test_sha',
                                      'ref': 'test_branch',

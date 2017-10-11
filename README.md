@@ -1,4 +1,4 @@
-![Triggear](https://d1ro8r1rbfn3jf.cloudfront.net/ms_147854/PhVcvTkZsFfrXz4WB18J9dnmq6JpON/triggear.png?Expires=1507399646&Signature=a0VmF~wDthgghf1Fz8HyLmUHEV57b0Y8uETNIoaS64faz~O~oFh8gNewJ-a3ypMRl3oCXhNGySPUWA9-Rx89rQzus7OfhoLE8mzameUfr11GOkAnrZQxeQrvBdnhxULc4Fy56Sf-JHmFCUX3ZflAS3DQ8bshPkTZjG0gbuuT5U9ZtUOldWpFyTf~3ksVt1eb3rXIH1D~iBqpgIHPXQ7i3lu44a8hwl~ZeDB2hgVJ55N7z0-5IYvMEEmHhuWW8eqwGsVpcMZmed2Z5xtIn8Lbh8deGBBIQzIy5K8GNMasFGJfHZFyc0D9zgsTwXaCEzR-b~e5a-IMEJI1gqEz7JLkdw__&Key-Pair-Id=APKAJHEJJBIZWFB73RSA "Triggear")
+![Triggear](./triggear.png "Triggear")
 
 ### Triggear
 
@@ -64,7 +64,7 @@ __Note:__ docker-compose build runs all the unittests by default
 
    * manually
 ```bash
-PYTHONPATH=<PATH_TO_TRIGGEAR> py.test .
+PYTHONPATH=[PATH_TO_TRIGGEAR] py.test .
 ```
 
    * with docker

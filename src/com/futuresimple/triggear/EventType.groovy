@@ -3,7 +3,8 @@ package com.futuresimple.triggear
 enum EventType {
     LABEL('labeled'),
     PUSH('push'),
-    TAG('tagged')
+    TAG('tagged'),
+    PR_OPEN('opened')
 
     EventType(String eventName) {
         this.eventName = eventName

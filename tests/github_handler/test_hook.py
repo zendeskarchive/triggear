@@ -31,6 +31,17 @@ async def test_handling_push(gh_sut: GithubHandler):
                     handle_mock.assert_called_once_with({'action': 'not_matched', 'ref': 'refs/heads/master'})
 
 
+async def test_handling_pr_opened(gh_sut: GithubHandler):
+    with asynctest.patch.object(gh_sut, 'get_request_json',
+                                return_value={'action': 'opened', 'ref': 'refs/heads/master'}):
+        with asynctest.patch.object(gh_sut, 'validate_webhook_secret', return_value='AUTHORIZED'):
+            with asynctest.patch.object(gh_sut, 'get_request_event_header', return_value='pull_request'):
+                with asynctest.patch.object(gh_sut, 'handle_pr_opened') as handle_mock:
+                    result = await gh_sut.handle_hook(asynctest.MagicMock())
+                    assert result.status == 200
+                    handle_mock.assert_called_once_with({'action': 'opened', 'ref': 'refs/heads/master'})
+
+
 @pytest.mark.parametrize("hook_data, hook_method", [
     ({'action': 'labeled'}, 'handle_labeled'),
     ({'action': 'created'}, 'handle_comment'),
