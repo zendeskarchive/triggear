@@ -3,6 +3,7 @@ from asynctest import MagicMock
 from pytest_mock import MockFixture
 
 from app.github_handler import GithubHandler
+from app.labels import Labels
 
 pytestmark = pytest.mark.asyncio
 
@@ -10,8 +11,8 @@ pytestmark = pytest.mark.asyncio
 async def test_triggear_sync_label_found(gh_sut: GithubHandler,
                                          mocker: MockFixture,
                                          mock_collection_with_branch_restriction: MagicMock):
-    repo_labels_mock = mocker.patch.object(gh_sut, 'get_repo_labels', return_value=['triggear-sync'])
-    set_label_mock = mocker.patch.object(gh_sut, 'add_triggear_sync_label_to_pr')
+    repo_labels_mock = mocker.patch.object(gh_sut, 'get_repo_labels', return_value=[Labels.pr_sync])
+    set_label_mock = mocker.patch.object(gh_sut, 'add_triggear_pr_sync_label_to_pr')
 
     await gh_sut.set_sync_label(mock_collection_with_branch_restriction, {'repository': 'test_repo_1'}, 38)
 
@@ -23,7 +24,7 @@ async def test_triggear_sync_label_not_found(gh_sut: GithubHandler,
                                              mocker: MockFixture,
                                              mock_collection_with_branch_restriction: MagicMock):
     repo_labels_mock = mocker.patch.object(gh_sut, 'get_repo_labels', return_value=['other', 'labels'])
-    set_label_mock = mocker.patch.object(gh_sut, 'add_triggear_sync_label_to_pr')
+    set_label_mock = mocker.patch.object(gh_sut, 'add_triggear_pr_sync_label_to_pr')
 
     await gh_sut.set_sync_label(mock_collection_with_branch_restriction, {'repository': 'test_repo_1'}, 38)
 

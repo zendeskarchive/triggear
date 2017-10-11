@@ -13,6 +13,7 @@ import aiohttp.web_request
 from app.background_task import BackgroundTask
 from app.err_handling import handle_exceptions
 from app.event_types import EventTypes
+from app.labels import Labels
 
 
 class GithubHandler:
@@ -88,7 +89,7 @@ class GithubHandler:
         }
         logging.warning(f"Hook details: pr_opened for query {registration_query} (branch: {branch}, sha: {sha})")
 
-        # we need to set triggear-sync label only on PRs opened in repos, where something is actually registered
+        # we need to set triggear-pr-sync label only on PRs opened in repos, where something is actually registered
         # for this kind of events
         await self.set_sync_label(collection=collection,
                                   query=registration_query,
@@ -102,13 +103,13 @@ class GithubHandler:
     async def set_sync_label(self, collection, query, pr_number):
         async for _ in collection.find(query):
             repo = query['repository']
-            if 'triggear-sync' in self.get_repo_labels(repo):
-                logging.warning(f"Setting 'triggear-sync' label on PR {pr_number} in repo {repo}")
-                self.add_triggear_sync_label_to_pr(repo, pr_number)
+            if Labels.pr_sync in self.get_repo_labels(repo):
+                logging.warning(f"Setting 'triggear-pr-sync' label on PR {pr_number} in repo {repo}")
+                self.add_triggear_pr_sync_label_to_pr(repo, pr_number)
                 logging.warning('Label set')
 
-    def add_triggear_sync_label_to_pr(self, repo, pr_number):
-        self.__gh_client.get_repo(repo).get_issue(pr_number).set_labels('triggear-sync')
+    def add_triggear_pr_sync_label_to_pr(self, repo, pr_number):
+        self.__gh_client.get_repo(repo).get_issue(pr_number).set_labels(Labels.pr_sync)
 
     def get_repo_labels(self, repo: str):
         return [label.name for label in self.__gh_client.get_repo(repo).get_labels()]
@@ -150,26 +151,47 @@ class GithubHandler:
         )
 
     async def handle_synchronize(self, data):
-        collection = self.__mongo_client.registered[EventTypes.labeled]
         repository = data['pull_request']['head']['repo']['full_name']
         pr_number = data['pull_request']['number']
         commit_sha = data['pull_request']['head']['sha']
         pr_branch = data['pull_request']['head']['ref']
         pr_labels = self.get_pr_labels(pr_number, repository)
         logging.warning(f"Hook details: synchronize for repository {repository} and branch {pr_branch}")
-        if 'triggear-sync' in pr_labels and len(pr_labels) > 1:
-            pr_labels.remove('triggear-sync')
-            for label in pr_labels:
+        await self.trigger_jobs_related_to_label_syncs(commit_sha, pr_branch, pr_labels, repository)
+        await self.trigger_jobs_related_to_pr_syncs(commit_sha, pr_branch, pr_labels, repository)
+
+    async def trigger_jobs_related_to_pr_syncs(self, commit_sha, pr_branch, pr_labels, repository):
+        try:
+            if Labels.pr_sync in pr_labels:
                 registration_query = {
-                    "repository": repository,
-                    "labels": label
+                    "repository": repository
                 }
                 await self.trigger_registered_jobs(
-                    collection=collection,
+                    collection=self.__mongo_client.registered[EventTypes.pr_opened],
                     query=registration_query,
                     sha=commit_sha,
                     branch=pr_branch
                 )
+        except Exception as e:
+            print(f"Unexpected exception caught when triggering PR syncs: {e}")
+
+    async def trigger_jobs_related_to_label_syncs(self, commit_sha, pr_branch, pr_labels, repository):
+        try:
+            if Labels.label_sync in pr_labels and len(pr_labels) > 1:
+                pr_labels.remove(Labels.label_sync)
+                for label in pr_labels:
+                    registration_query = {
+                        "repository": repository,
+                        "labels": label
+                    }
+                    await self.trigger_registered_jobs(
+                        collection=self.__mongo_client.registered[EventTypes.labeled],
+                        query=registration_query,
+                        sha=commit_sha,
+                        branch=pr_branch
+                    )
+        except Exception as e:
+            print(f"Unexpected exception caught when triggering label syncs: {e}")
 
     def get_pr_labels(self, pr_number, repository):
         return [label.name for label in self.__gh_client.get_repo(repository).get_issue(pr_number).labels]
