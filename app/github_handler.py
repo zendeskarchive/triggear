@@ -365,6 +365,8 @@ class GithubHandler:
 
         build_info = await self.get_build_info(job_name, next_build_number)
         if build_info is not None:
+            logging.warning(f"Creating pending status for {job_name} in repo {repository} "
+                            f"(branch {pr_branch}, sha {sha}")
             self.__gh_client.get_repo(repository).get_commit(sha).create_status(
                 state="pending",
                 target_url=build_info['url'],
@@ -373,6 +375,7 @@ class GithubHandler:
             while await self.is_job_building(job_name, next_build_number):
                 await asyncio.sleep(1)
             build_info = await self.get_build_info(job_name, next_build_number)
+            logging.warning(f"Build {job_name} #{next_build_number} finished.")
 
             final_state = "success" if build_info['result'] == "SUCCESS" \
                 else "failure" if build_info['result'] == "FAILURE" \
@@ -380,6 +383,7 @@ class GithubHandler:
             final_description = "build succeeded" if build_info['result'] == "SUCCESS" \
                 else "build failed" if build_info['result'] == "FAILURE" \
                 else "build error"
+            logging.warning(f"Creating build status for {job_name} #{next_build_number} - verdict: {final_state}.")
             self.__gh_client.get_repo(repository).get_commit(sha).create_status(
                 state=final_state,
                 target_url=build_info['url'],
