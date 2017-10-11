@@ -277,7 +277,7 @@ PR status with your job results:
 As you can see job name is again used as context. Details link
 will redirect users from GitHub to your pipeline build.
 <a name="sync"/>
-#### iii. Running jobs on PR sync
+#### iii. Running jobs on PR labeled
 
 __Case #1__ You want to run job registered for label Y on every
 push to the PR labeled with Y (e.g. redeploy code on every PR
@@ -298,15 +298,14 @@ triggear.registerForLabel('Y', [])
 ```
 
 Then, you'll need a special label in your GitHub repo. It's name
-should be `triggear-sync`.
+should be `triggear-label-sync`.
 
-Set label Y and `triggear-sync` on one of your PRs. 
+Set label Y and `triggear-label-sync` on one of your PRs. 
 
 ![Triggear run on sync](https://d1ro8r1rbfn3jf.cloudfront.net/ms_147854/3vpgIdsHplo0VARNjnCfLLRymrOg0X/triggearsync.png?Expires=1502466199&Signature=O7T7U0nmW~xTd2oLsE9L9-1RTtx~JPV8GzMXBH6kBzgfzdq91H4xMh3zhUL6Q2imR5cwMnTDseK8G6WJOXJL2UMbuTZa9WHY7NOkmvagyVxVbnfSzns8-0FGSk9a6DYDVb4zcrz1Y01IfU5GcsXO8bDG04fa5wi4Ipu5srH8Odc4LeGyLX5FXnGDFXbCQVWSox-ISr9ekY16APpnS8K4oaAEevT5knG2qdXsPsX2f7vbdlmPQJ6FIqocXzl0IVI9~dkvDkz3Q5DMPaNcSM8nBsRVVqr16fYTBnzonPnaFIZ9GCJIk6lCP4ENfKYttn9~ZFI8hSvWj6J5fGpgXAkpTg__&Key-Pair-Id=APKAJHEJJBIZWFB73RSA)
 
-From then on
-every push to this PRs branch will trigger your job. Removing
-`triggear-sync` label will stop this behaviour.
+From then on every push to this PRs branch will trigger your job. 
+Removing `triggear-label-sync` label will stop this behaviour.
 <a name="opened"/>
 #### iv. Running jobs on PR opened
 
@@ -329,7 +328,7 @@ triggear.registerForPrOpened()
 ```
 
 Then, you'll need a special label in your GitHub repo. It's name
-should be `triggear-sync`. If that label is present triggear will
+should be `triggear-pr-sync`. If that label is present triggear will
 set in on PR automatically. It will cause all synchronize events
 to re-run the job.
 <a name="rerun"/>

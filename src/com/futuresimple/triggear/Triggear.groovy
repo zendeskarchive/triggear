@@ -18,7 +18,7 @@ class Triggear implements Serializable {
 
     /**
      * Register for PR opened events in repository. If anyone opens new PR, Triggear will trigger this job and try to
-     * assign 'triggear-sync' label to PR. If such label does not exist, trigger for sync events won't work.
+     * assign 'triggear-pr-sync' label to PR. If such label does not exist, trigger for sync events won't work.
      *
      * @param requestedParams Parameters that your job will be run with
      */
