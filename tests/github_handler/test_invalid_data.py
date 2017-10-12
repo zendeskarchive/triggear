@@ -2,6 +2,7 @@ import pytest
 import asynctest
 
 from app.github_handler import GithubHandler
+from app.labels import Labels
 
 pytestmark = pytest.mark.asyncio
 
@@ -58,16 +59,16 @@ async def test_empty_hook_handle(gh_sut: GithubHandler, mocker):
     ({}, 'comment'),
     ({'comment': {}}, 'body'),
     ({'comment': {'body': 'Triggear run job'}}, 'repository'),
-    ({'comment': {'body': 'Triggear resync labels sha'}}, 'repository'),
+    ({'comment': {'body': Labels.label_sync}}, 'repository'),
     ({'comment': {'body': 'Triggear run test'}, 'repository': {}}, 'full_name'),
-    ({'comment': {'body': 'Triggear resync labels sha'}, 'repository': {}}, 'full_name'),
+    ({'comment': {'body': Labels.label_sync}, 'repository': {}}, 'full_name'),
     ({'comment': {'body': 'Triggear run test'}, 'repository': {'full_name': 'test_repo'}}, 'issue'),
-    ({'comment': {'body': 'Triggear resync labels sha'}, 'repository': {'full_name': 'test_repo'}}, 'issue'),
+    ({'comment': {'body': Labels.label_sync}, 'repository': {'full_name': 'test_repo'}}, 'issue'),
     ({'comment': {'body': 'Triggear run test'}, 'repository': {'full_name': 'test_repo'}, 'issue': {}}, 'number'),
-    ({'comment': {'body': 'Triggear resync labels sha'}, 'repository': {'full_name': 'test_repo'}, 'issue': {}}, 'number'),
-    ({'comment': {'body': 'Triggear resync labels sha'},
+    ({'comment': {'body': Labels.label_sync}, 'repository': {'full_name': 'test_repo'}, 'issue': {}}, 'number'),
+    ({'comment': {'body': Labels.label_sync},
       'repository': {'full_name': 'test_repo'}, 'issue': {'number': 1}}, 'labels'),
-    ({'comment': {'body': 'Triggear resync labels sha'},
+    ({'comment': {'body': Labels.label_sync},
       'repository': {'full_name': 'test_repo'}, 'issue': {'number': 1, 'labels': [{}]}}, 'name'),
 
 ])

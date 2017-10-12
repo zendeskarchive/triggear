@@ -341,13 +341,14 @@ You want to rerun it without having to push something to PR.
 
 To do this simply open GitHub PR and write comment:
 ```
-Triggear resync labels <sha>
+triggear-label-sync
 ```
 
 By doing so following behaviour will start:
  - Triggear will look on your PR and check it's labels
  - Triggear will run the job that failed giving it `branch` and `sha`
- parameters according to what you specified in PR/comment
+ parameters according to what you specified in PR/comment, where
+ `sha` is latest commit in this PR
  - Once the job is done Triggear will update commit status
  according to job results
  
