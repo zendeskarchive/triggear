@@ -208,13 +208,13 @@ class GithubHandler:
                           in [item.split('=') for item in job_params]}
             logging.warning(f"Hook details: single run comment for repository {repository_name} and branch {pr_branch}")
             await self.trigger_unregistered_job(job_name, pr_branch, job_params, repository_name, pr_number)
-        elif data['comment']['body'].startswith('Triggear resync labels '):
-            commit_sha = data['comment']['body'].split()[3]
+        elif data['comment']['body'] == Labels.label_sync:
             collection = self.__mongo_client.registered[EventTypes.labeled]
             repository_name = data['repository']['full_name']
             pr_number = data['issue']['number']
             pr_labels = [label['name'] for label in data['issue']['labels']]
             pr_branch = self.get_pr_branch(pr_number, repository_name)
+            commit_sha = self.get_latest_commit_sha(pr_number, repository_name)
             for label in pr_labels:
                 registration_query = {
                     "repository": repository_name,
@@ -228,12 +228,12 @@ class GithubHandler:
                     sha=commit_sha,
                     branch=pr_branch
                 )
-        elif data['comment']['body'].startswith('Triggear resync commit '):
-            commit_sha = data['comment']['body'].split()[3]
+        elif data['comment']['body'] == Labels.pr_sync:
             collection = self.__mongo_client.registered[EventTypes.pr_opened]
             repository_name = data['repository']['full_name']
             pr_number = data['issue']['number']
             pr_branch = self.get_pr_branch(pr_number, repository_name)
+            commit_sha = self.get_latest_commit_sha(pr_number, repository_name)
             registration_query = {
                 "repository": repository_name
             }
@@ -247,6 +247,9 @@ class GithubHandler:
             )
         else:
             return
+
+    def get_latest_commit_sha(self, pr_number, repository_name):
+        return self.__gh_client.get_repo(repository_name).get_pull(pr_number).get_commits()[-1].sha
 
     def get_pr_branch(self, pr_number, repository_name):
         return self.__gh_client.get_repo(repository_name).get_pull(pr_number).head.ref

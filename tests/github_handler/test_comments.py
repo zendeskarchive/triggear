@@ -3,6 +3,7 @@ from asynctest import MagicMock, call, ANY
 from pytest_mock import MockFixture
 
 from app.github_handler import GithubHandler
+from app.labels import Labels
 
 pytestmark = pytest.mark.asyncio
 
@@ -43,13 +44,16 @@ async def test_triggear_resync_labels(gh_sut: GithubHandler,
                                       mock_trigger_registered_jobs: MagicMock):
     pr_branch_mock = mocker.patch.object(gh_sut, 'get_pr_branch',
                                          return_value='test_branch')
-    hook_data = {'comment': {'body': 'Triggear resync labels sha'},
+    pr_sha_mock = mocker.patch.object(gh_sut, 'get_latest_commit_sha',
+                                      return_value='sha')
+    hook_data = {'comment': {'body': Labels.label_sync},
                  'repository': {'full_name': 'test_repo'},
                  'issue': {'number': 1, 'labels': [{'name': 'label1'}, {'name': 'label2'}]}}
 
     await gh_sut.handle_comment(hook_data)
 
     pr_branch_mock.assert_called_once_with(1, 'test_repo')
+    pr_sha_mock.assert_called_once_with(1, 'test_repo')
     assert mock_trigger_registered_jobs.call_count == 2
     calls = [call(branch='test_branch',
                   collection=ANY,
@@ -67,13 +71,16 @@ async def test_triggear_resync_commit(gh_sut: GithubHandler,
                                       mock_trigger_registered_jobs: MagicMock):
     pr_branch_mock = mocker.patch.object(gh_sut, 'get_pr_branch',
                                          return_value='test_branch')
-    hook_data = {'comment': {'body': 'Triggear resync commit sha'},
+    pr_sha_mock = mocker.patch.object(gh_sut, 'get_latest_commit_sha',
+                                      return_value='sha')
+    hook_data = {'comment': {'body': Labels.pr_sync},
                  'repository': {'full_name': 'test_repo'},
                  'issue': {'number': 1, 'labels': [{'name': 'label1'}, {'name': 'label2'}]}}
 
     await gh_sut.handle_comment(hook_data)
 
     pr_branch_mock.assert_called_once_with(1, 'test_repo')
+    pr_sha_mock.assert_called_once_with(1, 'test_repo')
     assert mock_trigger_registered_jobs.call_count == 1
     calls = [call(branch='test_branch',
                   collection=ANY,
@@ -87,7 +94,7 @@ async def test_triggear_resync_no_labels(gh_sut: GithubHandler,
                                          mock_trigger_registered_jobs: MagicMock):
     pr_labels_mock = mocker.patch.object(gh_sut, 'get_pr_branch',
                                          return_value='test_branch')
-    hook_data = {'comment': {'body': 'Triggear resync labels sha'},
+    hook_data = {'comment': {'body': Labels.label_sync},
                  'repository': {'full_name': 'test_repo'},
                  'issue': {'number': 1, 'labels': []}}
 
