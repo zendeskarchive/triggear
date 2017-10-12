@@ -341,7 +341,7 @@ You want to rerun it without having to push something to PR.
 
 To do this simply open GitHub PR and write comment:
 ```
-Triggear resync <sha>
+Triggear resync labels <sha>
 ```
 
 By doing so following behaviour will start:

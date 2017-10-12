@@ -208,8 +208,8 @@ class GithubHandler:
                           in [item.split('=') for item in job_params]}
             logging.warning(f"Hook details: single run comment for repository {repository_name} and branch {pr_branch}")
             await self.trigger_unregistered_job(job_name, pr_branch, job_params, repository_name, pr_number)
-        elif data['comment']['body'].startswith('Triggear resync '):
-            commit_sha = data['comment']['body'].split()[2]
+        elif data['comment']['body'].startswith('Triggear resync labels '):
+            commit_sha = data['comment']['body'].split()[3]
             collection = self.__mongo_client.registered[EventTypes.labeled]
             repository_name = data['repository']['full_name']
             pr_number = data['issue']['number']
@@ -220,13 +220,31 @@ class GithubHandler:
                     "repository": repository_name,
                     "labels": label
                 }
-                logging.warning(f"Hook details: resync comment for repository {repository_name} and branch {pr_branch}")
+                logging.warning(f"Hook details: resync label {label} "
+                                f"for repository {repository_name} and branch {pr_branch}, sha {commit_sha}")
                 await self.trigger_registered_jobs(
                     collection=collection,
                     query=registration_query,
                     sha=commit_sha,
                     branch=pr_branch
                 )
+        elif data['comment']['body'].startswith('Triggear resync commit '):
+            commit_sha = data['comment']['body'].split()[3]
+            collection = self.__mongo_client.registered[EventTypes.pr_opened]
+            repository_name = data['repository']['full_name']
+            pr_number = data['issue']['number']
+            pr_branch = self.get_pr_branch(pr_number, repository_name)
+            registration_query = {
+                "repository": repository_name
+            }
+            logging.warning(f"Hook details: resync commit {commit_sha} "
+                            f"for repository {repository_name} and branch {pr_branch}")
+            await self.trigger_registered_jobs(
+                collection=collection,
+                query=registration_query,
+                sha=commit_sha,
+                branch=pr_branch
+            )
         else:
             return
 
