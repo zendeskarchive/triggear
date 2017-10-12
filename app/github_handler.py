@@ -249,7 +249,7 @@ class GithubHandler:
             return
 
     def get_latest_commit_sha(self, pr_number, repository_name):
-        return self.__gh_client.get_repo(repository_name).get_pull(pr_number).get_commits()[-1].sha
+        return self.__gh_client.get_repo(repository_name).get_pull(pr_number).head.sha
 
     def get_pr_branch(self, pr_number, repository_name):
         return self.__gh_client.get_repo(repository_name).get_pull(pr_number).head.ref
