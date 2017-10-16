@@ -6,6 +6,7 @@ import motor.motor_asyncio
 
 from aiohttp import web
 
+from app.health_handler import HealthHandler
 from app.pipeline_handler import PipelineHandler
 from app.triggear_config import TriggearConfig
 from app.github_handler import GithubHandler
@@ -30,12 +31,14 @@ def main():
     register_handler = PipelineHandler(github_client=gh_client,
                                        mongo_client=mongo_client,
                                        api_token=app_config.triggear_token)
+    health_handler = HealthHandler(api_token=app_config.triggear_token)
 
     app = web.Application()
     app.router.add_post('/github', github_handler.handle_hook)
     app.router.add_post('/register', register_handler.handle_register)
     app.router.add_post('/status', register_handler.handle_status)
     app.router.add_post('/comment', register_handler.handle_comment)
+    app.router.add_get('/health', health_handler.handle_health_check)
     web.run_app(app)
 
 
