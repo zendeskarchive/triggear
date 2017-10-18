@@ -119,18 +119,12 @@ class GithubHandler:
         tag = data['ref'][10:]
         repo = data['repository']['full_name']
         branch = ''
-        if data['base_ref'] is None:
-            pass
-        elif data['base_ref'].startstwith('/refs/tags'):
-            branch = data['base_ref'][11:]
-        else:
-            branch = data['base_ref']
         sha = data['after']
         registration_query = {
             "repository": repo,
         }
         logging.warning(f"Hook details: tagged for query {registration_query} "
-                        f"(branch: {branch}, sha: {sha}, tag: {tag})")
+                        f"(sha: {sha}, tag: {tag})")
         await self.trigger_registered_jobs(
             collection=collection,
             query=registration_query,
