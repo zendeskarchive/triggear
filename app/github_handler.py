@@ -118,7 +118,13 @@ class GithubHandler:
         collection = self.__mongo_client.registered[EventTypes.tagged]
         tag = data['ref'][10:]
         repo = data['repository']['full_name']
-        branch = data['base_ref'][11:]
+        branch = ''
+        if data['base_ref'].startstwith('/refs/tags'):
+            branch = data['base_ref'][11:]
+        elif data['base_ref'] is None:
+            pass
+        else:
+            branch = data['base_ref']
         sha = data['after']
         registration_query = {
             "repository": repo,
