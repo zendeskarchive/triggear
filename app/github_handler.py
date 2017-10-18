@@ -119,10 +119,10 @@ class GithubHandler:
         tag = data['ref'][10:]
         repo = data['repository']['full_name']
         branch = ''
-        if data['base_ref'].startstwith('/refs/tags'):
-            branch = data['base_ref'][11:]
-        elif data['base_ref'] is None:
+        if data['base_ref'] is None:
             pass
+        elif data['base_ref'].startstwith('/refs/tags'):
+            branch = data['base_ref'][11:]
         else:
             branch = data['base_ref']
         sha = data['after']
