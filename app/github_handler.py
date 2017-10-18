@@ -118,13 +118,13 @@ class GithubHandler:
         collection = self.__mongo_client.registered[EventTypes.tagged]
         tag = data['ref'][10:]
         repo = data['repository']['full_name']
-        branch = data['base_ref'][11:]
+        branch = ''
         sha = data['after']
         registration_query = {
             "repository": repo,
         }
         logging.warning(f"Hook details: tagged for query {registration_query} "
-                        f"(branch: {branch}, sha: {sha}, tag: {tag})")
+                        f"(sha: {sha}, tag: {tag})")
         await self.trigger_registered_jobs(
             collection=collection,
             query=registration_query,
