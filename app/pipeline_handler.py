@@ -20,7 +20,8 @@ class PipelineHandler:
                                              job_name,
                                              labels,
                                              requested_params,
-                                             branch_restrictions):
+                                             branch_restrictions,
+                                             change_restrictions):
         collection = self.__mongo_client.registered[event_type]
         job_registration = {
             "repository": repository,
@@ -30,6 +31,7 @@ class PipelineHandler:
         job_registration['labels'] = labels
         job_registration['requested_params'] = requested_params
         job_registration['branch_restrictions'] = branch_restrictions if branch_restrictions is not None else []
+        job_registration['change_restrictions'] = change_restrictions if change_restrictions is not None else []
         if not found_doc:
             result = await collection.insert_one(job_registration)
             logging.info(f"Inserted document with ID {repr(result.inserted_id)}")
@@ -50,7 +52,8 @@ class PipelineHandler:
             job_name=data['jobName'],
             labels=data['labels'],
             requested_params=data['requested_params'],
-            branch_restrictions=data.get('branch_restrictions')
+            branch_restrictions=data.get('branch_restrictions'),
+            change_restrictions=data.get('change_restrictions')
         )
         return aiohttp.web.Response(text='Register ACK')
 

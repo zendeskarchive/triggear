@@ -16,6 +16,18 @@ from app.event_types import EventTypes
 from app.labels import Labels
 
 
+def starts_with_item_from_list(string, list_of_strings):
+    return any([string.startswith(restriction) for restriction in list_of_strings])
+
+
+def any_of_changes_starts_with_any_restriction(changes, restrictions):
+    return any([starts_with_item_from_list(change, restrictions) for change in changes])
+
+
+def flatten_list(list_of_lists):
+    return [item for sublist in list_of_lists for item in sublist]
+
+
 class GithubHandler:
     BRANCH_DELETED_SHA = '0000000000000000000000000000000000000000'
 
@@ -173,7 +185,7 @@ class GithubHandler:
                     branch=pr_branch
                 )
         except Exception as e:
-            logging.error(f"Unexpected exception caught when triggering PR syncs: {e}")
+            logging.exception(f"Unexpected exception caught when triggering PR syncs: {e}")
 
     async def trigger_jobs_related_to_label_syncs(self, commit_sha, pr_branch, pr_labels, repository):
         try:
@@ -191,7 +203,7 @@ class GithubHandler:
                         branch=pr_branch
                     )
         except Exception as e:
-            logging.error(f"Unexpected exception caught when triggering label syncs: {e}")
+            logging.exception(f"Unexpected exception caught when triggering label syncs: {e}")
 
     def get_pr_labels(self, pr_number, repository):
         return [label.name for label in self.__gh_client.get_repo(repository).get_issue(pr_number).labels]
@@ -261,46 +273,65 @@ class GithubHandler:
         registration_query = {
             "repository": data['repository']['full_name']
         }
-        logging.warning(f"Hook details: push for query {registration_query} and branch {branch} with SHA: {commit_sha}")
+
+        commits = data['commits']
+        additions = flatten_list([commit['added'] for commit in commits])
+        removals = flatten_list([commit['removed'] for commit in commits])
+        modifications = flatten_list([commit['modified'] for commit in commits])
+        changes = set(additions + removals + modifications)
+
+        logging.warning(f"Hook details: push for query {registration_query} "
+                        f"and branch {branch} with SHA: {commit_sha}")
         if commit_sha != self.BRANCH_DELETED_SHA:
             await self.trigger_registered_jobs(
                 collection=collection,
                 query=registration_query,
                 sha=commit_sha,
-                branch=branch
+                branch=branch,
+                changes=changes
             )
         else:
             logging.warning(f"Branch {branch} was deleted as SHA was zeros only!")
 
-    async def trigger_registered_jobs(self, collection, query, sha, branch, tag=None):
+    async def trigger_registered_jobs(self, collection, query, sha, branch, tag=None, changes=None):
         async for document in collection.find(query):
             job_name = document['job']
+
             branch_restrictions = document.get('branch_restrictions')
             branch_restrictions = branch_restrictions if branch_restrictions is not None else []
-            if branch_restrictions == [] or branch in branch_restrictions:
-                job_requested_params = document['requested_params']
-                try:
-                    self.get_jobs_next_build_number(job_name)  # Raises if job does not exist on Jenkins
-                    if await self.can_trigger_job_by_branch(job_name, branch):
-                        await BackgroundTask().run(self.trigger_registered_job,
-                                                   (
-                                                       job_name,
-                                                       job_requested_params,
-                                                       document['repository'],
-                                                       sha,
-                                                       branch,
-                                                       tag
-                                                   ),
-                                                   callback=None)
-                except jenkins.NotFoundException as e:
-                    delete_query = query
-                    delete_query['job'] = job_name
-                    logging.error(f"Job {job_name} was not found on Jenkins anymore - deleting by query: {query}\n"
-                                  f"(Exception: {str(e)}")
-                    await collection.delete_one(delete_query)
+
+            change_restrictions = document.get('change_restrictions')
+            change_restrictions = change_restrictions if change_restrictions is not None else []
+
+            if not change_restrictions or any_of_changes_starts_with_any_restriction(change_restrictions, changes):
+                if branch_restrictions == [] or branch in branch_restrictions:
+                    job_requested_params = document['requested_params']
+                    try:
+                        self.get_jobs_next_build_number(job_name)  # Raises if job does not exist on Jenkins
+                        if await self.can_trigger_job_by_branch(job_name, branch):
+                            await BackgroundTask().run(self.trigger_registered_job,
+                                                       (
+                                                           job_name,
+                                                           job_requested_params,
+                                                           document['repository'],
+                                                           sha,
+                                                           branch,
+                                                           tag
+                                                       ),
+                                                       callback=None)
+                    except jenkins.NotFoundException as e:
+                        delete_query = query
+                        delete_query['job'] = job_name
+                        logging.exception(f"Job {job_name} was not found on Jenkins anymore - deleting by query: "
+                                          f"{query}\n (Exception: {e}")
+                        await collection.delete_one(delete_query)
+                else:
+                    logging.warning(f"Job {job_name} was registered with following branch restrictions: "
+                                    f"{branch_restrictions}. Current push was on {branch} branch, so Triggear will not "
+                                    f"build this job.")
             else:
-                logging.warning(f"Job {job_name} was registered with following branch restrictions: "
-                                f"{branch_restrictions}. Current push was on {branch} branch, so Triggear will not "
+                logging.warning(f"Job {job_name} was registered with following change restrictions: "
+                                f"{change_restrictions}. Current push had changes in {changes}, so Triggear will not "
                                 f"build this job.")
 
     def get_jobs_next_build_number(self, job_name):
@@ -313,8 +344,8 @@ class GithubHandler:
             try:
                 self.build_jenkins_job(job_name, job_params)
             except jenkins.JenkinsException as jexp:
-                logging.error(f"Job {job_name} did not accept {job_params} "
-                              f"as parameters but it was passed to it (Error: {jexp})")
+                logging.exception(f"Job {job_name} did not accept {job_params} "
+                                  f"as parameters but it was passed to it (Error: {jexp})")
                 return
 
             while await self.is_job_building(job_name, next_build_number):
@@ -335,8 +366,8 @@ class GithubHandler:
                          f"{final_description} ({build_info['url']})"
                 )
             else:
-                logging.error(f"Triggear was not able to find build number {next_build_number} for job {job_name}."
-                              f"Task aborted.")
+                logging.exception(f"Triggear was not able to find build number {next_build_number} for job {job_name}."
+                                  f"Task aborted.")
                 return
 
     def create_pr_comment(self, pr_number, repository, body):
@@ -405,8 +436,8 @@ class GithubHandler:
             self.build_jenkins_job(job_name, job_params)
             logging.warning(f"Scheduled build of: {job_name} #{next_build_number}")
         except jenkins.JenkinsException as jexp:
-            logging.error(f"Job {job_name} did not accept {job_params} "
-                          f"as parameters but it requested them (Error: {jexp})")
+            logging.exception(f"Job {job_name} did not accept {job_params} "
+                              f"as parameters but it requested them (Error: {jexp})")
             self.__gh_client.get_repo(repository).get_commit(sha).create_status(
                 state="error",
                 target_url=self.__jenkins_client.get_job_info(job_name).get('url'),
@@ -441,6 +472,6 @@ class GithubHandler:
                 description=final_description,
                 context=job_name)
         else:
-            logging.error(f"Triggear was not able to find build number {next_build_number} for job {job_name}."
-                          f"Task aborted.")
+            logging.exception(f"Triggear was not able to find build number {next_build_number} for job {job_name}."
+                              f"Task aborted.")
             return

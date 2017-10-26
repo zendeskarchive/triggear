@@ -15,7 +15,7 @@ def handle_exceptions():
                 logging.warning(f"Error in {func}: {missing_key} key is missing")
                 return aiohttp.web.Response(text=f'Error: {missing_key} is missing in request', status=400)
             except Exception as exc:
-                logging.error(f"Unknown error occurred in {func}: {exc}")
+                logging.exception(f"Unknown error occurred in {func}: {exc}")
                 return aiohttp.web.Response(text=f"Unknown error: {exc}", status=500)
         return wrapped
     return wrapper
