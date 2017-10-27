@@ -1,4 +1,4 @@
-from app.event_types import EventTypes
+from app.enums.event_types import EventTypes
 
 
 def test_types_are_as_in_hooks():

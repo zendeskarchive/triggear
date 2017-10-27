@@ -1,8 +1,8 @@
-import pytest
 import asynctest
+import pytest
 
-from app.github_handler import GithubHandler
-from app.labels import Labels
+from app.controllers.github_controller import GithubController
+from app.enums.labels import Labels
 
 pytestmark = pytest.mark.asyncio
 
@@ -10,14 +10,15 @@ pytestmark = pytest.mark.asyncio
 @pytest.mark.parametrize("hook_data, missing_key", [
     ({}, 'pull_request'),
     ({'pull_request': {}}, 'head'),
-    ({'pull_request': {'head': {}}}, 'sha'),
-    ({'pull_request': {'head': {'sha': '123123'}}}, 'ref'),
+    ({'pull_request': {'head': {'ref': 'branch', 'repo': {'full_name': 'repo'}}}}, 'sha'),
+    ({'pull_request': {'head': {'sha': '123123', 'repo': {'full_name': 'repo'}}}}, 'ref'),
+    ({'pull_request': {'head': {'sha': '123123'}}}, 'repo'),
     ({'pull_request': {'head': {'sha': '123123', 'ref': 'branch'}}}, 'repo'),
     ({'pull_request': {'head': {'sha': '123123', 'ref': 'branch', 'repo': {}}}}, 'full_name'),
     ({'pull_request': {'head': {'sha': '123123', 'ref': 'branch', 'repo': {'full_name': 'repo'}}}}, 'label'),
 
 ])
-async def test_handling_labeled(hook_data, missing_key, gh_sut: GithubHandler):
+async def test_handling_labeled(hook_data, missing_key, gh_sut: GithubController):
     with pytest.raises(KeyError) as exc_info:
         await gh_sut.handle_labeled(hook_data)
     assert missing_key in str(exc_info.value)
@@ -34,13 +35,13 @@ async def test_handling_labeled(hook_data, missing_key, gh_sut: GithubHandler):
                        'number': 'test_pr_number'}}, 'ref'),
 
 ])
-async def test_handling_synchronize(hook_data, missing_key, gh_sut: GithubHandler):
+async def test_handling_synchronize(hook_data, missing_key, gh_sut: GithubController):
     with pytest.raises(KeyError) as exc_info:
         await gh_sut.handle_synchronize(hook_data)
     assert missing_key in str(exc_info.value)
 
 
-async def test_empty_hook_handle(gh_sut: GithubHandler, mocker):
+async def test_empty_hook_handle(gh_sut: GithubController, mocker):
     label = mocker.patch.object(gh_sut, 'handle_labeled')
     sync = mocker.patch.object(gh_sut, 'handle_synchronize')
     comment = mocker.patch.object(gh_sut, 'handle_comment')
@@ -72,7 +73,7 @@ async def test_empty_hook_handle(gh_sut: GithubHandler, mocker):
       'repository': {'full_name': 'test_repo'}, 'issue': {'number': 1, 'labels': [{}]}}, 'name'),
 
 ])
-async def test_handling_synchronize(hook_data, missing_key, gh_sut: GithubHandler):
+async def test_handling_synchronize(hook_data, missing_key, gh_sut: GithubController):
     with pytest.raises(KeyError) as exc_info:
         await gh_sut.handle_comment(hook_data)
     assert missing_key in str(exc_info.value)

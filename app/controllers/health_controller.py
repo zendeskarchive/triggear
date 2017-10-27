@@ -1,11 +1,11 @@
-import aiohttp.web_request
 import aiohttp.web
+import aiohttp.web_request
 
-from app.auth_validation import validate_auth_header
-from app.err_handling import handle_exceptions
+from app.utilities.auth_validation import validate_auth_header
+from app.utilities.err_handling import handle_exceptions
 
 
-class HealthHandler:
+class HealthController:
     def __init__(self, api_token: str):
         self.api_token = api_token
 

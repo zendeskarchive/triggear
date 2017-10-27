@@ -3,13 +3,12 @@ import os
 import github
 import jenkins
 import motor.motor_asyncio
-
 from aiohttp import web
 
-from app.health_handler import HealthHandler
-from app.pipeline_handler import PipelineHandler
-from app.triggear_config import TriggearConfig
-from app.github_handler import GithubHandler
+from app.controllers.github_controller import GithubController
+from app.controllers.health_controller import HealthController
+from app.controllers.pipeline_controller import PipelineController
+from configs.triggear_config import TriggearConfig
 
 
 def main():
@@ -21,24 +20,22 @@ def main():
     jenkins_client = jenkins.Jenkins(url=app_config.jenkins_url,
                                      username=app_config.jenkins_user_id,
                                      password=app_config.jenkins_api_token)
-    rerun_time_limit = app_config.rerun_time_limit
 
-    github_handler = GithubHandler(github_client=gh_client,
-                                   mongo_client=mongo_client,
-                                   jenkins_client=jenkins_client,
-                                   rerun_time_limit=rerun_time_limit,
-                                   api_token=app_config.triggear_token)
-    register_handler = PipelineHandler(github_client=gh_client,
-                                       mongo_client=mongo_client,
-                                       api_token=app_config.triggear_token)
-    health_handler = HealthHandler(api_token=app_config.triggear_token)
+    github_controller = GithubController(github_client=gh_client,
+                                         mongo_client=mongo_client,
+                                         jenkins_client=jenkins_client,
+                                         config=app_config)
+    pipeline_controller = PipelineController(github_client=gh_client,
+                                             mongo_client=mongo_client,
+                                             api_token=app_config.triggear_token)
+    health_controller = HealthController(api_token=app_config.triggear_token)
 
     app = web.Application()
-    app.router.add_post('/github', github_handler.handle_hook)
-    app.router.add_post('/register', register_handler.handle_register)
-    app.router.add_post('/status', register_handler.handle_status)
-    app.router.add_post('/comment', register_handler.handle_comment)
-    app.router.add_get('/health', health_handler.handle_health_check)
+    app.router.add_post('/github', github_controller.handle_hook)
+    app.router.add_post('/register', pipeline_controller.handle_register)
+    app.router.add_post('/status', pipeline_controller.handle_status)
+    app.router.add_post('/comment', pipeline_controller.handle_comment)
+    app.router.add_get('/health', health_controller.handle_health_check)
     web.run_app(app)
 
 

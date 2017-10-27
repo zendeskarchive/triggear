@@ -1,12 +1,11 @@
 import asyncio
-
 from asyncio.selector_events import BaseSelectorEventLoop
 from unittest.mock import Mock
 
 import pytest
 from pytest_mock import MockFixture
 
-from app.background_task import BackgroundTask
+from app.utilities.background_task import BackgroundTask
 
 pytestmark = pytest.mark.asyncio
 
