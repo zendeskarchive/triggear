@@ -16,14 +16,16 @@ async def test_trigger_jobs_related_to_push(gh_sut: GithubHandler,
                                             parsed_ref):
     hook_data = {'after': 'test_sha',
                  'ref': ref,
-                 'repository': {'full_name': 'test_repo'}}
+                 'repository': {'full_name': 'test_repo'},
+                 'commits': [{'added': ['c'], 'removed': ['b'], 'modified': ['a']}]}
 
     await gh_sut.handle_push(hook_data)
 
     mock_trigger_registered_jobs.assert_called_once_with(branch=parsed_ref,
                                                          collection=ANY,
                                                          query={'repository': 'test_repo'},
-                                                         sha='test_sha')
+                                                         sha='test_sha',
+                                                         changes={'a', 'b', 'c'})
 
 
 async def test_when_push_is_branch_delete_should_not_trigger_anything(gh_sut: GithubHandler,
@@ -31,7 +33,8 @@ async def test_when_push_is_branch_delete_should_not_trigger_anything(gh_sut: Gi
     hook_data = {
         'after': '0000000000000000000000000000000000000000',
         'ref': 'refs/heads/test_branch',
-        'repository': {'full_name': 'test_repo'}
+        'repository': {'full_name': 'test_repo'},
+        'commits': []
     }
 
     await gh_sut.handle_push(hook_data)

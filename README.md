@@ -194,7 +194,7 @@ repository X and get branch and commit SHA of this push (e.g.
 you want to run unittests job for every push)
 
 To solve that you want your pipeline to use Triggear 
-var `triggearRegister`:
+method `registerForPushes`:
 
 ```groovy
 // Assuming you called this shared library "Triggear" in Jenkins
@@ -220,6 +220,29 @@ will be set based on it's results:
 
 You can see, that job name is set as status context. When you click
 on Details link you will be redirected to your job build URL.
+
+__Case #3__ You want your pipeline to be run on every push to 
+repository X only if something changed in directory 'X/Y' or file
+'Z'
+
+To do it, you will need to pass changeRestrictions parameter to registerForPushes
+method:
+```groovy
+// Assuming you called this shared library "Triggear" in Jenkins
+// Ommit this line if you add Triggear as shared library implicitly
+@Library(['Triggear']) _
+
+import com.futuresimple.triggear.RequestParam
+import com.futuresimple.triggear.Triggear
+
+Triggear triggear = new Triggear(this, 'X')
+triggear.registerForPushes([RequestParam.BRANCH, RequestParam.SHA], [], ['X/Y', 'Z'])
+```
+
+Please note, that it works in a way, that Triggear checks if any files paths 
+changed/added/removed in current push starts with strings mentioned in changeRestrictions
+parameter. If so - job will be triggered. If not - nothing happens, message is logged in 
+Triggear.
 <a name="label"/>
 #### ii. Running jobs when PR is labeled
 

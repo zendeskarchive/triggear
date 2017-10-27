@@ -37,12 +37,15 @@ class Triggear implements Serializable {
      * @param branchRestrictions Branches for which this job should be triggered. Pushes to other branches will be
      * ignored
      */
-    void registerForPushes(List<RequestParam> requestedParams, List<String> branchRestrictions = []) {
+    void registerForPushes(List<RequestParam> requestedParams,
+            List<String> branchRestrictions = [],
+            List<String> changeRestrictions = []) {
         raiseIfTagRequested(requestedParams)
         register(EventType.PUSH,
             [],
             requestedParams,
-            branchRestrictions
+            branchRestrictions,
+            changeRestrictions
         )
     }
 
@@ -135,7 +138,8 @@ class Triggear implements Serializable {
     private void register(EventType eventType,
                           List<String> labels,
                           List<RequestParam> requestedParams,
-                          List<String> branchRestrictions = []) {
+                          List<String> branchRestrictions = [],
+                          List<String> changeRestrictions = []) {
         sendRequestToTriggearService('register',
             [
                 eventType           : eventType.getEventName(),
@@ -143,7 +147,8 @@ class Triggear implements Serializable {
                 jobName             : context.env.JOB_NAME,
                 labels              : labels,
                 requested_params    : requestedParams.collect { it.getRequestParam() },
-                branch_restrictions : branchRestrictions
+                branch_restrictions : branchRestrictions,
+                changeRestrictions  : changeRestrictions
             ]
         )
     }

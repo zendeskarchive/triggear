@@ -158,3 +158,21 @@ def mock_collection_with_branch_restriction():
         async def delete_one(query):
             return
     yield Collection
+
+
+@pytest.fixture
+def mock_collection_with_change_restriction():
+    class Collection:
+        @staticmethod
+        def find(query):
+            return AsyncIterFromList(
+                [{'job': 'test_job_1',
+                  'requested_params': [],
+                  'repository': 'test_repo_1',
+                  'change_restrictions': ['some_file', 'another/directory']}]
+            )
+
+        @staticmethod
+        async def delete_one(query):
+            return
+    yield Collection

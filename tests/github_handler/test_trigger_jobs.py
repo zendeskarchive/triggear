@@ -230,3 +230,43 @@ async def test_push_hook_meets_branch_restriction(gh_sut: GithubHandler,
                                                         'test_sha',
                                                         'master',
                                                         None)
+
+
+async def test_push_hook_does_not_meet_change_restriction(gh_sut: GithubHandler,
+                                                          mock_collection_with_change_restriction: MagicMock,
+                                                          mock_trigger_registered_job: MagicMock,
+                                                          mock_can_trigger_job_by_branch: MagicMock):
+    await gh_sut.trigger_registered_jobs(collection=mock_collection_with_change_restriction,
+                                         query={},
+                                         sha='test_sha',
+                                         branch='test_branch',
+                                         changes=['different_file', 'different/dir'])
+    time.sleep(0.3)
+
+    mock_can_trigger_job_by_branch.assert_not_called()
+    mock_trigger_registered_job.assert_not_called()
+
+
+@pytest.mark.parametrize("changes", [
+    'some_file',
+    'another/directory',
+])
+async def test_push_hook_meets_change_restriction(gh_sut: GithubHandler,
+                                                  mock_collection_with_change_restriction: MagicMock,
+                                                  mock_trigger_registered_job: MagicMock,
+                                                  mock_can_trigger_job_by_branch: MagicMock,
+                                                  changes: str):
+    await gh_sut.trigger_registered_jobs(collection=mock_collection_with_change_restriction,
+                                         query={},
+                                         sha='test_sha',
+                                         branch='master',
+                                         changes=[changes, 'different/dir', 'different_file'])
+    time.sleep(0.3)
+
+    mock_can_trigger_job_by_branch.assert_called_once_with('test_job_1', 'master')
+    mock_trigger_registered_job.assert_called_once_with('test_job_1',
+                                                        [],
+                                                        'test_repo_1',
+                                                        'test_sha',
+                                                        'master',
+                                                        None)
