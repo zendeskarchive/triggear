@@ -303,7 +303,7 @@ class GithubHandler:
             change_restrictions = document.get('change_restrictions')
             change_restrictions = change_restrictions if change_restrictions is not None else []
 
-            if not change_restrictions or any_of_changes_starts_with_any_restriction(change_restrictions, changes):
+            if not change_restrictions or any_of_changes_starts_with_any_restriction(changes, change_restrictions):
                 if branch_restrictions == [] or branch in branch_restrictions:
                     job_requested_params = document['requested_params']
                     try:
