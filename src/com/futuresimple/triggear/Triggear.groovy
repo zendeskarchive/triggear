@@ -148,7 +148,7 @@ class Triggear implements Serializable {
                 labels              : labels,
                 requested_params    : requestedParams.collect { it.getRequestParam() },
                 branch_restrictions : branchRestrictions,
-                changeRestrictions  : changeRestrictions
+                change_restrictions  : changeRestrictions
             ]
         )
     }
