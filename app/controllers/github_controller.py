@@ -94,7 +94,7 @@ class GithubController:
             logging.warning('Label set')
 
     def set_pr_sync_label(self, repo, pr_number):
-        self.__gh_client.get_repo(repo).get_issue(pr_number).set_labels(Labels.pr_sync)
+        self.__gh_client.get_repo(repo).get_issue(pr_number).add_to_labels(Labels.pr_sync)
 
     def get_repo_labels(self, repo: str):
         return [label.name for label in self.__gh_client.get_repo(repo).get_labels()]
