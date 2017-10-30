@@ -10,6 +10,7 @@ import github
 import jenkins
 import motor.motor_asyncio
 
+from app.config.triggear_config import TriggearConfig
 from app.dto.hook_details import HookDetails
 from app.dto.hook_details_factory import HookDetailsFactory
 from app.enums.event_types import EventTypes
@@ -18,7 +19,6 @@ from app.utilities.background_task import BackgroundTask
 from app.utilities.constants import LAST_RUN_IN, BRANCH_DELETED_SHA, TRIGGEAR_RUN_PREFIX
 from app.utilities.err_handling import handle_exceptions
 from app.utilities.functions import any_starts_with
-from configs.triggear_config import TriggearConfig
 
 
 class GithubController:

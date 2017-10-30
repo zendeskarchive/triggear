@@ -43,7 +43,7 @@ def gh_sut(mocker: MockFixture):
     mock_jenkins = mocker.patch('app.controllers.github_controller.jenkins.Jenkins')
     mock_github = mocker.patch('app.controllers.github_controller.github.Github')
     mock_mongo = mocker.patch('motor.motor_asyncio.AsyncIOMotorClient')
-    mock_config = mocker.patch('configs.triggear_config.TriggearConfig')
+    mock_config = mocker.patch('app.config.triggear_config.TriggearConfig')
 
     with patch('app.controllers.github_controller.asyncio.sleep'):
         yield GithubController(mock_github, mock_mongo, mock_jenkins, mock_config)

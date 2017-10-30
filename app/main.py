@@ -5,10 +5,10 @@ import jenkins
 import motor.motor_asyncio
 from aiohttp import web
 
+from app.config.triggear_config import TriggearConfig
 from app.controllers.github_controller import GithubController
 from app.controllers.health_controller import HealthController
 from app.controllers.pipeline_controller import PipelineController
-from configs.triggear_config import TriggearConfig
 
 
 def main():
