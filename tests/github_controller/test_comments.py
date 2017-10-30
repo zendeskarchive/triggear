@@ -1,14 +1,16 @@
 import pytest
-from asynctest import MagicMock, call, ANY
+from asynctest import MagicMock, call
 from pytest_mock import MockFixture
 
-from app.github_handler import GithubHandler
-from app.labels import Labels
+from app.controllers.github_controller import GithubController
+from app.dto.hook_details import HookDetails
+from app.enums.event_types import EventTypes
+from app.enums.labels import Labels
 
 pytestmark = pytest.mark.asyncio
 
 
-async def test_run_test_no_params(gh_sut: GithubHandler,
+async def test_run_test_no_params(gh_sut: GithubController,
                                   mocker: MockFixture,
                                   mock_trigger_unregistered_jobs: MagicMock):
     pr_labels_mock = mocker.patch.object(gh_sut, 'get_pr_branch',
@@ -23,7 +25,7 @@ async def test_run_test_no_params(gh_sut: GithubHandler,
     mock_trigger_unregistered_jobs.assert_called_once_with('test', 'test_branch', {}, 'test_repo', 1)
 
 
-async def test_run_test_with_params(gh_sut: GithubHandler,
+async def test_run_test_with_params(gh_sut: GithubController,
                                     mocker: MockFixture,
                                     mock_trigger_unregistered_jobs: MagicMock):
     pr_labels_mock = mocker.patch.object(gh_sut, 'get_pr_branch',
@@ -39,7 +41,7 @@ async def test_run_test_with_params(gh_sut: GithubHandler,
                                                            {'param1': 'value1', 'param2': 'value2'}, 'test_repo', 1)
 
 
-async def test_triggear_resync_labels(gh_sut: GithubHandler,
+async def test_triggear_resync_labels(gh_sut: GithubController,
                                       mocker: MockFixture,
                                       mock_trigger_registered_jobs: MagicMock):
     pr_branch_mock = mocker.patch.object(gh_sut, 'get_pr_branch',
@@ -55,18 +57,21 @@ async def test_triggear_resync_labels(gh_sut: GithubHandler,
     pr_branch_mock.assert_called_once_with(1, 'test_repo')
     pr_sha_mock.assert_called_once_with(1, 'test_repo')
     assert mock_trigger_registered_jobs.call_count == 2
-    calls = [call(branch='test_branch',
-                  collection=ANY,
-                  query={'labels': 'label1', 'repository': 'test_repo'},
-                  sha='sha'),
-             call(branch='test_branch',
-                  collection=ANY,
-                  query={'labels': 'label2', 'repository': 'test_repo'},
-                  sha='sha')]
-    mock_trigger_registered_jobs.assert_has_calls(calls)
+    hook_details_1 = call(HookDetails(event_type=EventTypes.labeled,
+                                      branch='test_branch',
+                                      repository='test_repo',
+                                      sha='sha',
+                                      labels='label1'))
+    hook_details_2 = call(HookDetails(event_type=EventTypes.labeled,
+                                      branch='test_branch',
+                                      repository='test_repo',
+                                      sha='sha',
+                                      labels='label2'))
+    assert mock_trigger_registered_jobs.call_args_list[0] == hook_details_1
+    assert mock_trigger_registered_jobs.call_args_list[1] == hook_details_2
 
 
-async def test_triggear_resync_commit(gh_sut: GithubHandler,
+async def test_triggear_resync_commit(gh_sut: GithubController,
                                       mocker: MockFixture,
                                       mock_trigger_registered_jobs: MagicMock):
     pr_branch_mock = mocker.patch.object(gh_sut, 'get_pr_branch',
@@ -82,14 +87,14 @@ async def test_triggear_resync_commit(gh_sut: GithubHandler,
     pr_branch_mock.assert_called_once_with(1, 'test_repo')
     pr_sha_mock.assert_called_once_with(1, 'test_repo')
     assert mock_trigger_registered_jobs.call_count == 1
-    calls = [call(branch='test_branch',
-                  collection=ANY,
-                  query={'repository': 'test_repo'},
-                  sha='sha')]
+    calls = [call(HookDetails(event_type=EventTypes.pr_opened,
+                              branch='test_branch',
+                              repository='test_repo',
+                              sha='sha'))]
     mock_trigger_registered_jobs.assert_has_calls(calls)
 
 
-async def test_triggear_resync_no_labels(gh_sut: GithubHandler,
+async def test_triggear_resync_no_labels(gh_sut: GithubController,
                                          mocker: MockFixture,
                                          mock_trigger_registered_jobs: MagicMock):
     pr_labels_mock = mocker.patch.object(gh_sut, 'get_pr_branch',
@@ -104,7 +109,7 @@ async def test_triggear_resync_no_labels(gh_sut: GithubHandler,
     mock_trigger_registered_jobs.assert_not_called()
 
 
-async def test_not_relevant_comment(gh_sut: GithubHandler,
+async def test_not_relevant_comment(gh_sut: GithubController,
                                     mocker: MockFixture,
                                     mock_trigger_registered_jobs: MagicMock):
     pr_labels_mock = mocker.patch.object(gh_sut, 'get_pr_branch',

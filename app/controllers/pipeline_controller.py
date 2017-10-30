@@ -3,12 +3,12 @@ import logging
 import aiohttp.web
 import aiohttp.web_request
 
-from app.auth_validation import validate_auth_header
-from app.err_handling import handle_exceptions
-from app.requested_params import RequestedParams
+from app.enums.requested_params import RequestedParams
+from app.utilities.auth_validation import validate_auth_header
+from app.utilities.err_handling import handle_exceptions
 
 
-class PipelineHandler:
+class PipelineController:
     def __init__(self, github_client, mongo_client, api_token):
         self.__gh_client = github_client
         self.__mongo_client = mongo_client

@@ -1,7 +1,7 @@
 import asynctest
 import pytest
 
-from app.github_handler import GithubHandler
+from app.controllers.github_controller import GithubController
 
 pytestmark = pytest.mark.asyncio
 
@@ -11,7 +11,7 @@ pytestmark = pytest.mark.asyncio
     ({'action': 'created'}, 'handle_comment'),
     ({'action': 'synchronize'}, 'handle_synchronize'),
 ])
-async def test_handling_action_hooks(gh_sut: GithubHandler, hook_data, hook_method):
+async def test_handling_action_hooks(gh_sut: GithubController, hook_data, hook_method):
     with asynctest.patch.object(gh_sut, 'get_request_json', return_value=hook_data):
         with asynctest.patch.object(gh_sut, 'validate_webhook_secret', return_value='AUTHORIZED'):
             with asynctest.patch.object(gh_sut, hook_method) as handle_method:
@@ -20,7 +20,7 @@ async def test_handling_action_hooks(gh_sut: GithubHandler, hook_data, hook_meth
                 handle_method.assert_called_once_with(hook_data)
 
 
-async def test_handling_push(gh_sut: GithubHandler):
+async def test_handling_push(gh_sut: GithubController):
     with asynctest.patch.object(gh_sut, 'get_request_json',
                                 return_value={'action': 'not_matched', 'ref': 'refs/heads/master'}):
         with asynctest.patch.object(gh_sut, 'validate_webhook_secret', return_value='AUTHORIZED'):
@@ -31,7 +31,7 @@ async def test_handling_push(gh_sut: GithubHandler):
                     handle_mock.assert_called_once_with({'action': 'not_matched', 'ref': 'refs/heads/master'})
 
 
-async def test_handling_pr_opened(gh_sut: GithubHandler):
+async def test_handling_pr_opened(gh_sut: GithubController):
     with asynctest.patch.object(gh_sut, 'get_request_json',
                                 return_value={'action': 'opened', 'ref': 'refs/heads/master'}):
         with asynctest.patch.object(gh_sut, 'validate_webhook_secret', return_value='AUTHORIZED'):
@@ -47,7 +47,7 @@ async def test_handling_pr_opened(gh_sut: GithubHandler):
     ({'action': 'created'}, 'handle_comment'),
     ({'action': 'synchronize'}, 'handle_synchronize'),
 ])
-async def test_handling_action_hooks(gh_sut: GithubHandler, hook_data, hook_method):
+async def test_handling_action_hooks(gh_sut: GithubController, hook_data, hook_method):
     with asynctest.patch.object(gh_sut, 'get_request_json', return_value=hook_data):
         with asynctest.patch.object(gh_sut, 'validate_webhook_secret', return_value='AUTHORIZED'):
             with asynctest.patch.object(gh_sut, hook_method, side_effect=Exception()) as handle_method:

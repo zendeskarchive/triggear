@@ -4,8 +4,8 @@ import pytest
 from asynctest import patch
 from pytest_mock import MockFixture
 
-from app.background_task import BackgroundTask
-from app.github_handler import GithubHandler
+from app.controllers.github_controller import GithubController
+from app.utilities.background_task import BackgroundTask
 from tests.goodies import AsyncIterFromList
 
 
@@ -40,12 +40,13 @@ def callback():
 
 @pytest.fixture
 def gh_sut(mocker: MockFixture):
-    mock_jenkins = mocker.patch('app.github_handler.jenkins.Jenkins')
-    mock_github = mocker.patch('app.github_handler.github.Github')
+    mock_jenkins = mocker.patch('app.controllers.github_controller.jenkins.Jenkins')
+    mock_github = mocker.patch('app.controllers.github_controller.github.Github')
     mock_mongo = mocker.patch('motor.motor_asyncio.AsyncIOMotorClient')
+    mock_config = mocker.patch('configs.triggear_config.TriggearConfig')
 
-    with patch('app.github_handler.asyncio.sleep'):
-        yield GithubHandler(mock_github, mock_mongo, mock_jenkins, 0, '')
+    with patch('app.controllers.github_controller.asyncio.sleep'):
+        yield GithubController(mock_github, mock_mongo, mock_jenkins, mock_config)
 
 
 @pytest.fixture
