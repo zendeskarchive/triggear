@@ -178,7 +178,7 @@ var `triggearRegister`:
 // Ommit this line if you add Triggear as shared library implicitly
 @Library(['Triggear']) _
 
-import com.futuresimple.triggear.RequestParam
+import com.futuresimple.triggear.PipelineParameters
 import com.futuresimple.triggear.Triggear
 
 Triggear triggear = new Triggear(this, 'org/repo')
@@ -201,7 +201,7 @@ method `registerForPushes`:
 // Ommit this line if you add Triggear as shared library implicitly
 @Library(['Triggear']) _
 
-import com.futuresimple.triggear.RequestParam
+import com.futuresimple.triggear.PipelineParameters
 import com.futuresimple.triggear.Triggear
 
 Triggear triggear = new Triggear(this, 'X')
@@ -232,7 +232,7 @@ method:
 // Ommit this line if you add Triggear as shared library implicitly
 @Library(['Triggear']) _
 
-import com.futuresimple.triggear.RequestParam
+import com.futuresimple.triggear.PipelineParameters
 import com.futuresimple.triggear.Triggear
 
 Triggear triggear = new Triggear(this, 'X')
@@ -257,7 +257,7 @@ var `triggearRegister`:
 // Ommit this line if you add Triggear as shared library implicitly
 @Library(['Triggear']) _
 
-import com.futuresimple.triggear.RequestParam
+import com.futuresimple.triggear.PipelineParameters
 import com.futuresimple.triggear.Triggear
 
 Triggear triggear = new Triggear(this, 'X')
@@ -280,7 +280,7 @@ var `triggearRegister`:
 // Ommit this line if you add Triggear as shared library implicitly
 @Library(['Triggear']) _
 
-import com.futuresimple.triggear.RequestParam
+import com.futuresimple.triggear.PipelineParameters
 import com.futuresimple.triggear.Triggear
 
 Triggear triggear = new Triggear(this, 'X')
@@ -313,7 +313,7 @@ At first you need to register your job for label Y in repo X:
 // Ommit this line if you add Triggear as shared library implicitly
 @Library(['Triggear']) _
 
-import com.futuresimple.triggear.RequestParam
+import com.futuresimple.triggear.PipelineParameters
 import com.futuresimple.triggear.Triggear
 
 Triggear triggear = new Triggear(this, 'X')
@@ -343,7 +343,7 @@ At first you need to register your job for PR opened events in repo X:
 // Ommit this line if you add Triggear as shared library implicitly
 @Library(['Triggear']) _
 
-import com.futuresimple.triggear.RequestParam
+import com.futuresimple.triggear.PipelineParameters
 import com.futuresimple.triggear.Triggear
 
 Triggear triggear = new Triggear(this, 'X')
@@ -397,7 +397,7 @@ To do so - in your Pipeline, once it's done call `triggearStatus`
 var:
 
 ```groovy
-import com.futuresimple.triggear.CommitState
+import com.futuresimple.triggear.CommitStatus
 
 // this is the case when your job handles sha as param
 triggear.addCommitStatus(params.sha, 
@@ -451,7 +451,7 @@ To do so you need to register your job for `tagged` events in repo X:
 // Assuming you called this shared library "Triggear" in Jenkins
 @Library(['Triggear']) _
 
-import com.futuresimple.triggear.RequestParam
+import com.futuresimple.triggear.PipelineParameters
 import com.futuresimple.triggear.Triggear
 
 Triggear triggear = new Triggear(this, 'X')
