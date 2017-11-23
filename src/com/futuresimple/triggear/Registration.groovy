@@ -45,8 +45,8 @@ class Registration {
         return new TagBuilder()
     }
 
-    static LabelBuilder forLabels(){
-        return new LabelBuilder()
+    static LabelBuilder forLabels(String... labels){
+        return new LabelBuilder(labels)
     }
 
     static PrBuilder forPrOpened(){
@@ -86,8 +86,9 @@ class Registration {
     }
 
     static class LabelBuilder implements Builder {
-        LabelBuilder(){
+        LabelBuilder(String... labels){
             eventType = EventType.LABEL
+            request.labels = labels
         }
 
         LabelBuilder addLabel(String label){
