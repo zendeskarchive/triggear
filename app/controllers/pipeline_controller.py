@@ -4,9 +4,10 @@ from typing import List, Optional, Dict
 import aiohttp.web
 import aiohttp.web_request
 
-from app.enums.comment_request_data import CommentRequestData
-from app.enums.requested_params import RequestedParams
-from app.enums.status_request_data import StatusRequestData
+from app.enums.registration_fields import RegistrationFields
+from app.request_schemes.comment_request_data import CommentRequestData
+from app.request_schemes.register_request_data import RegisterRequestData
+from app.request_schemes.status_request_data import StatusRequestData
 from app.utilities.auth_validation import validate_auth_header
 from app.utilities.err_handling import handle_exceptions
 
@@ -28,15 +29,15 @@ class PipelineController:
                                              file_restrictions: Optional[List[str]]):
         collection = self.__mongo_client.registered[event_type]
         job_registration = {
-            "repository": repository,
-            "job": job_name
+            RegistrationFields.repository: repository,
+            RegistrationFields.job: job_name
         }
         found_doc = await collection.find_one(job_registration)
-        job_registration['labels'] = labels
-        job_registration['requested_params'] = requested_params
-        job_registration['branch_restrictions'] = branch_restrictions if branch_restrictions is not None else []
-        job_registration['change_restrictions'] = change_restrictions if change_restrictions is not None else []
-        job_registration['file_restrictions'] = file_restrictions if file_restrictions is not None else []
+        job_registration[RegistrationFields.labels] = labels
+        job_registration[RegistrationFields.requested_params] = requested_params
+        job_registration[RegistrationFields.branch_restrictions] = branch_restrictions if branch_restrictions is not None else []
+        job_registration[RegistrationFields.change_restrictions] = change_restrictions if change_restrictions is not None else []
+        job_registration[RegistrationFields.file_restrictions] = file_restrictions if file_restrictions is not None else []
         if not found_doc:
             result = await collection.insert_one(job_registration)
             logging.info(f"Inserted document with ID {repr(result.inserted_id)}")
@@ -49,7 +50,7 @@ class PipelineController:
     async def handle_register(self, request: aiohttp.web_request.Request):
         data: Dict = await request.json()
         logging.warning(f"Register REQ received: {data}")
-        if not self.are_params_valid(data):
+        if not RegisterRequestData.is_valid_register_request_data(data):
             return aiohttp.web.Response(reason='Invalid requested params!', status=400)
         await self.add_registration_if_not_exists(
             event_type=data['eventType'],
@@ -62,13 +63,6 @@ class PipelineController:
             file_restrictions=data.get('file_restrictions')
         )
         return aiohttp.web.Response(text='Register ACK')
-
-    @staticmethod
-    def are_params_valid(data: Dict):
-        for param in data['requested_params']:
-            if param not in RequestedParams.get_allowed():
-                return False
-        return True
 
     async def __create_or_update_status(self, repository, sha, state, description, url, context):
         self.__gh_client.get_repo(repository).get_commit(sha).create_status(
