@@ -4,7 +4,9 @@ from typing import List, Optional, Dict
 import aiohttp.web
 import aiohttp.web_request
 
+from app.enums.comment_request_data import CommentRequestData
 from app.enums.requested_params import RequestedParams
+from app.enums.status_request_data import StatusRequestData
 from app.utilities.auth_validation import validate_auth_header
 from app.utilities.err_handling import handle_exceptions
 
@@ -63,9 +65,8 @@ class PipelineController:
 
     @staticmethod
     def are_params_valid(data: Dict):
-        allowed_params = RequestedParams.get_allowed()
         for param in data['requested_params']:
-            if param not in allowed_params:
+            if param not in RequestedParams.get_allowed():
                 return False
         return True
 
@@ -81,6 +82,8 @@ class PipelineController:
     @validate_auth_header()
     async def handle_status(self, request: aiohttp.web_request.Request):
         data = await request.json()
+        if not StatusRequestData.is_valid_status_data(data):
+            return aiohttp.web.Response(reason='Invalid status request params!', status=400)
         logging.warning(f"Status REQ received: {data}")
         await self.__create_or_update_status(
             repository=data['repository'],
@@ -96,6 +99,8 @@ class PipelineController:
     @validate_auth_header()
     async def handle_comment(self, request: aiohttp.web_request.Request):
         data = await request.json()
+        if not CommentRequestData.is_valid_comment_data(data):
+            return aiohttp.web.Response(reason='Invalid comment request params!', status=400)
         logging.warning(f"Comment REQ received: {data}")
         await self.__create_comment(
             repository=data['repository'],
