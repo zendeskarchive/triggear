@@ -9,17 +9,20 @@ from app.utilities.background_task import BackgroundTask
 
 pytestmark = pytest.mark.asyncio
 
+
 async def test_coro_no_args(empty_coro: Mock, background_task: BackgroundTask):
     await background_task.run(empty_coro, ())
     await asyncio.sleep(0.1)
 
     empty_coro.assert_called_once_with()
 
+
 async def test_coro_with_args(empty_coro: Mock, background_task: BackgroundTask):
     await background_task.run(empty_coro, (12,))
     await asyncio.sleep(0.1)
 
     empty_coro.assert_called_once_with(12)
+
 
 async def test_loop_is_opened_and_closed(mocker: MockFixture, empty_coro: Mock, background_task: BackgroundTask):
     mocker.spy(asyncio, 'new_event_loop')
@@ -30,6 +33,7 @@ async def test_loop_is_opened_and_closed(mocker: MockFixture, empty_coro: Mock, 
 
     assert asyncio.new_event_loop.call_count == 1
     assert BaseSelectorEventLoop.close.call_count == 1
+
 
 async def test_success_callback_is_called(empty_coro: Mock, callback: Mock, background_task: BackgroundTask):
     await background_task.run(empty_coro, (), callback=callback)

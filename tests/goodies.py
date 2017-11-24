@@ -1,9 +1,12 @@
 import asyncio
 from typing import List
+from typing import Any
+from typing import Dict
 
 
 class AsyncIterFromList:
     def __init__(self, tasks: List):
+        # type: (List[Dict[str, Any]]) -> None
         self.not_done = tasks
         self.done = list()
     async def __aiter__(self):

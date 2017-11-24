@@ -19,6 +19,9 @@ from app.utilities.background_task import BackgroundTask
 from app.utilities.constants import LAST_RUN_IN, BRANCH_DELETED_SHA, TRIGGEAR_RUN_PREFIX
 from app.utilities.err_handling import handle_exceptions
 from app.utilities.functions import any_starts_with
+from aiohttp.web_response import Response
+from typing import Optional
+from typing import Tuple
 
 
 class GithubController:
@@ -49,11 +52,11 @@ class GithubController:
         return 'AUTHORIZED'
 
     @staticmethod
-    async def get_request_json(request):
+    async def get_request_json(request: aiohttp.web_request.Request) -> Dict:
         return await request.json()
 
     @handle_exceptions()
-    async def handle_hook(self, request: aiohttp.web_request.Request):
+    async def handle_hook(self, request: aiohttp.web_request.Request) -> Optional[Response]:
         validation = await self.validate_webhook_secret(request)
         if validation != 'AUTHORIZED':
             return aiohttp.web.Response(text=validation[1], status=validation[0])
@@ -79,7 +82,7 @@ class GithubController:
         return aiohttp.web.Response(text='Hook ACK')
 
     @staticmethod
-    async def get_request_event_header(request):
+    async def get_request_event_header(request: aiohttp.web_request.Request) -> str:
         return request.headers['X-GitHub-Event']
 
     async def handle_pr_opened(self, data: dict):
@@ -126,7 +129,8 @@ class GithubController:
             if Labels.label_sync in pr_labels and len(pr_labels) > 1:
                 pr_labels.remove(Labels.label_sync)
                 for label in pr_labels:
-                    # update data to have fields required from labeled hook - necessary for HookDetailsFactory in handle_labeled
+                    # update data to have fields required from labeled hook
+                    # it's necessary for HookDetailsFactory in handle_labeled
                     data.update({'label': {'name': label}})
                     logging.warning(f'Sync hook on PR with {Labels.label_sync} - handling like PR open')
                     await self.handle_labeled(data)
@@ -150,7 +154,7 @@ class GithubController:
         head_branch, head_sha = await self.__get_comment_branch_and_sha(data)
         await self.trigger_registered_jobs(HookDetailsFactory.get_pr_sync_details(data, head_branch, head_sha))
 
-    async def __get_comment_branch_and_sha(self, data):
+    async def __get_comment_branch_and_sha(self, data: Dict) -> Tuple:
         repository_name = data['repository']['full_name']
         pr_number = data['issue']['number']
         head_branch = self.get_pr_branch(pr_number, repository_name)
@@ -174,10 +178,10 @@ class GithubController:
         logging.warning(f"Hook details: single run comment for repository {repository_name} and branch {pr_branch}")
         await self.trigger_unregistered_job(job_name, pr_branch, job_params, repository_name, pr_number)
 
-    def get_latest_commit_sha(self, pr_number, repository_name):
+    def get_latest_commit_sha(self, pr_number: int, repository_name: str) -> str:
         return self.__gh_client.get_repo(repository_name).get_pull(pr_number).head.sha
 
-    def get_pr_branch(self, pr_number, repository_name):
+    def get_pr_branch(self, pr_number: int, repository_name: str) -> str:
         return self.__gh_client.get_repo(repository_name).get_pull(pr_number).head.ref
 
     async def handle_push(self, data):
@@ -233,7 +237,7 @@ class GithubController:
     async def __get_collection_for_hook_type(self, event_type: EventTypes):
         return self.__mongo_client.registered[event_type]
 
-    def get_jobs_next_build_number(self, job_name):
+    def get_jobs_next_build_number(self, job_name) -> int:
         return self.__jenkins_client.get_job_info(job_name)['nextBuildNumber']
 
     async def trigger_unregistered_job(self, job_name, pr_branch, job_params, repository, pr_number):

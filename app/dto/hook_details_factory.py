@@ -3,6 +3,7 @@ from typing import List, Dict
 from app.dto.hook_details import HookDetails
 from app.enums.event_types import EventTypes
 from app.utilities.functions import flatten_list
+from typing import Set
 
 
 class HookDetailsFactory:
@@ -38,7 +39,7 @@ class HookDetailsFactory:
         return hook_details
 
     @staticmethod
-    def __get_changes(commits: List[Dict]):
+    def __get_changes(commits: List[Dict]) -> Set[str]:
         additions = flatten_list([commit['added'] for commit in commits])
         removals = flatten_list([commit['removed'] for commit in commits])
         modifications = flatten_list([commit['modified'] for commit in commits])
@@ -67,7 +68,7 @@ class HookDetailsFactory:
         ]
 
     @staticmethod
-    def get_pr_sync_details(data, head_branch, head_sha):
+    def get_pr_sync_details(data: Dict, head_branch: str, head_sha: str) -> HookDetails:
         return HookDetails(
             event_type=EventTypes.pr_opened,
             repository=data['repository']['full_name'],
