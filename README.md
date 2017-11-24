@@ -19,6 +19,13 @@ The example usage flow is following:
 3. At this point if event specified in registration request occurs in repository, Triggear will automatically trigger job that registered
 4. After build is done, Triggear reports its status to GitHub - usually to commit/PR that triggered the job
 
+### Important note
+
+Triggear now have submodule of [triggear_pipeline](https://github.com/futuresimple/triggear_pipeline) located in 
+`src/com/futuresimple`. So be sure to clone with submodules:
+
+`git clone --recursive git@github.com:futuresimple/triggear.git`
+
 For overview of Triggear features please read [6. Workflows](#workflows) section
 ### Table of Contents  
 1. [Building Triggear](#build)
@@ -128,6 +135,9 @@ and status methods. To do it:
    
    3. Add secret text with name `triggear_token` and value of triggear_token
    field from your `creds.yml`
+   
+Alternatively you can simply add [triggear_pipeline](https://github.com/futuresimple/triggear_pipeline)
+as submodule in your shared library `src/com` to make it available for you pipelines.
 
 __Note:__ Workflows section of docs assumes that you called Triggear
 shared library as simply as `Triggear`
@@ -178,11 +188,17 @@ var `triggearRegister`:
 // Ommit this line if you add Triggear as shared library implicitly
 @Library(['Triggear']) _
 
-import com.futuresimple.triggear.PipelineParameters
-import com.futuresimple.triggear.Triggear
+import com.futuresimple.triggear.Request
+import com.futuresimple.triggear.TriggearClient
+import com.getbase.plumber.git.FSTechRepo
+import com.getbase.plumber.pipeline.JobParameter
+import com.getbase.plumber.pipeline.JobProperties
+import org.jenkinsci.plugins.workflow.libs.Library
 
-Triggear triggear = new Triggear(this, 'org/repo')
-triggear.registerForPushes([])
+TriggearClient triggear = new TriggearClient(this, new GitHubRepository('triggear'))
+triggear.register(Request
+        .forPushes()
+        .build())
 ```
 
 Now you need to run your job once to call register properly. From
@@ -201,11 +217,15 @@ method `registerForPushes`:
 // Ommit this line if you add Triggear as shared library implicitly
 @Library(['Triggear']) _
 
-import com.futuresimple.triggear.PipelineParameters
-import com.futuresimple.triggear.Triggear
+import com.futuresimple.triggear.Request
+import com.futuresimple.triggear.TriggearClient
 
-Triggear triggear = new Triggear(this, 'X')
-triggear.registerForPushes([RequestParam.BRANCH, RequestParam.SHA])
+TriggearClient triggear = new TriggearClient(this, new GitHubRepository('triggear'))
+triggear.register(Request
+        .forPushes()
+        .addBranchAsParameter()
+        .addShaAsParameter()
+        .build())
 ```
 
 Now you need to run your job once to call register properly. From
@@ -232,11 +252,16 @@ method:
 // Ommit this line if you add Triggear as shared library implicitly
 @Library(['Triggear']) _
 
-import com.futuresimple.triggear.PipelineParameters
-import com.futuresimple.triggear.Triggear
+import com.futuresimple.triggear.Request
+import com.futuresimple.triggear.TriggearClient
 
-Triggear triggear = new Triggear(this, 'X')
-triggear.registerForPushes([RequestParam.BRANCH, RequestParam.SHA], [], ['X/Y', 'Z'])
+TriggearClient triggear = new TriggearClient(this, new GitHubRepository('X'))
+triggear.register(Request.forPushes()
+        .addChangeRestriction('X/Y')
+        .addChangeRestriction('Z')
+        .addBranchAsParameter()
+        .addShaAsParameter()
+        .build())
 ```
 
 Please note, that it works in a way, that Triggear checks if any files paths 
@@ -257,11 +282,16 @@ var `triggearRegister`:
 // Ommit this line if you add Triggear as shared library implicitly
 @Library(['Triggear']) _
 
-import com.futuresimple.triggear.PipelineParameters
-import com.futuresimple.triggear.Triggear
+import com.futuresimple.triggear.Request
+import com.futuresimple.triggear.TriggearClient
 
-Triggear triggear = new Triggear(this, 'X')
-triggear.registerForLabel('Y', [])
+triggering_label = 'Y'
+
+TriggearClient triggear = new TriggearClient(this, new GitHubRepository('X'))
+Request registrationRequest = Request.forLabels()
+        .addLabel(triggering_label)
+        .build()
+triggear.register(registrationRequest)
 ```
 
 Now run you pipeline once to make register call. From then on
@@ -280,11 +310,18 @@ var `triggearRegister`:
 // Ommit this line if you add Triggear as shared library implicitly
 @Library(['Triggear']) _
 
-import com.futuresimple.triggear.PipelineParameters
-import com.futuresimple.triggear.Triggear
+import com.futuresimple.triggear.Request
+import com.futuresimple.triggear.TriggearClient
 
-Triggear triggear = new Triggear(this, 'X')
-triggear.registerForLabel('Y', [RequestParam.BRANCH, RequestParam.SHA])
+triggering_label = 'Y'
+
+TriggearClient triggear = new TriggearClient(this, new GitHubRepository('X'))
+Request registrationRequest = Request.forLabels()
+        .addLabel(triggering_label)
+        .addBranchAsParameter()
+        .addShaAsParameter()
+        .build()
+triggear.register(registrationRequest)
 ```
 
 Now run you pipeline once to make register call. From then on
@@ -313,11 +350,16 @@ At first you need to register your job for label Y in repo X:
 // Ommit this line if you add Triggear as shared library implicitly
 @Library(['Triggear']) _
 
-import com.futuresimple.triggear.PipelineParameters
-import com.futuresimple.triggear.Triggear
+import com.futuresimple.triggear.Request
+import com.futuresimple.triggear.TriggearClient
 
-Triggear triggear = new Triggear(this, 'X')
-triggear.registerForLabel('Y', [])
+triggering_label = 'Y'
+
+TriggearClient triggear = new TriggearClient(this, new GitHubRepository('X'))
+Request registrationRequest = Request.forLabels()
+        .addLabel(triggering_label)
+        .build()
+triggear.register(registrationRequest)
 ```
 
 Then, you'll need a special label in your GitHub repo. It's name
@@ -343,11 +385,12 @@ At first you need to register your job for PR opened events in repo X:
 // Ommit this line if you add Triggear as shared library implicitly
 @Library(['Triggear']) _
 
-import com.futuresimple.triggear.PipelineParameters
-import com.futuresimple.triggear.Triggear
+import com.futuresimple.triggear.Request
+import com.futuresimple.triggear.TriggearClient
 
-Triggear triggear = new Triggear(this, 'X')
-triggear.registerForPrOpened()
+TriggearClient triggear = new TriggearClient(this, new FSTechRepo('PipelinesExamples'))
+triggear.register(Request.forPrOpened()
+        .build())
 ```
 
 Then, you'll need a special label in your GitHub repo. It's name
@@ -400,11 +443,11 @@ var:
 import com.futuresimple.triggear.CommitStatus
 
 // this is the case when your job handles sha as param
-triggear.addCommitStatus(params.sha, 
-    currentBuild.result == "SUCCESS" ? CommitState.SUCCESS : CommitState.FAILURE, 
-    "Unittests report for commit ${params.sha}",
-    "Unittests report",
-    "${BUILD_URL}report"
+triggear.addCommitStatus(sha,
+    currentBuild.result == "SUCCESS" ? CommitState.SUCCESS : CommitState.FAILURE,
+    "Custom status console logs link",
+    "Console logs",
+    "${BUILD_URL}console"
 )
 ```
 
@@ -431,7 +474,7 @@ pipeline:
 
 ```groovy
 // this is the case when your job handles sha as param
-triggear.addComment(params.sha, 'Very important info about the build')
+triggear.addComment(sha, 'Important build details as commit comment')
 ```
 
 By doing so you will see the following results:
@@ -451,11 +494,15 @@ To do so you need to register your job for `tagged` events in repo X:
 // Assuming you called this shared library "Triggear" in Jenkins
 @Library(['Triggear']) _
 
-import com.futuresimple.triggear.PipelineParameters
-import com.futuresimple.triggear.Triggear
+import com.futuresimple.triggear.Request
+import com.futuresimple.triggear.TriggearClient
 
-Triggear triggear = new Triggear(this, 'X')
-triggear.registerForTags([RequestParam.BRANCH, RequestParam.SHA, RequestParam.TAG])
+TriggearClient triggear = new TriggearClient(this, new FSTechRepo('PipelinesExamples'))
+triggear.register(Request.forTags()
+        .addTagAsParameter()
+        .addBranchAsParameter()
+        .addShaAsParameter()
+        .build())
 ```
 
 By running your job once, you'll enable functionality of running
