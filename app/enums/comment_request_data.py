@@ -2,19 +2,15 @@ from typing import Dict
 from collections import Counter
 
 
-class StatusRequestData:
+class CommentRequestData:
     repository = 'repository'
     sha = 'sha'
-    state = 'state'
-    description = 'description'
-    url = 'url'
-    context = 'context'
+    body = 'body'
+    job_name = 'jobName'
 
     @staticmethod
-    def is_valid_status_data(data: Dict) -> bool:
-        return Counter([StatusRequestData.repository,
-                        StatusRequestData.sha,
-                        StatusRequestData.state,
-                        StatusRequestData.description,
-                        StatusRequestData.url,
-                        StatusRequestData.context]) == Counter(data.keys())
+    def is_valid_comment_data(data: Dict) -> bool:
+        return Counter([CommentRequestData.repository,
+                        CommentRequestData.sha,
+                        CommentRequestData.body,
+                        CommentRequestData.job_name]) == Counter(data.keys())
