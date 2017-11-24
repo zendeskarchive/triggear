@@ -160,7 +160,7 @@ class GithubController:
     async def handle_labeled_sync_comment(self, data):
         head_branch, head_sha = await self.__get_comment_branch_and_sha(data)
         for hook_details in HookDetailsFactory.get_labeled_sync_details(data, head_branch=head_branch, head_sha=head_sha):
-            self.trigger_registered_jobs(hook_details)
+            await self.trigger_registered_jobs(hook_details)
 
     async def handle_run_comment(self, data):
         comment_body_parts = data['comment']['body'].split()[2:]
