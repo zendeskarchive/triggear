@@ -3,12 +3,14 @@ import functools
 import logging
 
 import aiohttp.web
+from aiohttp.web_response import Response
+from typing import Any, Tuple
 
 
 def handle_exceptions():
     def wrapper(func):
         @functools.wraps(func)
-        async def wrapped(*args):
+        async def wrapped(*args: Tuple[Any]) -> Response:
             try:
                 return await func(*args)
             except KeyError as missing_key:

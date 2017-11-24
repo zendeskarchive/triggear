@@ -1,4 +1,6 @@
 import asyncio
+from typing import Optional
+from typing import Tuple
 
 
 class BackgroundTask:
@@ -7,7 +9,7 @@ class BackgroundTask:
         loop.run_in_executor(None, self.task_runner, coro, args, callback)
 
     @staticmethod
-    def task_runner(coro, args, callback):
+    def task_runner(coro, args: Tuple, callback: Optional) -> None:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
 

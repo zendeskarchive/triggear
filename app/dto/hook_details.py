@@ -25,7 +25,7 @@ class HookDetails:
         self.__query: Dict[str, str] = dict(repository=repository, **additional_queries)
         logging.warning(str(self))
 
-    def __eq__(self, other):
+    def __eq__(self, other: 'HookDetails') -> bool:
         return isinstance(other, HookDetails) and \
             self.event_type == other.event_type and \
             self.changes == other.changes and \
@@ -39,7 +39,7 @@ class HookDetails:
         return not (self == other)
 
     @property
-    def event_type(self):
+    def event_type(self) -> EventTypes:
         return self.__event_type
 
     @property

@@ -3,6 +3,9 @@ from unittest.mock import Mock
 import pytest
 from asynctest import patch
 from pytest_mock import MockFixture
+from typing import Dict
+from typing import Tuple
+from _asyncio import Task
 
 from app.controllers.github_controller import GithubController
 from app.utilities.background_task import BackgroundTask
@@ -16,23 +19,24 @@ def background_task():
 
 @pytest.fixture
 def empty_coro():
-    async def coro(*args, **kwargs):
+    async def coro(*args, **kwargs) -> Tuple:
         return args, kwargs
     return Mock(wraps=coro)
 
 
 @pytest.fixture
 def exception_coro():
-    async def coro(*args, **kwargs):
+    # noinspection PyUnusedLocal
+    async def coro(*args, **kwargs) -> None:
         raise Exception()
     return Mock(wraps=coro)
 
 
 @pytest.fixture
 def callback():
-    def inner(future):
+    def inner(future: Task) -> None:
         try:
-            future.exception()
+            future.exception(None)
         except:
             pass
     return Mock(wraps=inner)
@@ -113,8 +117,8 @@ def mock_request():
         headers = {'X-GitHub-Event': 'event'}
 
         @staticmethod
-        async def json():
-            return 'json'
+        async def json() -> Dict:
+            return {'json': 'json'}
     yield ToTest
 
 
@@ -123,6 +127,7 @@ def mock_empty_collection():
     class Collection:
         @staticmethod
         def find(query):
+            # type: (Dict[str, str]) -> AsyncIterFromList
             return AsyncIterFromList([])
     yield Collection
 
@@ -130,15 +135,16 @@ def mock_empty_collection():
 @pytest.fixture
 def mock_two_elem_collection():
     class Collection:
+        # noinspection PyUnusedLocal
         @staticmethod
-        def find(query):
+        def find(query: Dict[str, str]) -> AsyncIterFromList:
             return AsyncIterFromList(
                 [{'job': 'test_job_1', 'requested_params': [], 'repository': 'test_repo_1'},
                  {'job': 'test_job_2', 'requested_params': ['branch'], 'repository': 'test_repo_2'}]
             )
 
         @staticmethod
-        async def delete_one(query):
+        async def delete_one(query: Dict[str, str]) -> None:
             return
     yield Collection
 
@@ -146,8 +152,9 @@ def mock_two_elem_collection():
 @pytest.fixture
 def mock_collection_with_branch_restriction():
     class Collection:
+        # noinspection PyUnusedLocal
         @staticmethod
-        def find(query):
+        def find(query: Dict[str, str]) -> AsyncIterFromList:
             return AsyncIterFromList(
                 [{'job': 'test_job_1',
                   'requested_params': [],
@@ -164,8 +171,9 @@ def mock_collection_with_branch_restriction():
 @pytest.fixture
 def mock_collection_with_change_restriction():
     class Collection:
+        # noinspection PyUnusedLocal
         @staticmethod
-        def find(query):
+        def find(query: Dict[str, str]) -> AsyncIterFromList:
             return AsyncIterFromList(
                 [{'job': 'test_job_1',
                   'requested_params': [],
