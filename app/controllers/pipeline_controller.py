@@ -47,7 +47,7 @@ class PipelineController:
 
     @handle_exceptions()
     @validate_auth_header()
-    async def handle_register(self, request: aiohttp.web_request.Request):
+    async def handle_register(self, request: aiohttp.web_request.Request) -> aiohttp.web.Response:
         data: Dict = await request.json()
         logging.warning(f"Register REQ received: {data}")
         if not RegisterRequestData.is_valid_register_request_data(data):
@@ -74,7 +74,7 @@ class PipelineController:
 
     @handle_exceptions()
     @validate_auth_header()
-    async def handle_status(self, request: aiohttp.web_request.Request):
+    async def handle_status(self, request: aiohttp.web_request.Request) -> aiohttp.web.Response:
         data = await request.json()
         if not StatusRequestData.is_valid_status_data(data):
             return aiohttp.web.Response(reason='Invalid status request params!', status=400)
