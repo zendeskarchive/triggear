@@ -2,7 +2,7 @@ import asyncio
 import hmac
 import logging
 import time
-from typing import Dict
+from typing import Dict, List
 
 import aiohttp.web
 import aiohttp.web_request
@@ -15,6 +15,7 @@ from app.dto.hook_details import HookDetails
 from app.dto.hook_details_factory import HookDetailsFactory
 from app.enums.event_types import EventTypes
 from app.enums.labels import Labels
+from app.enums.registration_fields import RegistrationFields
 from app.utilities.background_task import BackgroundTask
 from app.utilities.constants import LAST_RUN_IN, BRANCH_DELETED_SHA, TRIGGEAR_RUN_PREFIX
 from app.utilities.err_handling import handle_exceptions
@@ -196,35 +197,44 @@ class GithubController:
         async for document in collection.find(hook_details.query):
             job_name = document['job']
 
-            branch_restrictions = document.get('branch_restrictions')
+            branch_restrictions = document.get(RegistrationFields.branch_restrictions)
             branch_restrictions = branch_restrictions if branch_restrictions is not None else []
 
-            change_restrictions = document.get('change_restrictions')
+            change_restrictions = document.get(RegistrationFields.change_restrictions)
             change_restrictions = change_restrictions if change_restrictions is not None else []
+
+            file_restrictions = document.get(RegistrationFields.file_restrictions)
+            file_restrictions = file_restrictions if file_restrictions is not None else []
 
             if not change_restrictions or any_starts_with(any_list=hook_details.changes,
                                                           starts_with_list=change_restrictions):
-                if branch_restrictions == [] or hook_details.branch in branch_restrictions:
-                    job_requested_params = document['requested_params']
-                    try:
-                        self.get_jobs_next_build_number(job_name)  # Raises if job does not exist on Jenkins
-                        if await self.can_trigger_job_by_branch(job_name, hook_details.branch):
-                            await BackgroundTask().run(self.trigger_registered_job,
-                                                       (
-                                                           job_name,
-                                                           job_requested_params,
-                                                           document['repository'],
-                                                           hook_details.sha,
-                                                           hook_details.branch,
-                                                           hook_details.tag
-                                                       ),
-                                                       callback=None)
-                    except jenkins.NotFoundException as not_found_exception:
-                        delete_query = hook_details.query
-                        delete_query['job'] = job_name
-                        logging.exception(f"Job {job_name} was not found on Jenkins anymore - deleting by query: "
-                                          f"{hook_details.query}\n (Exception: {not_found_exception}")
-                        await collection.delete_one(delete_query)
+                if not branch_restrictions or hook_details.branch in branch_restrictions:
+                    if not file_restrictions or await self.__are_files_in_repo(files=file_restrictions, hook=hook_details):
+                        job_requested_params = document[RegistrationFields.requested_params]
+                        try:
+                            self.get_jobs_next_build_number(job_name)  # Raises if job does not exist on Jenkins
+                            if await self.can_trigger_job_by_branch(job_name, hook_details.branch):
+                                await BackgroundTask().run(self.trigger_registered_job,
+                                                           (
+                                                               job_name,
+                                                               job_requested_params,
+                                                               document[RegistrationFields.repository],
+                                                               hook_details.sha,
+                                                               hook_details.branch,
+                                                               hook_details.tag
+                                                           ),
+                                                           callback=None)
+                        except jenkins.NotFoundException as not_found_exception:
+                            delete_query = hook_details.query
+                            delete_query['job'] = job_name
+                            logging.exception(f"Job {job_name} was not found on Jenkins anymore - deleting by query: "
+                                              f"{hook_details.query}\n (Exception: {not_found_exception}")
+                            await collection.delete_one(delete_query)
+                    else:
+                        logging.warning(f"Job {job_name} was registered with following file restrictions: "
+                                        f"{file_restrictions}. Current hook was on {hook_details.branch}/{hook_details.sha}, "
+                                        f"which appears not to have one of those files. That's why"
+                                        f"Triggear will not build this job.")
                 else:
                     logging.warning(f"Job {job_name} was registered with following branch restrictions: "
                                     f"{branch_restrictions}. Current push was on {hook_details.branch} branch, "
@@ -233,6 +243,15 @@ class GithubController:
                 logging.warning(f"Job {job_name} was registered with following change restrictions: "
                                 f"{change_restrictions}. Current push had changes in {hook_details.changes}, "
                                 f"so Triggear will not build this job.")
+
+    async def __are_files_in_repo(self, files: List[str], hook: HookDetails) -> bool:
+        try:
+            for file in files:
+                self.__gh_client.get_repo(hook.repository).get_file_contents(path=file, ref=hook.sha if hook.sha else hook.branch)
+        except github.GithubException as gh_exc:
+            logging.exception(f"Exception when looking for file {file} in repo {hook.repository} at ref {hook.sha}/{hook.branch} (Exc: {gh_exc})")
+            return False
+        return True
 
     async def __get_collection_for_hook_type(self, event_type: EventTypes):
         return self.__mongo_client.registered[event_type]
