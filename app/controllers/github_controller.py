@@ -94,10 +94,22 @@ class GithubController:
     async def set_sync_label(self, repository, pr_number):
         if Labels.pr_sync in self.get_repo_labels(repository):
             logging.warning(f'Setting "triggear-pr-sync" label on PR {pr_number} in repo {repository}')
-            self.set_pr_sync_label(repository, pr_number)
+            await self.set_pr_sync_label_with_retry(repository, pr_number)
             logging.warning('Label set')
 
-    def set_pr_sync_label(self, repo, pr_number):
+    async def set_pr_sync_label_with_retry(self, repo, pr_number):
+        retries = 3
+        while retries:
+            try:
+                await self.set_pr_sync_label(repo, pr_number)
+                return
+            except github.GithubException as gh_exception:
+                logging.exception(f'Exception when trying to set label on PR. Exception: {gh_exception}')
+                retries -= 1
+                await asyncio.sleep(1)
+        raise TimeoutError(f'Failed to set label on PR #{pr_number} in repo {repo} after 3 retries')
+
+    async def set_pr_sync_label(self, repo, pr_number):
         self.__gh_client.get_repo(repo).get_issue(pr_number).add_to_labels(Labels.pr_sync)
 
     def get_repo_labels(self, repo: str):
