@@ -2,7 +2,7 @@ from typing import List, Set
 
 import pytest
 
-from app.utilities.functions import flatten_list, any_starts_with, starts_with_item_from_list
+from app.utilities.functions import flatten_list, any_starts_with, starts_with_item_from_list, get_all_starting_with
 
 
 def test__flatten_list():
@@ -25,3 +25,12 @@ def test__any_starts_with(collection: Set[str], list_of_prefixes: List[str], exp
 ])
 def test__starts_with_item_from_list(string: str, list_of_prefixes: List[str], expected_result: bool):
     assert starts_with_item_from_list(string, list_of_prefixes) == expected_result
+
+
+@pytest.mark.parametrize("collection, list_of_prefixes, expected_result", [
+    ({'true', 'false'}, ['tr', 'fa'], {'true', 'false'}),
+    ({'true', 'false'}, ['fa'], {'false'}),
+    ({'true', 'false'}, ['bad'], set())
+])
+def test__get_all_starting_with(collection: Set[str], list_of_prefixes: List[str], expected_result: bool):
+    assert get_all_starting_with(collection, list_of_prefixes) == expected_result
