@@ -14,4 +14,4 @@ def flatten_list(list_of_lists: List[List[Any]]) -> List[Any]:
 
 
 def get_all_starting_with(strings_list: Set[str], prefixes_list: List[str]) -> Set[str]:
-    return {change for change in strings_list if starts_with_item_from_list(change, prefixes_list)}
+    return {string for string in strings_list if starts_with_item_from_list(string, prefixes_list)}

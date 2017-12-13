@@ -21,7 +21,7 @@ from app.request_schemes.register_request_data import RegisterRequestData
 from app.utilities.background_task import BackgroundTask
 from app.utilities.constants import LAST_RUN_IN, BRANCH_DELETED_SHA, TRIGGEAR_RUN_PREFIX
 from app.utilities.err_handling import handle_exceptions
-from app.utilities.functions import any_starts_with
+from app.utilities.functions import any_starts_with, get_all_starting_with
 from aiohttp.web_response import Response
 from typing import Optional
 from typing import Tuple
@@ -226,7 +226,8 @@ class GithubController:
                                                                cursor[RegistrationFields.repository],
                                                                hook_details.sha,
                                                                hook_details.branch,
-                                                               hook_details.tag
+                                                               hook_details.tag,
+                                                               get_all_starting_with(hook_details.changes, change_restrictions)
                                                            ),
                                                            callback=None)
                         except jenkins.NotFoundException:
@@ -333,8 +334,9 @@ class GithubController:
                                      repository: str,
                                      sha: str,
                                      pr_branch: str,
-                                     tag: str=None):
-        job_params = await self.get_requested_parameters_values(job_requested_params, pr_branch, sha, tag)
+                                     tag: str=None,
+                                     relevant_changes: Set[str]=set()):
+        job_params = await self.get_requested_parameters_values(job_requested_params, pr_branch, sha, tag, relevant_changes)
         next_build_number = self.get_jobs_next_build_number(job_name)
         try:
             self.build_jenkins_job(job_name, job_params)
