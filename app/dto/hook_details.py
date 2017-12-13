@@ -72,4 +72,4 @@ class HookDetails:
 
     @changes.setter
     def changes(self, value: Set[str]):
-        self.__changes = value
+        self.__changes = set(value)

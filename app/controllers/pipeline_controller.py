@@ -3,6 +3,8 @@ from typing import List, Optional, Dict
 
 import aiohttp.web
 import aiohttp.web_request
+import github
+import motor.motor_asyncio
 
 from app.enums.registration_fields import RegistrationFields
 from app.request_schemes.comment_request_data import CommentRequestData
@@ -13,7 +15,10 @@ from app.utilities.err_handling import handle_exceptions
 
 
 class PipelineController:
-    def __init__(self, github_client, mongo_client, api_token):
+    def __init__(self,
+                 github_client: github.Github,
+                 mongo_client: motor.motor_asyncio.AsyncIOMotorClient,
+                 api_token: str):
         self.__gh_client = github_client
         self.__mongo_client = mongo_client
         self.api_token = api_token
@@ -51,7 +56,7 @@ class PipelineController:
         data: Dict = await request.json()
         logging.warning(f"Register REQ received: {data}")
         if not RegisterRequestData.is_valid_register_request_data(data):
-            return aiohttp.web.Response(reason='Invalid requested params!', status=400)
+            return aiohttp.web.Response(reason='Invalid register request params!', status=400)
         await self.add_registration_if_not_exists(
             event_type=data['eventType'],
             repository=data['repository'],
@@ -63,14 +68,6 @@ class PipelineController:
             file_restrictions=data.get('file_restrictions')
         )
         return aiohttp.web.Response(text='Register ACK')
-
-    async def __create_or_update_status(self, repository, sha, state, description, url, context):
-        self.__gh_client.get_repo(repository).get_commit(sha).create_status(
-            state=state,
-            description=description,
-            target_url=url,
-            context=context
-        )
 
     @handle_exceptions()
     @validate_auth_header()
@@ -88,6 +85,14 @@ class PipelineController:
             context=data['context']
         )
         return aiohttp.web.Response(text='Status ACK')
+
+    async def __create_or_update_status(self, repository, sha, state, description, url, context):
+        self.__gh_client.get_repo(repository).get_commit(sha).create_status(
+            state=state,
+            description=description,
+            target_url=url,
+            context=context
+        )
 
     @handle_exceptions()
     @validate_auth_header()

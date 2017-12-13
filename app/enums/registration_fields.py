@@ -6,3 +6,4 @@ class RegistrationFields:
     branch_restrictions = 'branch_restrictions'
     change_restrictions = 'change_restrictions'
     file_restrictions = 'file_restrictions'
+    missed_times = 'missed_times'

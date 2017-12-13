@@ -1,0 +1,2 @@
+class TriggearTimeoutError(TimeoutError):
+    pass

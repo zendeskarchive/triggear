@@ -7,7 +7,7 @@ def validate_auth_header():
     def wrapper(func):
         @functools.wraps(func)
         async def wrapped(*args):
-            auth_header = args[1].headers['Authorization']
+            auth_header = args[1].headers.get('Authorization')
             expected_token = 'Token ' + args[0].api_token
             if auth_header == expected_token:
                 return await func(*args)

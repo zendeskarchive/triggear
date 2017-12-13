@@ -1,0 +1,5 @@
+jenkins_url: "http://JENKINS_URL/"
+jenkins_user_id: "JENKINS_USER"
+jenkins_api_token: "JENKINS_USER_API_TOKEN"
+github_token: "GITHUB_TOKEN"
+triggear_token: "TRIGGEAR_TOKEN"

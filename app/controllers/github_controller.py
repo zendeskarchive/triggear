@@ -16,6 +16,7 @@ from app.dto.hook_details_factory import HookDetailsFactory
 from app.enums.event_types import EventTypes
 from app.enums.labels import Labels
 from app.enums.registration_fields import RegistrationFields
+from app.exceptions.triggear_timeout_error import TriggearTimeoutError
 from app.utilities.background_task import BackgroundTask
 from app.utilities.constants import LAST_RUN_IN, BRANCH_DELETED_SHA, TRIGGEAR_RUN_PREFIX
 from app.utilities.err_handling import handle_exceptions
@@ -44,7 +45,7 @@ class GithubController:
             return 401, 'Unauthorized'
         sha_name, signature = header_signature.split('=')
         if sha_name != 'sha1':
-            return 501, "Non SHA-1 auth non-implemented"
+            return 501, "Only SHA1 auth supported"
 
         req_body = await req.read()
         mac = hmac.new(bytearray(self.api_token, 'utf-8'), msg=req_body, digestmod='sha1')
@@ -84,7 +85,7 @@ class GithubController:
 
     @staticmethod
     async def get_request_event_header(request: aiohttp.web_request.Request) -> str:
-        return request.headers['X-GitHub-Event']
+        return request.headers.get('X-GitHub-Event')
 
     async def handle_pr_opened(self, data: dict):
         hook_details: HookDetails = HookDetailsFactory.get_pr_opened_details(data)
@@ -101,16 +102,13 @@ class GithubController:
         retries = 3
         while retries:
             try:
-                await self.set_pr_sync_label(repo, pr_number)
+                self.__gh_client.get_repo(repo).get_issue(pr_number).add_to_labels(Labels.pr_sync)
                 return
             except github.GithubException as gh_exception:
                 logging.exception(f'Exception when trying to set label on PR. Exception: {gh_exception}')
                 retries -= 1
                 await asyncio.sleep(1)
-        raise TimeoutError(f'Failed to set label on PR #{pr_number} in repo {repo} after 3 retries')
-
-    async def set_pr_sync_label(self, repo, pr_number):
-        self.__gh_client.get_repo(repo).get_issue(pr_number).add_to_labels(Labels.pr_sync)
+        raise TriggearTimeoutError(f'Failed to set label on PR #{pr_number} in repo {repo} after 3 retries')
 
     def get_repo_labels(self, repo: str):
         return [label.name for label in self.__gh_client.get_repo(repo).get_labels()]
@@ -124,31 +122,26 @@ class GithubController:
     async def handle_synchronize(self, data: Dict):
         pr_labels = self.get_pr_labels(repository=data['pull_request']['head']['repo']['full_name'],
                                        pr_number=data['pull_request']['number'])
-        await self.handle_pr_sync(data, pr_labels)
-        await self.handle_labeled_sync(data, pr_labels)
+        try:
+            await self.handle_pr_sync(data, pr_labels)
+        finally:
+            # we want to call labeled sync even is something went wrong in pr-sync handler
+            await self.handle_labeled_sync(data, pr_labels)
 
     async def handle_pr_sync(self, data, pr_labels):
-        # noinspection PyBroadException
-        try:
-            if Labels.pr_sync in pr_labels:
-                logging.warning(f'Sync hook on PR with {Labels.pr_sync} - handling like PR open')
-                await self.handle_pr_opened(data)
-        except Exception as pr_sync_exception:
-            logging.exception(f'Unexpected exception while handling PR sync: {pr_sync_exception}')
+        if Labels.pr_sync in pr_labels:
+            logging.warning(f'Sync hook on PR with {Labels.pr_sync} - handling like PR open')
+            await self.handle_pr_opened(data)
 
     async def handle_labeled_sync(self, data, pr_labels):
-        # noinspection PyBroadException
-        try:
-            if Labels.label_sync in pr_labels and len(pr_labels) > 1:
-                pr_labels.remove(Labels.label_sync)
-                for label in pr_labels:
-                    # update data to have fields required from labeled hook
-                    # it's necessary for HookDetailsFactory in handle_labeled
-                    data.update({'label': {'name': label}})
-                    logging.warning(f'Sync hook on PR with {Labels.label_sync} - handling like PR open')
-                    await self.handle_labeled(data)
-        except Exception as label_sync_exception:
-            logging.exception(f'Unexpected exception while handling PR sync: {label_sync_exception}')
+        if Labels.label_sync in pr_labels and len(pr_labels) > 1:
+            pr_labels.remove(Labels.label_sync)
+            for label in pr_labels:
+                # update data to have fields required from labeled hook
+                # it's necessary for HookDetailsFactory in handle_labeled
+                data.update({'label': {'name': label}})
+                logging.warning(f'Sync hook on PR with {Labels.label_sync} - handling like PR labeled')
+                await self.handle_labeled(data)
 
     def get_pr_labels(self, repository, pr_number):
         return [label.name for label in self.__gh_client.get_repo(repository).get_issue(pr_number).labels]
@@ -164,10 +157,10 @@ class GithubController:
                 await self.handle_pr_sync_comment(data)
 
     async def handle_pr_sync_comment(self, data):
-        head_branch, head_sha = await self.__get_comment_branch_and_sha(data)
+        head_branch, head_sha = await self.get_comment_branch_and_sha(data)
         await self.trigger_registered_jobs(HookDetailsFactory.get_pr_sync_details(data, head_branch, head_sha))
 
-    async def __get_comment_branch_and_sha(self, data: Dict) -> Tuple:
+    async def get_comment_branch_and_sha(self, data: Dict) -> Tuple:
         repository_name = data['repository']['full_name']
         pr_number = data['issue']['number']
         head_branch = self.get_pr_branch(pr_number, repository_name)
@@ -175,7 +168,7 @@ class GithubController:
         return head_branch, head_sha
 
     async def handle_labeled_sync_comment(self, data):
-        head_branch, head_sha = await self.__get_comment_branch_and_sha(data)
+        head_branch, head_sha = await self.get_comment_branch_and_sha(data)
         for hook_details in HookDetailsFactory.get_labeled_sync_details(data, head_branch=head_branch, head_sha=head_sha):
             await self.trigger_registered_jobs(hook_details)
 
@@ -205,24 +198,23 @@ class GithubController:
             logging.warning(f"Branch {hook_details.branch} was deleted as SHA was zeros only!")
 
     async def trigger_registered_jobs(self, hook_details: HookDetails):
-        collection = await self.__get_collection_for_hook_type(hook_details.event_type)
-        async for document in collection.find(hook_details.query):
-            job_name = document['job']
+        collection = await self.get_collection_for_hook_type(hook_details.event_type)
+        async for cursor in collection.find(hook_details.query):
+            job_name = cursor[RegistrationFields.job]
 
-            branch_restrictions = document.get(RegistrationFields.branch_restrictions)
+            branch_restrictions = cursor.get(RegistrationFields.branch_restrictions)
             branch_restrictions = branch_restrictions if branch_restrictions is not None else []
 
-            change_restrictions = document.get(RegistrationFields.change_restrictions)
+            change_restrictions = cursor.get(RegistrationFields.change_restrictions)
             change_restrictions = change_restrictions if change_restrictions is not None else []
 
-            file_restrictions = document.get(RegistrationFields.file_restrictions)
+            file_restrictions = cursor.get(RegistrationFields.file_restrictions)
             file_restrictions = file_restrictions if file_restrictions is not None else []
 
-            if not change_restrictions or any_starts_with(any_list=hook_details.changes,
-                                                          starts_with_list=change_restrictions):
+            if not change_restrictions or any_starts_with(any_list=hook_details.changes, starts_with_list=change_restrictions):
                 if not branch_restrictions or hook_details.branch in branch_restrictions:
-                    if not file_restrictions or await self.__are_files_in_repo(files=file_restrictions, hook=hook_details):
-                        job_requested_params = document[RegistrationFields.requested_params]
+                    if not file_restrictions or await self.are_files_in_repo(files=file_restrictions, hook=hook_details):
+                        job_requested_params = cursor[RegistrationFields.requested_params]
                         try:
                             self.get_jobs_next_build_number(job_name)  # Raises if job does not exist on Jenkins
                             if await self.can_trigger_job_by_branch(job_name, hook_details.branch):
@@ -230,18 +222,18 @@ class GithubController:
                                                            (
                                                                job_name,
                                                                job_requested_params,
-                                                               document[RegistrationFields.repository],
+                                                               cursor[RegistrationFields.repository],
                                                                hook_details.sha,
                                                                hook_details.branch,
                                                                hook_details.tag
                                                            ),
                                                            callback=None)
-                        except jenkins.NotFoundException as not_found_exception:
-                            delete_query = hook_details.query
-                            delete_query['job'] = job_name
-                            logging.exception(f"Job {job_name} was not found on Jenkins anymore - deleting by query: "
-                                              f"{hook_details.query}\n (Exception: {not_found_exception}")
-                            await collection.delete_one(delete_query)
+                        except jenkins.NotFoundException:
+                            update_query = hook_details.query
+                            update_query[RegistrationFields.job] = job_name
+                            logging.exception(f"Job {job_name} was not found on Jenkins anymore - incrementing {RegistrationFields.missed_times} "
+                                              f"for query {update_query}")
+                            await collection.update_one(update_query, {'$inc': {RegistrationFields.missed_times: 1}})
                     else:
                         logging.warning(f"Job {job_name} was registered with following file restrictions: "
                                         f"{file_restrictions}. Current hook was on {hook_details.branch}/{hook_details.sha}, "
@@ -256,7 +248,7 @@ class GithubController:
                                 f"{change_restrictions}. Current push had changes in {hook_details.changes}, "
                                 f"so Triggear will not build this job.")
 
-    async def __are_files_in_repo(self, files: List[str], hook: HookDetails) -> bool:
+    async def are_files_in_repo(self, files: List[str], hook: HookDetails) -> bool:
         try:
             for file in files:
                 self.__gh_client.get_repo(hook.repository).get_file_contents(path=file, ref=hook.sha if hook.sha else hook.branch)
@@ -265,7 +257,7 @@ class GithubController:
             return False
         return True
 
-    async def __get_collection_for_hook_type(self, event_type: EventTypes):
+    async def get_collection_for_hook_type(self, event_type: EventTypes):
         return self.__mongo_client.registered[event_type]
 
     def get_jobs_next_build_number(self, job_name) -> int:
@@ -277,9 +269,8 @@ class GithubController:
 
             try:
                 self.build_jenkins_job(job_name, job_params)
-            except jenkins.JenkinsException as jexp:
-                logging.exception(f"Job {job_name} did not accept {job_params} "
-                                  f"as parameters but it was passed to it (Error: {jexp})")
+            except jenkins.JenkinsException as jenkins_exception:
+                logging.exception(f"Job {job_name} did not accept {job_params} as parameters but it was passed to it (Error: {jenkins_exception})")
                 return
 
             while await self.is_job_building(job_name, next_build_number):
@@ -287,27 +278,15 @@ class GithubController:
             build_info = await self.get_build_info(job_name, next_build_number)
 
             if build_info is not None:
-                final_state = "success" if build_info['result'] == "SUCCESS" \
-                    else "failure" if build_info['result'] == "FAILURE" \
-                    else "error"
-                final_description = "build succeeded" if build_info['result'] == "SUCCESS" \
-                    else "build failed" if build_info['result'] == "FAILURE" \
-                    else "build error"
-                self.create_pr_comment(
-                    pr_number,
-                    repository,
-                    body=f"Job {job_name} finished with status {final_state} - "
-                         f"{final_description} ({build_info['url']})"
-                )
+                final_state = await self.get_final_build_state(build_info)
+                final_description = await self.get_final_build_description(build_info)
+                self.create_pr_comment(pr_number, repository,
+                                       body=f"Job {job_name} finished with status {final_state} - {final_description} ({build_info['url']})")
             else:
-                logging.exception(f"Triggear was not able to find build number {next_build_number} for job {job_name}."
-                                  f"Task aborted.")
-                return
+                logging.exception(f"Triggear was not able to find build number {next_build_number} for job {job_name}. Task aborted.")
 
     def create_pr_comment(self, pr_number, repository, body):
-        self.__gh_client.get_repo(repository).get_issue(pr_number).create_comment(
-            body=body
-        )
+        self.__gh_client.get_repo(repository).get_issue(pr_number).create_comment(body=body)
 
     async def get_build_info(self, job_name, build_number):
         timeout = time.monotonic() + 30
@@ -316,7 +295,7 @@ class GithubController:
                 return self.__jenkins_client.get_build_info(job_name, build_number)
             except jenkins.NotFoundException:
                 logging.warning(f"Build number {build_number} was not yet found for job {job_name}."
-                                f"Probably because of high load on Jenkins build is stuck in pre-run state and it is"
+                                f"Probably because of high load on Jenkins build is stuck in pre-run state and it is "
                                 f"not available in history. We will retry for 30 sec for it to appear.")
                 await asyncio.sleep(1)
         return None
@@ -331,30 +310,95 @@ class GithubController:
         self.__jenkins_client.build_job(job_name, parameters=job_params)
 
     async def can_trigger_job_by_branch(self, job_name, branch):
-        last_job_run_in_branch = {
-            "branch": branch,
-            "job": job_name
-        }
+        last_job_run_in_branch = {"branch": branch, "job": job_name}
         collection = self.__mongo_client.registered[LAST_RUN_IN]
         found_run = await collection.find_one(last_job_run_in_branch)
         last_job_run_in_branch['timestamp'] = int(time.time())
         if not found_run:
-            result = await collection.insert_one(last_job_run_in_branch)
-            logging.info(f"Inserted last run time document with ID {repr(result.inserted_id)}")
+            await collection.insert_one(last_job_run_in_branch)
             logging.warning(f"Job {job_name} was never run in branch {branch}")
         else:
             if int(time.time()) - found_run['timestamp'] < self._rerun_time_limit:
-                logging.warning(f"Job {job_name} was run in branch {branch} "
-                                f"less then {self._rerun_time_limit} - won't be triggered")
+                logging.warning(f"Job {job_name} was run in branch {branch} less then {self._rerun_time_limit} - won't be triggered")
                 return False
             else:
-                result = await collection.replace_one(found_run, last_job_run_in_branch)
-                logging.warning(f"Job {job_name} was run in branch {branch} "
-                                f"more then {self._rerun_time_limit} - time was updated and will be triggered")
-                logging.info(f"Updated {repr(result.matched_count)} last run documents")
+                await collection.replace_one(found_run, last_job_run_in_branch)
+                logging.warning(f"Job {job_name} for branch {branch} ran more then {self._rerun_time_limit} ago. Will be run, last run time updated.")
         return True
 
-    async def trigger_registered_job(self, job_name, job_requested_params, repository, sha, pr_branch, tag=None):
+    async def trigger_registered_job(self,
+                                     job_name: str,
+                                     job_requested_params: List[str],
+                                     repository: str,
+                                     sha: str,
+                                     pr_branch: str,
+                                     tag: str=None):
+        job_params = await self.get_requested_parameters_values(job_requested_params, pr_branch, sha, tag)
+        next_build_number = self.get_jobs_next_build_number(job_name)
+        try:
+            self.build_jenkins_job(job_name, job_params)
+            logging.warning(f"Scheduled build of: {job_name} #{next_build_number}")
+        except jenkins.JenkinsException as jenkins_exception:
+            logging.exception(f"Job {job_name} did not accept {job_params} as parameters but it requested them (Error: {jenkins_exception})")
+
+            await self.create_github_build_status(repository, sha, "error",
+                                                  await self.get_job_url(job_name),
+                                                  f"Job {job_name} did not accept requested parameters {job_params.keys()}!",
+                                                  job_name)
+            return
+
+        build_info = await self.get_build_info(job_name, next_build_number)
+        if build_info is not None:
+            logging.warning(f"Creating pending status for {job_name} in repo {repository} (branch {pr_branch}, sha {sha}")
+
+            await self.create_github_build_status(repository, sha, "pending", build_info['url'], "build in progress", job_name)
+
+            while await self.is_job_building(job_name, next_build_number):
+                await asyncio.sleep(1)
+
+            build_info = await self.get_build_info(job_name, next_build_number)
+            logging.warning(f"Build {job_name} #{next_build_number} finished.")
+
+            final_state = await self.get_final_build_state(build_info)
+            final_description = await self.get_final_build_description(build_info)
+            logging.warning(f"Creating build status for {job_name} #{next_build_number} - verdict: {final_state}.")
+
+            await self.create_github_build_status(repository, sha, final_state, build_info['url'], final_description, job_name)
+        else:
+            logging.exception(f"Triggear was not able to find build number {next_build_number} for job {job_name}. Task aborted.")
+
+            await self.create_github_build_status(repository, sha, "error",
+                                                  await self.get_job_url(job_name),
+                                                  f"Triggear cant find build {job_name} #{next_build_number}",
+                                                  job_name)
+
+    async def get_job_url(self, job_name):
+        return self.__jenkins_client.get_job_info(job_name).get('url')
+
+    async def create_github_build_status(self, repository, sha, state, url, description, context):
+        self.__gh_client.get_repo(repository).get_commit(sha).create_status(state=state,
+                                                                            target_url=url,
+                                                                            description=description,
+                                                                            context=context)
+
+    @staticmethod
+    async def get_final_build_state(build_info):
+        return "success" if build_info['result'] == "SUCCESS" \
+            else "success" if build_info['result'] == "UNSTABLE" \
+            else "failure" if build_info['result'] == "FAILURE" \
+            else "failure" if build_info['result'] == "ABORTED" \
+            else "error"
+
+    @staticmethod
+    async def get_final_build_description(build_info):
+        return "build succeeded" if build_info['result'] == "SUCCESS" \
+            else "build unstable" if build_info['result'] == "UNSTABLE" \
+            else "build failed" if build_info['result'] == "FAILURE" \
+            else "build aborted" if build_info['result'] == "ABORTED" \
+            else "build error"
+
+    @staticmethod
+    async def get_requested_parameters_values(job_requested_params: List[str], pr_branch: str, sha: str, tag: str):
         job_params = None
         if job_requested_params:
             job_params = {}
@@ -364,47 +408,4 @@ class GithubController:
                 job_params['sha'] = sha
             if 'tag' in job_requested_params:
                 job_params['tag'] = tag
-        next_build_number = self.get_jobs_next_build_number(job_name)
-        try:
-            self.build_jenkins_job(job_name, job_params)
-            logging.warning(f"Scheduled build of: {job_name} #{next_build_number}")
-        except jenkins.JenkinsException as jexp:
-            logging.exception(f"Job {job_name} did not accept {job_params} "
-                              f"as parameters but it requested them (Error: {jexp})")
-            self.__gh_client.get_repo(repository).get_commit(sha).create_status(
-                state="error",
-                target_url=self.__jenkins_client.get_job_info(job_name).get('url'),
-                description=f"Job {job_name} did not accept requested parameters {job_params.keys()}!",
-                context=job_name)
-            return
-
-        build_info = await self.get_build_info(job_name, next_build_number)
-        if build_info is not None:
-            logging.warning(f"Creating pending status for {job_name} in repo {repository} "
-                            f"(branch {pr_branch}, sha {sha}")
-            self.__gh_client.get_repo(repository).get_commit(sha).create_status(
-                state="pending",
-                target_url=build_info['url'],
-                description="build in progress",
-                context=job_name)
-            while await self.is_job_building(job_name, next_build_number):
-                await asyncio.sleep(1)
-            build_info = await self.get_build_info(job_name, next_build_number)
-            logging.warning(f"Build {job_name} #{next_build_number} finished.")
-
-            final_state = "success" if build_info['result'] == "SUCCESS" \
-                else "failure" if build_info['result'] == "FAILURE" \
-                else "error"
-            final_description = "build succeeded" if build_info['result'] == "SUCCESS" \
-                else "build failed" if build_info['result'] == "FAILURE" \
-                else "build error"
-            logging.warning(f"Creating build status for {job_name} #{next_build_number} - verdict: {final_state}.")
-            self.__gh_client.get_repo(repository).get_commit(sha).create_status(
-                state=final_state,
-                target_url=build_info['url'],
-                description=final_description,
-                context=job_name)
-        else:
-            logging.exception(f"Triggear was not able to find build number {next_build_number} for job {job_name}."
-                              f"Task aborted.")
-            return
+        return job_params if job_params != {} else None
