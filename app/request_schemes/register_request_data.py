@@ -12,6 +12,7 @@ class RegisterRequestData:
     file_restrictions = 'file_restrictions'
 
     class RequestedParams:
+        changes = 'changes'
         branch = 'branch'
         sha = 'sha'
         tag = 'tag'
@@ -35,7 +36,8 @@ class RegisterRequestData:
     def __get_allowed_requested_params() -> List[str]:
         return [RegisterRequestData.RequestedParams.branch,
                 RegisterRequestData.RequestedParams.sha,
-                RegisterRequestData.RequestedParams.tag]
+                RegisterRequestData.RequestedParams.tag,
+                RegisterRequestData.RequestedParams.changes]
 
     @staticmethod
     def __are_requested_params_valid(data: Dict):

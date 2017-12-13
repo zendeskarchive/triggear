@@ -2,7 +2,7 @@ import asyncio
 import hmac
 import logging
 import time
-from typing import Dict, List
+from typing import Dict, List, Set
 
 import aiohttp.web
 import aiohttp.web_request
@@ -17,10 +17,11 @@ from app.enums.event_types import EventTypes
 from app.enums.labels import Labels
 from app.enums.registration_fields import RegistrationFields
 from app.exceptions.triggear_timeout_error import TriggearTimeoutError
+from app.request_schemes.register_request_data import RegisterRequestData
 from app.utilities.background_task import BackgroundTask
 from app.utilities.constants import LAST_RUN_IN, BRANCH_DELETED_SHA, TRIGGEAR_RUN_PREFIX
 from app.utilities.err_handling import handle_exceptions
-from app.utilities.functions import any_starts_with
+from app.utilities.functions import any_starts_with, get_all_starting_with
 from aiohttp.web_response import Response
 from typing import Optional
 from typing import Tuple
@@ -225,7 +226,8 @@ class GithubController:
                                                                cursor[RegistrationFields.repository],
                                                                hook_details.sha,
                                                                hook_details.branch,
-                                                               hook_details.tag
+                                                               hook_details.tag,
+                                                               get_all_starting_with(hook_details.changes, change_restrictions)
                                                            ),
                                                            callback=None)
                         except jenkins.NotFoundException:
@@ -332,8 +334,9 @@ class GithubController:
                                      repository: str,
                                      sha: str,
                                      pr_branch: str,
-                                     tag: str=None):
-        job_params = await self.get_requested_parameters_values(job_requested_params, pr_branch, sha, tag)
+                                     tag: str=None,
+                                     relevant_changes: Set[str]=set()):
+        job_params = await self.get_requested_parameters_values(job_requested_params, pr_branch, sha, tag, relevant_changes)
         next_build_number = self.get_jobs_next_build_number(job_name)
         try:
             self.build_jenkins_job(job_name, job_params)
@@ -398,14 +401,16 @@ class GithubController:
             else "build error"
 
     @staticmethod
-    async def get_requested_parameters_values(job_requested_params: List[str], pr_branch: str, sha: str, tag: str):
+    async def get_requested_parameters_values(job_requested_params: List[str], pr_branch: str, sha: str, tag: str, changes: Set[str] = set()):
         job_params = None
         if job_requested_params:
             job_params = {}
-            if 'branch' in job_requested_params:
+            if RegisterRequestData.RequestedParams.branch in job_requested_params:
                 job_params['branch'] = pr_branch
-            if 'sha' in job_requested_params:
+            if RegisterRequestData.RequestedParams.sha in job_requested_params:
                 job_params['sha'] = sha
-            if 'tag' in job_requested_params:
+            if RegisterRequestData.RequestedParams.tag in job_requested_params:
                 job_params['tag'] = tag
+            if RegisterRequestData.RequestedParams.changes in job_requested_params:
+                job_params['changes'] = ','.join(changes)
         return job_params if job_params != {} else None

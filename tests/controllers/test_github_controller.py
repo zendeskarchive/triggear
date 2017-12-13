@@ -15,7 +15,7 @@ import github.PullRequestPart
 import github.Commit
 import time
 from github import GithubException
-from mockito import mock, when, expect
+from mockito import mock, when, expect, verify, VerificationError
 
 from app.config.triggear_config import TriggearConfig
 from app.controllers.github_controller import GithubController
@@ -799,7 +799,23 @@ class TestGithubController:
         (['invalid'], None)
     ])
     async def test__get_requested_parameters_values__should_return_only_requested_parameters(self, requested_parameters, expected_parameters):
-        assert expected_parameters == await GithubController.get_requested_parameters_values(requested_parameters, 'master', '123321', '1.0')
+        assert expected_parameters == await GithubController.get_requested_parameters_values(requested_parameters,
+                                                                                             'master',
+                                                                                             '123321',
+                                                                                             '1.0')
+
+    async def test__get_requested_parameters__should_return_files_joined_with_coma__when_changes_are_requested(self):
+        result = await GithubController.get_requested_parameters_values(
+            ['branch', 'changes'],
+            'master',
+            '123321',
+            '1.0',
+            changes={'README.md', '.gitignore'}
+        )
+        try:
+            assert {'branch': 'master', 'changes': 'README.md,.gitignore'} == result
+        except AssertionError:
+            assert {'branch': 'master', 'changes': '.gitignore,README.md'} == result
 
     async def test__can_trigger_job_by_branch__when_job_was_not_run__should_add_it_to_mongo__and_return_true(self):
         collection = mock(
@@ -926,7 +942,7 @@ class TestGithubController:
         github_controller = GithubController(mock(), mock(), mock(), mock())
 
         expect(github_controller)\
-            .get_requested_parameters_values(requested_parameters, branch, sha, tag)\
+            .get_requested_parameters_values(requested_parameters, branch, sha, tag, set())\
             .thenReturn(async_value({'branch': branch}))
         expect(github_controller) \
             .get_jobs_next_build_number('job')\
@@ -958,7 +974,7 @@ class TestGithubController:
             mock(asyncio)
 
             expect(github_controller) \
-                .get_requested_parameters_values(requested_parameters, branch, sha, None) \
+                .get_requested_parameters_values(requested_parameters, branch, sha, None, set()) \
                 .thenReturn(async_value({'branch': branch}))
             expect(github_controller) \
                 .get_jobs_next_build_number(job_name) \
@@ -992,7 +1008,7 @@ class TestGithubController:
         mock(asyncio)
 
         expect(github_controller)\
-            .get_requested_parameters_values(requested_parameters, branch, sha, None)\
+            .get_requested_parameters_values(requested_parameters, branch, sha, None, set())\
             .thenReturn(async_value({'branch': branch}))
         expect(github_controller) \
             .get_jobs_next_build_number(job_name)\
@@ -1062,7 +1078,7 @@ class TestGithubController:
             strict=True
         )
         hook_details = mock(
-            {'event_type': EventTypes.push, 'query': hook_query, 'branch': branch_name, 'sha': sha, 'tag': None},
+            {'event_type': EventTypes.push, 'query': hook_query, 'branch': branch_name, 'sha': sha, 'tag': None, 'changes': {'.gitignore'}},
             spec=HookDetails,
             strict=True
         )
@@ -1083,10 +1099,32 @@ class TestGithubController:
         when(github_controller).get_jobs_next_build_number(job_name).thenReturn(231)
         when(github_controller).can_trigger_job_by_branch(job_name, branch_name).thenReturn(async_value(True))
 
-        expect(github_controller).trigger_registered_job(job_name, [], 'repo', sha, branch_name, None)
+        expect(github_controller).trigger_registered_job(job_name, [], 'repo', sha, branch_name, None, set())
 
         # when
         await github_controller.trigger_registered_jobs(hook_details)
+
+    async def test__when_changes_are_passed_to_trigger_registered_job__should_be_passed_to_build_job(self):
+        github_controller = GithubController(mock(), mock(), mock(), mock())
+
+        # given
+        when(github_controller).get_jobs_next_build_number('job').thenReturn(3)
+        when(github_controller).build_jenkins_job('job', any)
+        when(github_controller)\
+            .create_github_build_status('repo', '123321', 'error', 'url', 'Triggear cant find build job #3', 'job')\
+            .thenReturn(async_value(None))
+
+        # expect
+        expect(github_controller).get_job_url('job').thenReturn(async_value('url'))
+
+        # when
+        await github_controller.trigger_registered_job('job', ['branch', 'changes'], 'repo', '123321', 'branch', '1.0', {'README.md', '.gitignore'})
+
+        try:
+            verify(github_controller).build_jenkins_job('job', {'branch': 'branch', 'changes': 'README.md,.gitignore'})
+        except VerificationError:
+            # we cant know the order of joined set, so...
+            verify(github_controller).build_jenkins_job('job', {'branch': 'branch', 'changes': '.gitignore,README.md'})
 
     async def test__trigger_registered_jobs__when_change_restrictions_are_not_met__background_task_to_trigger_it_is_not_started(self):
         hook_query = {'repository': 'repo'}
@@ -1108,7 +1146,7 @@ class TestGithubController:
             strict=True
         )
         hook_details = mock(
-            {'event_type': EventTypes.push, 'query': hook_query, 'branch': branch_name, 'sha': sha, 'tag': None, 'changes': ['README.md']},
+            {'event_type': EventTypes.push, 'query': hook_query, 'branch': branch_name, 'sha': sha, 'tag': None, 'changes': {'README.md'}},
             spec=HookDetails,
             strict=True
         )
@@ -1208,6 +1246,103 @@ class TestGithubController:
         when(cursor).get('file_restrictions').thenReturn(['README.md'])
         expect(github_controller).are_files_in_repo(files=['README.md'], hook=hook_details).thenReturn(async_value(False))
         expect(github_controller, times=0).get_jobs_next_build_number(job_name).thenReturn(231)
+
+        # when
+        await github_controller.trigger_registered_jobs(hook_details)
+
+    async def test__when_hook_has_changes__and_they_are_requested__but_not_in_restrictions__should_not_be_passed_to_job(self):
+        hook_query = {'repository': 'repo'}
+        job_name = 'job'
+        sha = '123789'
+        branch_name = 'branch'
+
+        cursor = mock(
+            spec=motor.motor_asyncio.AsyncIOMotorCommandCursor,
+            strict=True
+        )
+        collection = mock(
+            spec=motor.motor_asyncio.AsyncIOMotorCollection,
+            strict=True
+        )
+        mongo_client: motor.motor_asyncio.AsyncIOMotorClient = mock(
+            {'registered': {EventTypes.push: collection}},
+            spec=motor.motor_asyncio.AsyncIOMotorClient,
+            strict=True
+        )
+        hook_details = mock(
+            {'event_type': EventTypes.push, 'query': hook_query, 'branch': branch_name, 'sha': sha, 'tag': None, 'changes': {'README.md'}},
+            spec=HookDetails,
+            strict=True
+        )
+
+        github_controller = GithubController(github_client=mock(),
+                                             mongo_client=mongo_client,
+                                             jenkins_client=mock(),
+                                             config=mock())
+
+        # given
+        when(collection).find(hook_query).thenReturn(async_iter(cursor))
+        when(cursor).__getitem__('job').thenReturn(job_name)
+        when(cursor).__getitem__('repository').thenReturn('repo')
+        when(cursor).__getitem__('requested_params').thenReturn([])
+        when(cursor).get('branch_restrictions').thenReturn([])
+        when(cursor).get('change_restrictions').thenReturn([])
+        when(cursor).get('file_restrictions').thenReturn([])
+        when(github_controller).get_jobs_next_build_number(job_name).thenReturn(231)
+        when(github_controller).can_trigger_job_by_branch(job_name, branch_name).thenReturn(async_value(True))
+
+        expect(github_controller).trigger_registered_job(job_name, [], 'repo', sha, branch_name, None, set())
+
+        # when
+        await github_controller.trigger_registered_jobs(hook_details)
+
+    async def test__trigger_registered_jobs__when_only_some_changes_meets_change_restrictions__only_those_should_be_passed_to_job(self):
+        hook_query = {'repository': 'repo'}
+        job_name = 'job'
+        sha = '123789'
+        branch_name = 'branch'
+
+        cursor = mock(
+            spec=motor.motor_asyncio.AsyncIOMotorCommandCursor,
+            strict=True
+        )
+        collection = mock(
+            spec=motor.motor_asyncio.AsyncIOMotorCollection,
+            strict=True
+        )
+        mongo_client: motor.motor_asyncio.AsyncIOMotorClient = mock(
+            {'registered': {EventTypes.push: collection}},
+            spec=motor.motor_asyncio.AsyncIOMotorClient,
+            strict=True
+        )
+        hook_details = mock(
+            {'event_type': EventTypes.push,
+             'query': hook_query,
+             'branch': branch_name,
+             'sha': sha,
+             'tag': None,
+             'changes': {'README.md', 'docs/README.md'}},
+            spec=HookDetails,
+            strict=True
+        )
+
+        github_controller = GithubController(github_client=mock(),
+                                             mongo_client=mongo_client,
+                                             jenkins_client=mock(),
+                                             config=mock())
+
+        # given
+        when(collection).find(hook_query).thenReturn(async_iter(cursor))
+        when(cursor).__getitem__('job').thenReturn(job_name)
+        when(cursor).__getitem__('repository').thenReturn('repo')
+        when(cursor).__getitem__('requested_params').thenReturn([])
+        when(cursor).get('branch_restrictions').thenReturn([])
+        when(cursor).get('change_restrictions').thenReturn(['docs'])
+        when(cursor).get('file_restrictions').thenReturn([])
+        when(github_controller).get_jobs_next_build_number(job_name).thenReturn(231)
+        when(github_controller).can_trigger_job_by_branch(job_name, branch_name).thenReturn(async_value(True))
+
+        expect(github_controller).trigger_registered_job(job_name, [], 'repo', sha, branch_name, None, {'docs/README.md'})
 
         # when
         await github_controller.trigger_registered_jobs(hook_details)
