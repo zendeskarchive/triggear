@@ -2,7 +2,7 @@ import asyncio
 import hmac
 import logging
 import time
-from typing import Dict, List
+from typing import Dict, List, Set
 
 import aiohttp.web
 import aiohttp.web_request
@@ -17,6 +17,7 @@ from app.enums.event_types import EventTypes
 from app.enums.labels import Labels
 from app.enums.registration_fields import RegistrationFields
 from app.exceptions.triggear_timeout_error import TriggearTimeoutError
+from app.request_schemes.register_request_data import RegisterRequestData
 from app.utilities.background_task import BackgroundTask
 from app.utilities.constants import LAST_RUN_IN, BRANCH_DELETED_SHA, TRIGGEAR_RUN_PREFIX
 from app.utilities.err_handling import handle_exceptions
@@ -398,14 +399,16 @@ class GithubController:
             else "build error"
 
     @staticmethod
-    async def get_requested_parameters_values(job_requested_params: List[str], pr_branch: str, sha: str, tag: str):
+    async def get_requested_parameters_values(job_requested_params: List[str], pr_branch: str, sha: str, tag: str, changes: Set[str] = set()):
         job_params = None
         if job_requested_params:
             job_params = {}
-            if 'branch' in job_requested_params:
+            if RegisterRequestData.RequestedParams.branch in job_requested_params:
                 job_params['branch'] = pr_branch
-            if 'sha' in job_requested_params:
+            if RegisterRequestData.RequestedParams.sha in job_requested_params:
                 job_params['sha'] = sha
-            if 'tag' in job_requested_params:
+            if RegisterRequestData.RequestedParams.tag in job_requested_params:
                 job_params['tag'] = tag
+            if RegisterRequestData.RequestedParams.changes in job_requested_params:
+                job_params['changes'] = ','.join(changes)
         return job_params if job_params != {} else None

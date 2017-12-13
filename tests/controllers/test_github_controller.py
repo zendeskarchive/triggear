@@ -799,7 +799,19 @@ class TestGithubController:
         (['invalid'], None)
     ])
     async def test__get_requested_parameters_values__should_return_only_requested_parameters(self, requested_parameters, expected_parameters):
-        assert expected_parameters == await GithubController.get_requested_parameters_values(requested_parameters, 'master', '123321', '1.0')
+        assert expected_parameters == await GithubController.get_requested_parameters_values(requested_parameters,
+                                                                                             'master',
+                                                                                             '123321',
+                                                                                             '1.0')
+
+    async def test__get_requested_parameters__should_return_files_joined_with_coma__when_changes_are_requested(self):
+        assert {'branch': 'master', 'changes': 'README.md,.gitignore'} == await GithubController.get_requested_parameters_values(
+            ['branch', 'changes'],
+            'master',
+            '123321',
+            '1.0',
+            changes=['README.md', '.gitignore']
+        )
 
     async def test__can_trigger_job_by_branch__when_job_was_not_run__should_add_it_to_mongo__and_return_true(self):
         collection = mock(
