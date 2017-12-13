@@ -21,7 +21,7 @@ class TestRegisterRequestData:
         assert RegisterRequestData.is_valid_register_request_data(data)
 
     async def test__when_data_has_mandatory_keys__and_valid_requested_params__should_be_valid(self):
-        data = {'eventType': '', 'repository': '', 'jobName': '', 'labels': [], 'requested_params': ['branch', 'sha', 'tag']}
+        data = {'eventType': '', 'repository': '', 'jobName': '', 'labels': [], 'requested_params': ['branch', 'sha', 'tag', 'changes']}
         assert RegisterRequestData.is_valid_register_request_data(data)
 
     async def test__when_data_has_mandatory_keys__but_invalid_requested_params__should_not_be_valid(self):
