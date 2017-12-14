@@ -313,3 +313,16 @@ class TestPipelineController:
             change_restrictions=None,
             file_restrictions=None
         )
+
+    async def test__when_invalid_token_is_sent_to_missing__should_return_401_response(self):
+        pipeline_controller = PipelineController(mock(), mock(), self.API_TOKEN)
+
+        # given
+        request = mock({'headers': {'Authorization': f'Invalid token'}}, spec=aiohttp.web_request.Request)
+
+        # when
+        response: aiohttp.web.Response = await pipeline_controller.handle_missing(request)
+
+        # then
+        assert response.status == 401
+        assert response.body == b'Unauthorized'

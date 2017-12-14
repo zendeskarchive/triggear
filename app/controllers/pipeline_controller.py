@@ -112,3 +112,8 @@ class PipelineController:
     async def __create_comment(self, repository, sha, body, job_name):
         body = job_name + "\nComments: " + body
         self.__gh_client.get_repo(repository).get_commit(sha).create_comment(body=body)
+
+    @handle_exceptions()
+    @validate_auth_header()
+    async def handle_missing(self, request: aiohttp.web_request.Request) -> aiohttp.web.Response:
+        pass
