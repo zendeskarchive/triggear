@@ -1,3 +1,6 @@
+import datetime
+import time
+
 import github
 import aiohttp.web
 import aiohttp.web_request
@@ -5,14 +8,17 @@ import github.Repository
 import github.Commit
 import pytest
 import motor.motor_asyncio
-from mockito import mock, when
+from mockito import mock, when, expect, captor
 from pymongo.results import UpdateResult, InsertOneResult
 
 from app.controllers.pipeline_controller import PipelineController
+from app.enums.registration_fields import RegistrationFields
+from app.request_schemes.clear_request_data import ClearRequestData
 from app.request_schemes.comment_request_data import CommentRequestData
+from app.request_schemes.deregister_request_data import DeregisterRequestData
 from app.request_schemes.register_request_data import RegisterRequestData
 from app.request_schemes.status_request_data import StatusRequestData
-from tests.async_mockito import async_value
+from tests.async_mockito import async_value, async_iter
 
 pytestmark = pytest.mark.asyncio
 
@@ -313,3 +319,166 @@ class TestPipelineController:
             change_restrictions=None,
             file_restrictions=None
         )
+
+    async def test__when_invalid_token_is_sent_to_missing__should_return_401_response(self):
+        pipeline_controller = PipelineController(mock(), mock(), self.API_TOKEN)
+
+        # given
+        request = mock({'headers': {'Authorization': f'Invalid token'}}, spec=aiohttp.web_request.Request)
+
+        # when
+        response: aiohttp.web.Response = await pipeline_controller.handle_missing(request)
+
+        # then
+        assert response.status == 401
+        assert response.body == b'Unauthorized'
+
+    async def test__when_event_type_is_missing__handle_missing_should_return_400(self):
+        request = mock({'headers': {'Authorization': f'Token {self.API_TOKEN}'},
+                        'match_info': {}}, spec=aiohttp.web_request.Request, strict=True)
+
+        pipeline_controller = PipelineController(mock(), mock(), self.API_TOKEN)
+
+        result: aiohttp.web.Response = await pipeline_controller.handle_missing(request)
+
+        assert result.status == 400
+        assert result.text == 'Invalid eventType requested'
+
+    async def test__when_missing_endpoint_is_called__should_return_all_related_registrations_with_missing_times_more_then_0(self):
+        request = mock({'headers': {'Authorization': f'Token {self.API_TOKEN}'},
+                        'match_info': {'eventType': 'push'}}, spec=aiohttp.web_request.Request, strict=True)
+
+        cursor: motor.motor_asyncio.AsyncIOMotorCommandCursor = async_iter(
+            {RegistrationFields.job: 'push_job_1', RegistrationFields.missed_times: 7},
+            {RegistrationFields.job: 'push_job_2', RegistrationFields.missed_times: 13}
+        )
+        labeled_collection: motor.motor_asyncio.AsyncIOMotorCollection = mock(spec=motor.motor_asyncio.AsyncIOMotorCollection, strict=True)
+        push_collection: motor.motor_asyncio.AsyncIOMotorCollection = mock(spec=motor.motor_asyncio.AsyncIOMotorCollection, strict=True)
+        mongo_client: motor.motor_asyncio.AsyncIOMotorClient = mock({'registered': {'labeled': labeled_collection, 'push': push_collection}},
+                                                                    spec=motor.motor_asyncio.AsyncIOMotorClient, strict=True)
+
+        pipeline_controller = PipelineController(mock(), mongo_client, self.API_TOKEN)
+
+        expect(push_collection).find({RegistrationFields.missed_times: {'$gt': 0}}).thenReturn(cursor)
+        expect(labeled_collection, times=0).find({RegistrationFields.missed_times: {'$gt': 0}})
+
+        result: aiohttp.web.Response = await pipeline_controller.handle_missing(request)
+
+        assert result.status == 200
+        try:
+            assert result.text == 'push_job_1#7,push_job_2#13'
+        except AssertionError:
+            assert result.text == 'push_job_2#13,push_job_1#7'
+
+    async def test__when_deregister_got_wrong_token__should_return_401(self):
+        pipeline_controller = PipelineController(mock(), mock(), self.API_TOKEN)
+
+        # given
+        request = mock({'headers': {'Authorization': f'Invalid token'}}, spec=aiohttp.web_request.Request)
+
+        # when
+        response: aiohttp.web.Response = await pipeline_controller.handle_deregister(request)
+
+        # then
+        assert response.status == 401
+        assert response.body == b'Unauthorized'
+
+    async def test__when_deregister_is_missing_parameters__should_return_400(self):
+        request = mock({'headers': {'Authorization': f'Token {self.API_TOKEN}'}}, spec=aiohttp.web_request.Request, strict=True)
+
+        pipeline_controller = PipelineController(mock(), mock(), self.API_TOKEN)
+
+        # given
+        when(request).json().thenReturn(async_value({}))
+        when(DeregisterRequestData).is_valid_deregister_request_data({}).thenReturn(False)
+
+        # when
+        response: aiohttp.web.Response = await pipeline_controller.handle_deregister(request)
+
+        # then
+        assert response.status == 400
+        assert response.reason == 'Invalid deregister request params!'
+
+    async def test__when_deregister_request_is_valid__should_remove_registration_from_proper_collection__and_log_it_in_mongo(self):
+        request = mock({'headers': {'Authorization': f'Token {self.API_TOKEN}'}}, spec=aiohttp.web_request.Request, strict=True)
+
+        deregister_log_collection: motor.motor_asyncio.AsyncIOMotorCollection = mock(spec=motor.motor_asyncio.AsyncIOMotorCollection, strict=True)
+        labeled_collection: motor.motor_asyncio.AsyncIOMotorCollection = mock(spec=motor.motor_asyncio.AsyncIOMotorCollection, strict=True)
+        push_collection: motor.motor_asyncio.AsyncIOMotorCollection = mock(spec=motor.motor_asyncio.AsyncIOMotorCollection, strict=True)
+        mongo_client: motor.motor_asyncio.AsyncIOMotorClient = mock({'registered': {'labeled': labeled_collection,
+                                                                                    'push': push_collection},
+                                                                     'deregistered': {'log': deregister_log_collection}},
+                                                                    spec=motor.motor_asyncio.AsyncIOMotorClient, strict=True)
+
+        pipeline_controller = PipelineController(mock(), mongo_client, self.API_TOKEN)
+
+        # given
+        when(request).json().thenReturn(async_value({'eventType': 'push', 'jobName': 'job', 'caller': 'del_job#7'}))
+        expect(push_collection).delete_one({RegistrationFields.job: 'job'})
+        expect(labeled_collection, times=0).delete_one({RegistrationFields.job: 'jobName'})
+
+        arg_captor = captor()
+        expect(deregister_log_collection).insert_one(arg_captor)
+
+        # when
+        response: aiohttp.web.Response = await pipeline_controller.handle_deregister(request)
+
+        assert 'job' == arg_captor.value.get('job')
+        assert 'del_job#7' == arg_captor.value.get('caller')
+
+        assert 'push' == arg_captor.value.get('eventType')
+        assert isinstance(arg_captor.value.get('timestamp'), datetime.datetime)
+
+        assert response.status == 200
+        assert response.text == 'Deregistration of job for push succeeded'
+
+    async def test__when_clear_got_wrong_token__should_return_401(self):
+        pipeline_controller = PipelineController(mock(), mock(), self.API_TOKEN)
+
+        # given
+        request = mock({'headers': {'Authorization': f'Invalid token'}}, spec=aiohttp.web_request.Request)
+
+        # when
+        response: aiohttp.web.Response = await pipeline_controller.handle_clear(request)
+
+        # then
+        assert response.status == 401
+        assert response.body == b'Unauthorized'
+
+    async def test__when_clear_is_missing_parameters__should_return_400(self):
+        request = mock({'headers': {'Authorization': f'Token {self.API_TOKEN}'}}, spec=aiohttp.web_request.Request, strict=True)
+
+        pipeline_controller = PipelineController(mock(), mock(), self.API_TOKEN)
+
+        # given
+        when(request).json().thenReturn(async_value({}))
+        when(ClearRequestData).is_valid_clear_request_data({}).thenReturn(False)
+
+        # when
+        response: aiohttp.web.Response = await pipeline_controller.handle_clear(request)
+
+        # then
+        assert response.status == 400
+        assert response.reason == 'Invalid clear request params!'
+
+    async def test__when_clear_request_is_valid__should_set_missed_count_to_0(self):
+        request = mock({'headers': {'Authorization': f'Token {self.API_TOKEN}'}}, spec=aiohttp.web_request.Request, strict=True)
+
+        labeled_collection: motor.motor_asyncio.AsyncIOMotorCollection = mock(spec=motor.motor_asyncio.AsyncIOMotorCollection, strict=True)
+        push_collection: motor.motor_asyncio.AsyncIOMotorCollection = mock(spec=motor.motor_asyncio.AsyncIOMotorCollection, strict=True)
+        mongo_client: motor.motor_asyncio.AsyncIOMotorClient = mock({'registered': {'labeled': labeled_collection,
+                                                                                    'push': push_collection}},
+                                                                    spec=motor.motor_asyncio.AsyncIOMotorClient, strict=True)
+
+        pipeline_controller = PipelineController(mock(), mongo_client, self.API_TOKEN)
+
+        # given
+        when(request).json().thenReturn(async_value({'eventType': 'push', 'jobName': 'job', 'caller': 'del_job#7'}))
+        expect(push_collection).update_one({RegistrationFields.job: 'job'}, {'$set': {'missed_times': 0}})
+        expect(labeled_collection, times=0).update_one({RegistrationFields.job: 'jobName'}, {'$set': {'missed_count': 0}})
+
+        # when
+        response: aiohttp.web.Response = await pipeline_controller.handle_clear(request)
+
+        assert response.status == 200
+        assert response.text == 'Clear of job missed counter succeeded'

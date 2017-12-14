@@ -7,7 +7,7 @@ import app.config.triggear_config
 import app.controllers.github_controller
 import app.controllers.pipeline_controller
 import app.controllers.health_controller
-from mockito import when, mock
+from mockito import when, mock, expect
 from aiohttp import web
 import motor.motor_asyncio
 
@@ -33,7 +33,10 @@ class TestMain:
         pipeline_controller = mock({
                 'handle_register': 'register_handle_method',
                 'handle_status': 'status_handle_method',
-                'handle_comment': 'comment_handle_method'
+                'handle_comment': 'comment_handle_method',
+                'handle_missing': 'missing_handle_method',
+                'handle_deregister': 'deregister_handle_method',
+                'handle_clear': 'clear_handle_method'
             },
             spec=app.controllers.pipeline_controller.PipelineController, strict=True)
         health_controller = mock({
@@ -79,16 +82,22 @@ class TestMain:
             .Jenkins(url='url', username='user', password='jenkins_token')\
             .thenReturn(jenkins_client)
 
-        when(router)\
+        expect(router)\
             .add_post('/github', 'hook_handler_method')
-        when(router)\
+        expect(router)\
             .add_post('/register', 'register_handle_method')
-        when(router)\
+        expect(router)\
             .add_post('/status', 'status_handle_method')
-        when(router)\
+        expect(router)\
             .add_post('/comment', 'comment_handle_method')
-        when(router)\
+        expect(router)\
             .add_get('/health', 'health_handle_method')
+        expect(router)\
+            .add_get('/missing/{eventType}', 'missing_handle_method')
+        expect(router)\
+            .add_post('/deregister', 'deregister_handle_method')
+        expect(router)\
+            .add_post('/clear', 'clear_handle_method')
 
         when(web).run_app(web_app)
 
