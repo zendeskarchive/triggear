@@ -10,6 +10,7 @@ import time
 
 from app.enums.event_types import EventTypes
 from app.enums.registration_fields import RegistrationFields
+from app.request_schemes.clear_request_data import ClearRequestData
 from app.request_schemes.comment_request_data import CommentRequestData
 from app.request_schemes.deregister_request_data import DeregisterRequestData
 from app.request_schemes.register_request_data import RegisterRequestData
@@ -149,3 +150,15 @@ class PipelineController:
                                                             'timestamp': datetime.now()})
         return aiohttp.web.Response(text=f'Deregistration of {data[DeregisterRequestData.job_name]} '
                                          f'for {data[DeregisterRequestData.event_type]} succeeded')
+
+    @handle_exceptions()
+    @validate_auth_header()
+    async def handle_clear(self, request: aiohttp.web_request.Request) -> aiohttp.web.Response:
+        data: Dict = await request.json()
+        logging.warning(f"Clear REQ received: {data}")
+        if not ClearRequestData.is_valid_clear_request_data(data):
+            return aiohttp.web.Response(reason='Invalid clear request params!', status=400)
+        collection = self.__mongo_client.registered[data[RegisterRequestData.event_type]]
+        collection.update_one({RegistrationFields.job: data[DeregisterRequestData.job_name]}, {'$set': {RegistrationFields.missed_times: 0}})
+
+        return aiohttp.web.Response(text=f'Clear of {data[DeregisterRequestData.job_name]} missed counter succeeded')

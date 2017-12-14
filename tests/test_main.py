@@ -35,7 +35,8 @@ class TestMain:
                 'handle_status': 'status_handle_method',
                 'handle_comment': 'comment_handle_method',
                 'handle_missing': 'missing_handle_method',
-                'handle_deregister': 'deregister_handle_method'
+                'handle_deregister': 'deregister_handle_method',
+                'handle_clear': 'clear_handle_method'
             },
             spec=app.controllers.pipeline_controller.PipelineController, strict=True)
         health_controller = mock({
@@ -95,6 +96,8 @@ class TestMain:
             .add_get('/missing/{eventType}', 'missing_handle_method')
         expect(router)\
             .add_post('/deregister', 'deregister_handle_method')
+        expect(router)\
+            .add_post('/clear', 'clear_handle_method')
 
         when(web).run_app(web_app)
 

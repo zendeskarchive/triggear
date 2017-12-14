@@ -31,6 +31,7 @@ def main():
     health_controller = HealthController(api_token=app_config.triggear_token)
 
     app = web.Application()
+
     app.router.add_post('/github', github_controller.handle_hook)
     app.router.add_post('/register', pipeline_controller.handle_register)
     app.router.add_post('/status', pipeline_controller.handle_status)
@@ -38,6 +39,8 @@ def main():
     app.router.add_get('/health', health_controller.handle_health_check)
     app.router.add_get('/missing/{eventType}', pipeline_controller.handle_missing)
     app.router.add_post('/deregister', pipeline_controller.handle_deregister)
+    app.router.add_post('/clear', pipeline_controller.handle_clear)
+
     web.run_app(app)
 
 

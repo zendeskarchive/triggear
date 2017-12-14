@@ -13,6 +13,7 @@ from pymongo.results import UpdateResult, InsertOneResult
 
 from app.controllers.pipeline_controller import PipelineController
 from app.enums.registration_fields import RegistrationFields
+from app.request_schemes.clear_request_data import ClearRequestData
 from app.request_schemes.comment_request_data import CommentRequestData
 from app.request_schemes.deregister_request_data import DeregisterRequestData
 from app.request_schemes.register_request_data import RegisterRequestData
@@ -430,3 +431,54 @@ class TestPipelineController:
 
         assert response.status == 200
         assert response.text == 'Deregistration of job for push succeeded'
+
+    async def test__when_clear_got_wrong_token__should_return_401(self):
+        pipeline_controller = PipelineController(mock(), mock(), self.API_TOKEN)
+
+        # given
+        request = mock({'headers': {'Authorization': f'Invalid token'}}, spec=aiohttp.web_request.Request)
+
+        # when
+        response: aiohttp.web.Response = await pipeline_controller.handle_clear(request)
+
+        # then
+        assert response.status == 401
+        assert response.body == b'Unauthorized'
+
+    async def test__when_clear_is_missing_parameters__should_return_400(self):
+        request = mock({'headers': {'Authorization': f'Token {self.API_TOKEN}'}}, spec=aiohttp.web_request.Request, strict=True)
+
+        pipeline_controller = PipelineController(mock(), mock(), self.API_TOKEN)
+
+        # given
+        when(request).json().thenReturn(async_value({}))
+        when(ClearRequestData).is_valid_clear_request_data({}).thenReturn(False)
+
+        # when
+        response: aiohttp.web.Response = await pipeline_controller.handle_clear(request)
+
+        # then
+        assert response.status == 400
+        assert response.reason == 'Invalid clear request params!'
+
+    async def test__when_clear_request_is_valid__should_set_missed_count_to_0(self):
+        request = mock({'headers': {'Authorization': f'Token {self.API_TOKEN}'}}, spec=aiohttp.web_request.Request, strict=True)
+
+        labeled_collection: motor.motor_asyncio.AsyncIOMotorCollection = mock(spec=motor.motor_asyncio.AsyncIOMotorCollection, strict=True)
+        push_collection: motor.motor_asyncio.AsyncIOMotorCollection = mock(spec=motor.motor_asyncio.AsyncIOMotorCollection, strict=True)
+        mongo_client: motor.motor_asyncio.AsyncIOMotorClient = mock({'registered': {'labeled': labeled_collection,
+                                                                                    'push': push_collection}},
+                                                                    spec=motor.motor_asyncio.AsyncIOMotorClient, strict=True)
+
+        pipeline_controller = PipelineController(mock(), mongo_client, self.API_TOKEN)
+
+        # given
+        when(request).json().thenReturn(async_value({'eventType': 'push', 'jobName': 'job', 'caller': 'del_job#7'}))
+        expect(push_collection).update_one({RegistrationFields.job: 'job'}, {'$set': {'missed_times': 0}})
+        expect(labeled_collection, times=0).update_one({RegistrationFields.job: 'jobName'}, {'$set': {'missed_count': 0}})
+
+        # when
+        response: aiohttp.web.Response = await pipeline_controller.handle_clear(request)
+
+        assert response.status == 200
+        assert response.text == 'Clear of job missed counter succeeded'
