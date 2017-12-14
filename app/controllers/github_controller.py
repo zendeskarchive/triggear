@@ -200,22 +200,22 @@ class GithubController:
 
     async def trigger_registered_jobs(self, hook_details: HookDetails):
         collection = await self.get_collection_for_hook_type(hook_details.event_type)
-        async for cursor in collection.find(hook_details.query):
-            job_name = cursor[RegistrationFields.job]
+        async for document in collection.find(hook_details.query):
+            job_name = document[RegistrationFields.job]
 
-            branch_restrictions = cursor.get(RegistrationFields.branch_restrictions)
+            branch_restrictions = document.get(RegistrationFields.branch_restrictions)
             branch_restrictions = branch_restrictions if branch_restrictions is not None else []
 
-            change_restrictions = cursor.get(RegistrationFields.change_restrictions)
+            change_restrictions = document.get(RegistrationFields.change_restrictions)
             change_restrictions = change_restrictions if change_restrictions is not None else []
 
-            file_restrictions = cursor.get(RegistrationFields.file_restrictions)
+            file_restrictions = document.get(RegistrationFields.file_restrictions)
             file_restrictions = file_restrictions if file_restrictions is not None else []
 
             if not change_restrictions or any_starts_with(any_list=hook_details.changes, starts_with_list=change_restrictions):
                 if not branch_restrictions or hook_details.branch in branch_restrictions:
                     if not file_restrictions or await self.are_files_in_repo(files=file_restrictions, hook=hook_details):
-                        job_requested_params = cursor[RegistrationFields.requested_params]
+                        job_requested_params = document[RegistrationFields.requested_params]
                         try:
                             self.get_jobs_next_build_number(job_name)  # Raises if job does not exist on Jenkins
                             if await self.can_trigger_job_by_branch(job_name, hook_details.branch):
@@ -223,7 +223,7 @@ class GithubController:
                                                            (
                                                                job_name,
                                                                job_requested_params,
-                                                               cursor[RegistrationFields.repository],
+                                                               document[RegistrationFields.repository],
                                                                hook_details.sha,
                                                                hook_details.branch,
                                                                hook_details.tag,

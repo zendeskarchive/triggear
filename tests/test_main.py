@@ -91,7 +91,7 @@ class TestMain:
         when(router)\
             .add_get('/health', 'health_handle_method')
         when(router)\
-            .add_get('/missing', 'missing_handle_method')
+            .add_get('/missing/{eventType}', 'missing_handle_method')
 
         when(web).run_app(web_app)
 

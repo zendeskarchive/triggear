@@ -6,6 +6,7 @@ import aiohttp.web_request
 import github
 import motor.motor_asyncio
 
+from app.enums.event_types import EventTypes
 from app.enums.registration_fields import RegistrationFields
 from app.request_schemes.comment_request_data import CommentRequestData
 from app.request_schemes.register_request_data import RegisterRequestData
@@ -116,4 +117,15 @@ class PipelineController:
     @handle_exceptions()
     @validate_auth_header()
     async def handle_missing(self, request: aiohttp.web_request.Request) -> aiohttp.web.Response:
-        pass
+        event_type = request.match_info.get('eventType')
+        if event_type not in EventTypes.get_allowed_registration_event_types():
+            return aiohttp.web.Response(status=400, text='Invalid eventType requested')
+        logging.warning(f"Missing REQ received for: {event_type}")
+        collection: motor.motor_asyncio.AsyncIOMotorCollection = self.__mongo_client.registered[event_type]
+        cursor: motor.motor_asyncio.AsyncIOMotorCommandCursor = collection.find({RegistrationFields.missed_times: {'$gt': 0}})
+
+        missed_registered_jobs = []
+        async for document in cursor:
+            missed_registered_jobs.append(f'{document[RegistrationFields.job]}#{document[RegistrationFields.missed_times]}')
+
+        return aiohttp.web.Response(text=','.join(missed_registered_jobs))

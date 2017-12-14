@@ -5,14 +5,15 @@ import github.Repository
 import github.Commit
 import pytest
 import motor.motor_asyncio
-from mockito import mock, when
+from mockito import mock, when, expect
 from pymongo.results import UpdateResult, InsertOneResult
 
 from app.controllers.pipeline_controller import PipelineController
+from app.enums.registration_fields import RegistrationFields
 from app.request_schemes.comment_request_data import CommentRequestData
 from app.request_schemes.register_request_data import RegisterRequestData
 from app.request_schemes.status_request_data import StatusRequestData
-from tests.async_mockito import async_value
+from tests.async_mockito import async_value, async_iter
 
 pytestmark = pytest.mark.asyncio
 
@@ -326,3 +327,40 @@ class TestPipelineController:
         # then
         assert response.status == 401
         assert response.body == b'Unauthorized'
+
+    async def test__when_event_type_is_missing__handle_missing_should_return_400(self):
+        request = mock({'headers': {'Authorization': f'Token {self.API_TOKEN}'},
+                        'match_info': {}}, spec=aiohttp.web_request.Request, strict=True)
+
+        pipeline_controller = PipelineController(mock(), mock(), self.API_TOKEN)
+
+        result: aiohttp.web.Response = await pipeline_controller.handle_missing(request)
+
+        assert result.status == 400
+        assert result.text == 'Invalid eventType requested'
+
+    async def test__when_missing_endpoint_is_called__should_return_all_related_registrations_with_missing_times_more_then_0(self):
+        request = mock({'headers': {'Authorization': f'Token {self.API_TOKEN}'},
+                        'match_info': {'eventType': 'push'}}, spec=aiohttp.web_request.Request, strict=True)
+
+        cursor: motor.motor_asyncio.AsyncIOMotorCommandCursor = async_iter(
+            {RegistrationFields.job: 'push_job_1', RegistrationFields.missed_times: 7},
+            {RegistrationFields.job: 'push_job_2', RegistrationFields.missed_times: 13}
+        )
+        labeled_collection: motor.motor_asyncio.AsyncIOMotorCollection = mock(spec=motor.motor_asyncio.AsyncIOMotorCollection, strict=True)
+        push_collection: motor.motor_asyncio.AsyncIOMotorCollection = mock(spec=motor.motor_asyncio.AsyncIOMotorCollection, strict=True)
+        mongo_client: motor.motor_asyncio.AsyncIOMotorClient = mock({'registered': {'labeled': labeled_collection, 'push': push_collection}},
+                                                                    spec=motor.motor_asyncio.AsyncIOMotorClient, strict=True)
+
+        pipeline_controller = PipelineController(mock(), mongo_client, self.API_TOKEN)
+
+        expect(push_collection).find({RegistrationFields.missed_times: {'$gt': 0}}).thenReturn(cursor)
+        expect(labeled_collection, times=0).find({RegistrationFields.missed_times: {'$gt': 0}})
+
+        result: aiohttp.web.Response = await pipeline_controller.handle_missing(request)
+
+        assert result.status == 200
+        try:
+            assert result.text == 'push_job_1#7,push_job_2#13'
+        except AssertionError:
+            assert result.text == 'push_job_2#13,push_job_1#7'
