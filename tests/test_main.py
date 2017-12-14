@@ -33,7 +33,8 @@ class TestMain:
         pipeline_controller = mock({
                 'handle_register': 'register_handle_method',
                 'handle_status': 'status_handle_method',
-                'handle_comment': 'comment_handle_method'
+                'handle_comment': 'comment_handle_method',
+                'handle_missing': 'missing_handle_method'
             },
             spec=app.controllers.pipeline_controller.PipelineController, strict=True)
         health_controller = mock({
@@ -89,6 +90,8 @@ class TestMain:
             .add_post('/comment', 'comment_handle_method')
         when(router)\
             .add_get('/health', 'health_handle_method')
+        when(router)\
+            .add_get('/missing', 'missing_handle_method')
 
         when(web).run_app(web_app)
 
