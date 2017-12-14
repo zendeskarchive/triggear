@@ -37,6 +37,7 @@ def main():
     app.router.add_post('/comment', pipeline_controller.handle_comment)
     app.router.add_get('/health', health_controller.handle_health_check)
     app.router.add_get('/missing/{eventType}', pipeline_controller.handle_missing)
+    app.router.add_post('/deregister', pipeline_controller.handle_deregister)
     web.run_app(app)
 
 

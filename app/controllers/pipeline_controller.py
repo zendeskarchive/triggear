@@ -1,14 +1,17 @@
 import logging
+from datetime import datetime
 from typing import List, Optional, Dict
 
 import aiohttp.web
 import aiohttp.web_request
 import github
 import motor.motor_asyncio
+import time
 
 from app.enums.event_types import EventTypes
 from app.enums.registration_fields import RegistrationFields
 from app.request_schemes.comment_request_data import CommentRequestData
+from app.request_schemes.deregister_request_data import DeregisterRequestData
 from app.request_schemes.register_request_data import RegisterRequestData
 from app.request_schemes.status_request_data import StatusRequestData
 from app.utilities.auth_validation import validate_auth_header
@@ -129,3 +132,20 @@ class PipelineController:
             missed_registered_jobs.append(f'{document[RegistrationFields.job]}#{document[RegistrationFields.missed_times]}')
 
         return aiohttp.web.Response(text=','.join(missed_registered_jobs))
+
+    @handle_exceptions()
+    @validate_auth_header()
+    async def handle_deregister(self, request: aiohttp.web_request.Request) -> aiohttp.web.Response:
+        data: Dict = await request.json()
+        logging.warning(f"Deregister REQ received: {data}")
+        if not DeregisterRequestData.is_valid_deregister_request_data(data):
+            return aiohttp.web.Response(reason='Invalid deregister request params!', status=400)
+        collection = self.__mongo_client.registered[data[RegisterRequestData.event_type]]
+        collection.delete_one({RegistrationFields.job: data[DeregisterRequestData.job_name]})
+
+        self.__mongo_client.deregistered['log'].insert_one({'job': data[DeregisterRequestData.job_name],
+                                                            'caller': data[DeregisterRequestData.caller],
+                                                            'eventType': data[DeregisterRequestData.event_type],
+                                                            'timestamp': datetime.now()})
+        return aiohttp.web.Response(text=f'Deregistration of {data[DeregisterRequestData.job_name]} '
+                                         f'for {data[DeregisterRequestData.event_type]} succeeded')
