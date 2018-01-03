@@ -14,6 +14,7 @@ import github.PullRequest
 import github.PullRequestPart
 import github.Commit
 import time
+from urllib.error import HTTPError
 from github import GithubException
 from mockito import mock, when, expect, verify, VerificationError
 
@@ -754,6 +755,27 @@ class TestGithubController:
 
         github_controller.build_jenkins_job('job', {'param': 'value'})
 
+    async def test__when_build_jenkins_job_raises_400_nothing_is_submitted__should_be_recalled_with_empty_param(self):
+        jenkins_client: jenkins.Jenkins = mock(spec=jenkins.Jenkins, strict=True)
+        github_controller = GithubController(mock(), mock(), jenkins_client, mock())
+
+        when(jenkins_client).build_job('job', parameters=None).thenRaise(HTTPError(None, 400, 'Nothing is submitted', None, None))
+        expect(jenkins_client, times=1).build_job('job', parameters={'': ''})
+
+        github_controller.build_jenkins_job('job', None)
+
+    async def test__when_build_jenkins_job_raises_random_http_error__should_be_thrown(self):
+        jenkins_client: jenkins.Jenkins = mock(spec=jenkins.Jenkins, strict=True)
+        github_controller = GithubController(mock(), mock(), jenkins_client, mock())
+
+        when(jenkins_client).build_job('job', parameters=None).thenRaise(HTTPError(None, 401, 'Something went bad', None, None))
+        expect(jenkins_client, times=0).build_job('job', parameters={'': ''})
+
+        with pytest.raises(HTTPError) as error:
+            github_controller.build_jenkins_job('job', None)
+        assert error.value.code == 401
+        assert error.value.msg == 'Something went bad'
+
     async def test__create_github_build_status__calls_github_client_properly(self):
         github_client: github.Github = mock(spec=github.Github, strict=True)
         github_repo: github.Repository.Repository = mock(spec=github.Repository.Repository, strict=True)
@@ -1346,3 +1368,4 @@ class TestGithubController:
 
         # when
         await github_controller.trigger_registered_jobs(hook_details)
+        await asyncio.sleep(.25)
