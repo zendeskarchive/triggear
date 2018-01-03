@@ -214,7 +214,7 @@ class TestPipelineController:
         # given
         when(request).json().thenReturn(async_value(parameters))
         when(RegisterRequestData).is_valid_register_request_data(parameters).thenReturn(True)
-        when(pipeline_controller).add_registration_if_not_exists(
+        when(pipeline_controller).add_or_update_registration(
             event_type='type',
             repository='repo',
             job_name='job',
@@ -251,7 +251,7 @@ class TestPipelineController:
                                                       'file_restrictions': ['__init__.py']}).thenReturn(async_value(update_result))
 
         # when
-        await pipeline_controller.add_registration_if_not_exists(
+        await pipeline_controller.add_or_update_registration(
             event_type='pushed',
             repository='repo',
             job_name='job',
@@ -280,7 +280,7 @@ class TestPipelineController:
                                    'file_restrictions': ['__init__.py']}).thenReturn(async_value(update_result))
 
         # when
-        await pipeline_controller.add_registration_if_not_exists(
+        await pipeline_controller.add_or_update_registration(
             event_type='pushed',
             repository='repo',
             job_name='job',
@@ -309,7 +309,7 @@ class TestPipelineController:
                                    'file_restrictions': []}).thenReturn(async_value(update_result))
 
         # when
-        await pipeline_controller.add_registration_if_not_exists(
+        await pipeline_controller.add_or_update_registration(
             event_type='pushed',
             repository='repo',
             job_name='job',

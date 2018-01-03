@@ -27,15 +27,15 @@ class PipelineController:
         self.__mongo_client = mongo_client
         self.api_token = api_token
 
-    async def add_registration_if_not_exists(self,
-                                             event_type: str,
-                                             repository: str,
-                                             job_name: str,
-                                             labels: List[str],
-                                             requested_params: List[str],
-                                             branch_restrictions: Optional[List[str]],
-                                             change_restrictions: Optional[List[str]],
-                                             file_restrictions: Optional[List[str]]):
+    async def add_or_update_registration(self,
+                                         event_type: str,
+                                         repository: str,
+                                         job_name: str,
+                                         labels: List[str],
+                                         requested_params: List[str],
+                                         branch_restrictions: Optional[List[str]],
+                                         change_restrictions: Optional[List[str]],
+                                         file_restrictions: Optional[List[str]]):
         collection = self.__mongo_client.registered[event_type]
         job_registration = {
             RegistrationFields.repository: repository,
@@ -61,7 +61,7 @@ class PipelineController:
         logging.warning(f"Register REQ received: {data}")
         if not RegisterRequestData.is_valid_register_request_data(data):
             return aiohttp.web.Response(reason='Invalid register request params!', status=400)
-        await self.add_registration_if_not_exists(
+        await self.add_or_update_registration(
             event_type=data['eventType'],
             repository=data['repository'],
             job_name=data['jobName'],
