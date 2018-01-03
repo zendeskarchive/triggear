@@ -6,7 +6,6 @@ import aiohttp.web
 import aiohttp.web_request
 import github
 import motor.motor_asyncio
-import time
 
 from app.enums.event_types import EventTypes
 from app.enums.registration_fields import RegistrationFields
