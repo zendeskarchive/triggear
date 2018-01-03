@@ -3,12 +3,16 @@ import hmac
 import logging
 import time
 from typing import Dict, List, Set
+from typing import Optional
+from typing import Tuple
 
 import aiohttp.web
 import aiohttp.web_request
 import github
 import jenkins
 import motor.motor_asyncio
+from aiohttp.web_response import Response
+from urllib.error import HTTPError
 
 from app.config.triggear_config import TriggearConfig
 from app.dto.hook_details import HookDetails
@@ -22,9 +26,6 @@ from app.utilities.background_task import BackgroundTask
 from app.utilities.constants import LAST_RUN_IN, BRANCH_DELETED_SHA, TRIGGEAR_RUN_PREFIX
 from app.utilities.err_handling import handle_exceptions
 from app.utilities.functions import any_starts_with, get_all_starting_with
-from aiohttp.web_response import Response
-from typing import Optional
-from typing import Tuple
 
 
 class GithubController:
@@ -309,7 +310,14 @@ class GithubController:
         return None
 
     def build_jenkins_job(self, job_name, job_params):
-        self.__jenkins_client.build_job(job_name, parameters=job_params)
+        try:
+            self.__jenkins_client.build_job(job_name, parameters=job_params)
+        except HTTPError as http_error:
+            if http_error.code == 400 and http_error.msg == 'Nothing is submitted':
+                # workaround for jenkins.Jenkins issue with calling parametrized jobs with no parameters
+                self.__jenkins_client.build_job(job_name, parameters={'': ''})
+                return
+            raise
 
     async def can_trigger_job_by_branch(self, job_name, branch):
         last_job_run_in_branch = {"branch": branch, "job": job_name}
