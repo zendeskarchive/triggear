@@ -826,6 +826,22 @@ class TestGithubController:
                                                                                              '123321',
                                                                                              '1.0')
 
+    @pytest.mark.parametrize("requested_parameters, expected_parameters", [
+        ([], None),
+        (['branch:customBranch'], {'customBranch': 'staging'}),
+        (['sha:SHA'], {'SHA': '1q2w3e'}),
+        (['tag:tAg'], {'tAg': '2.0'}),
+        (['tag:Tag', 'sha:shA'], {'Tag': '2.0', 'shA': '1q2w3e'}),
+        (['tag:custom', 'sha:very', 'branch:much'], {'custom': '2.0', 'very': '1q2w3e', 'much': 'staging'}),
+        (['invalid'], None)
+    ])
+    async def test__get_requested_parameters_values__when_requested_params_are_prefix_based__should_return_proper_requested_params(
+            self, requested_parameters, expected_parameters):
+        assert expected_parameters == await GithubController.get_requested_parameters_values(requested_parameters,
+                                                                                             'staging',
+                                                                                             '1q2w3e',
+                                                                                             '2.0')
+
     async def test__get_requested_parameters__should_return_files_joined_with_coma__when_changes_are_requested(self):
         result = await GithubController.get_requested_parameters_values(
             ['branch', 'changes'],
