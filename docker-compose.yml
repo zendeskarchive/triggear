@@ -2,7 +2,7 @@ version: "2"
 services:
     app:
         build: .
-        command: python app/main.py
+        command: pipenv run python app/main.py
         depends_on:
           - mongodb
         ports:
@@ -11,6 +11,7 @@ services:
             - ./configs/creds.yml:/usr/src/creds/creds.yml
         environment:
           - COMPOSE=true
+          - PYTHONPATH=/usr/src/triggear
     mongodb:
         image: "bitnami/mongodb:latest"
         ports:
