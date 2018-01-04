@@ -315,7 +315,7 @@ class GithubController:
         except HTTPError as http_error:
             logging.exception(f'Exception caught when building job {job_name} with params {job_params}')
             if http_error.code == 400 and http_error.msg == 'Nothing is submitted':
-                logging.warning(f'Will retry building {job_name} with {"": ""} as params')
+                logging.warning(f'Will retry building {job_name} with {{"": ""}} as params')
                 # workaround for jenkins.Jenkins issue with calling parametrized jobs with no parameters
                 self.__jenkins_client.build_job(job_name, parameters={'': ''})
                 return
