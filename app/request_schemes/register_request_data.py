@@ -1,5 +1,7 @@
 from typing import Dict, List
 
+from app.utilities.functions import starts_with_item_from_list
+
 
 class RegisterRequestData:
     event_type = 'eventType'
@@ -40,9 +42,14 @@ class RegisterRequestData:
                 RegisterRequestData.RequestedParams.changes]
 
     @staticmethod
+    def __get_allowed_requested_params_prefixes() -> List[str]:
+        return [param + ':' for param in RegisterRequestData.__get_allowed_requested_params()]
+
+    @staticmethod
     def __are_requested_params_valid(data: Dict):
         for param in data[RegisterRequestData.requested_params]:
-            if param not in RegisterRequestData.__get_allowed_requested_params():
+            if param not in RegisterRequestData.__get_allowed_requested_params() \
+                    and not starts_with_item_from_list(param, RegisterRequestData.__get_allowed_requested_params_prefixes()):
                 return False
         return True
 

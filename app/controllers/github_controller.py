@@ -313,7 +313,9 @@ class GithubController:
         try:
             self.__jenkins_client.build_job(job_name, parameters=job_params)
         except HTTPError as http_error:
+            logging.exception(f'Exception caught when building job {job_name} with params {job_params}')
             if http_error.code == 400 and http_error.msg == 'Nothing is submitted':
+                logging.warning(f'Will retry building {job_name} with {"": ""} as params')
                 # workaround for jenkins.Jenkins issue with calling parametrized jobs with no parameters
                 self.__jenkins_client.build_job(job_name, parameters={'': ''})
                 return
@@ -413,12 +415,21 @@ class GithubController:
         job_params = None
         if job_requested_params:
             job_params = {}
-            if RegisterRequestData.RequestedParams.branch in job_requested_params:
-                job_params['branch'] = pr_branch
-            if RegisterRequestData.RequestedParams.sha in job_requested_params:
-                job_params['sha'] = sha
-            if RegisterRequestData.RequestedParams.tag in job_requested_params:
-                job_params['tag'] = tag
-            if RegisterRequestData.RequestedParams.changes in job_requested_params:
-                job_params['changes'] = ','.join(changes)
+            for param in job_requested_params:
+                if param.startswith(RegisterRequestData.RequestedParams.branch):
+                    param_key = await GithubController.__get_parsed_param_key(RegisterRequestData.RequestedParams.branch, param)
+                    job_params[param_key] = pr_branch
+                if param.startswith(RegisterRequestData.RequestedParams.sha):
+                    param_key = await GithubController.__get_parsed_param_key(RegisterRequestData.RequestedParams.sha, param)
+                    job_params[param_key] = sha
+                if param.startswith(RegisterRequestData.RequestedParams.tag):
+                    param_key = await GithubController.__get_parsed_param_key(RegisterRequestData.RequestedParams.tag, param)
+                    job_params[param_key] = tag
+                if param.startswith(RegisterRequestData.RequestedParams.changes):
+                    param_key = await GithubController.__get_parsed_param_key(RegisterRequestData.RequestedParams.changes, param)
+                    job_params[param_key] = ','.join(changes)
         return job_params if job_params != {} else None
+
+    @staticmethod
+    async def __get_parsed_param_key(prefix, param):
+        return prefix if param == prefix else param.split(':', 1)[1]
