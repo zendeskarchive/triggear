@@ -1,0 +1,30 @@
+[[source]]
+
+url = "https://pypi.python.org/simple"
+verify_ssl = true
+name = "pypi"
+
+
+[packages]
+
+python-jenkins = "*"
+PyGithub = "*"
+aiohttp = "*"
+motor = "*"
+PyYAML = "*"
+pytest = "*"
+pytest-asyncio = "*"
+pytest-cov = "*"
+pytest-mock = "*"
+asynctest = "*"
+mockito = "*"
+pytest-mockito = "*"
+
+
+[dev-packages]
+
+
+
+[requires]
+
+python_version = "3.6"

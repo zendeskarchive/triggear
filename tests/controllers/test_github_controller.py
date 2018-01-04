@@ -387,7 +387,7 @@ class TestGithubController:
     async def test__handle_tagged__passes_proper_hook_details_to_trigger_jobs(self):
         github_controller = GithubController(mock(), mock(), mock(), mock())
         hook_data = {'some': 'data'}
-        hook_details = mock(spec=HookDetails, strict=True)
+        hook_details = mock({'sha': '123321'}, spec=HookDetails, strict=True)
 
         # given
         when(HookDetailsFactory).get_tag_details(hook_data).thenReturn(hook_details)
@@ -1385,3 +1385,13 @@ class TestGithubController:
         # when
         await github_controller.trigger_registered_jobs(hook_details)
         await asyncio.sleep(.25)
+
+    async def test__tag_handle__should_not_trigger_jobs__if_sha_means_branch_deletion(self):
+        github_controller = GithubController(mock(), mock(), mock(), mock())
+        hook_data = mock()
+        hook_details = mock({'sha': '0000000000000000000000000000000000000000', 'branch': 'master', 'tag': '1.2.3'}, spec=HookDetails, strict=True)
+
+        expect(HookDetailsFactory).get_tag_details(hook_data).thenReturn(hook_details)
+        expect(github_controller, times=0).trigger_registered_jobs(hook_details)
+
+        await github_controller.handle_tagged(hook_data)

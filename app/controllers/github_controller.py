@@ -116,7 +116,11 @@ class GithubController:
         return [label.name for label in self.__gh_client.get_repo(repo).get_labels()]
 
     async def handle_tagged(self, data: dict):
-        await self.trigger_registered_jobs(HookDetailsFactory.get_tag_details(data))
+        hook_details: HookDetails = HookDetailsFactory.get_tag_details(data)
+        if hook_details.sha != BRANCH_DELETED_SHA:
+            await self.trigger_registered_jobs(hook_details)
+        else:
+            logging.warning(f"Tag {hook_details.tag} was deleted as SHA was zeros only!")
 
     async def handle_labeled(self, data: dict):
         await self.trigger_registered_jobs(HookDetailsFactory.get_labeled_details(data))
@@ -315,7 +319,7 @@ class GithubController:
         except HTTPError as http_error:
             logging.exception(f'Exception caught when building job {job_name} with params {job_params}')
             if http_error.code == 400 and http_error.msg == 'Nothing is submitted':
-                logging.warning(f'Will retry building {job_name} with {"": ""} as params')
+                logging.warning(f'Will retry building {job_name} with {{"": ""}} as params')
                 # workaround for jenkins.Jenkins issue with calling parametrized jobs with no parameters
                 self.__jenkins_client.build_job(job_name, parameters={'': ''})
                 return

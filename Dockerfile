@@ -6,13 +6,11 @@ ENV APP=/usr/src/triggear
 RUN mkdir -p $APP
 WORKDIR $APP
 
-COPY requirements.txt $APP
-RUN pip install -r requirements.txt
+RUN pip install pipenv
 COPY . $APP
-
-ENV PYTHONPATH=$APP
+RUN pipenv install
 
 ENV CREDS_PATH=$APP/configs/creds.yml
 ENV CONFIG_PATH=$APP/config.yml
 
-RUN PYTHONPATH=$APP pytest --cov-report=html --cov=app --junit-xml=report.xml .
+RUN pipenv run py.test --cov-report=html --cov=app --junit-xml=report.xml .
