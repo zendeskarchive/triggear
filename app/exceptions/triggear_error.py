@@ -1,0 +1,2 @@
+class TriggearError(RuntimeError):
+    pass
