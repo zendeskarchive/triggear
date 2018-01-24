@@ -5,7 +5,7 @@ import pytest
 import yaml
 from mockito import when
 
-from app.config.triggear_config import TriggearConfig
+from app.config.triggear_config import TriggearConfig, JenkinsInstanceConfig
 
 pytestmark = pytest.mark.asyncio
 
@@ -13,9 +13,11 @@ pytestmark = pytest.mark.asyncio
 @pytest.mark.usefixtures('unstub')
 class TestTriggearConfig:
     VALID_CREDS_DATA = {
-        'jenkins_url': 'URL',
-        'jenkins_user_id': 'USER',
-        'jenkins_api_token': 'JENKINS_TOKEN',
+        'jenkins_instances': [{
+            'url': 'URL',
+            'user': 'USER',
+            'token': 'JENKINS_TOKEN',
+        }],
         'github_token': 'GITHUB_TOKEN',
         'triggear_token': 'TRIGGEAR_TOKEN'
     }
@@ -28,11 +30,9 @@ class TestTriggearConfig:
         assert str(file_not_found_error.value) == "[Errno 2] No such file or directory: 'does/not/exist'"
 
     @pytest.mark.parametrize("yaml_data, missing_key", [
-        ({}, 'jenkins_url'),
-        ({'jenkins_url': ''}, 'jenkins_user_id'),
-        ({'jenkins_url': '', 'jenkins_user_id': ''}, 'jenkins_api_token'),
-        ({'jenkins_url': '', 'jenkins_user_id': '', 'jenkins_api_token': ''}, 'github_token'),
-        ({'jenkins_url': '', 'jenkins_user_id': '', 'jenkins_api_token': '', 'github_token': ''}, 'triggear_token')
+        ({}, 'jenkins_instances'),
+        ({'jenkins_instances': []}, 'github_token'),
+        ({'jenkins_instances': [], 'github_token': ''}, 'triggear_token')
     ])
     async def test__when_any_key_is_missing_in_creds_file__should_raise_proper_key_error(self, yaml_data: Dict, missing_key: str):
         when(os).getenv('CREDS_PATH').thenReturn('./tests/config/example_configs/creds.yaml')
@@ -59,8 +59,19 @@ class TestTriggearConfig:
 
         assert triggear_config.rerun_time_limit == 2
         assert triggear_config.RERUN_DEFAULT_TIME == 30
+
         assert triggear_config.triggear_token == 'TRIGGEAR_TOKEN'
         assert triggear_config.github_token == 'GITHUB_TOKEN'
-        assert triggear_config.jenkins_api_token == 'JENKINS_USER_API_TOKEN'
-        assert triggear_config.jenkins_url == 'http://JENKINS_URL/'
-        assert triggear_config.jenkins_user_id == 'JENKINS_USER'
+
+        first_instance_url = "https://JENKINS_URL/"
+        second_instance_url = "https://ci.triggear.com/"
+        assert set(triggear_config.jenkins_instances.keys()) == {first_instance_url, second_instance_url}
+
+        first_instance: JenkinsInstanceConfig = triggear_config.jenkins_instances.get(first_instance_url)
+        second_instance: JenkinsInstanceConfig = triggear_config.jenkins_instances.get(second_instance_url)
+        assert first_instance.url == first_instance_url
+        assert first_instance.username == 'JENKINS_USER'
+        assert first_instance.token == 'JENKINS_USER_API_TOKEN'
+        assert second_instance.url == second_instance_url
+        assert second_instance.username == "other_user"
+        assert second_instance.token == "other_api_token"
