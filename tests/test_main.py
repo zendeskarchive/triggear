@@ -48,39 +48,34 @@ class TestMain:
         web_app = mock({'router': router}, spec=web.Application, strict=True)
         github_client = mock(spec=github.Github, strict=True)
         mongo_client = mock(spec=motor.motor_asyncio, strict=True)
-        jenkins_client = mock(spec=jenkins.Jenkins, strict=True)
 
         # given
-        when(app.config.triggear_config)\
+        expect(app.config.triggear_config)\
             .TriggearConfig()\
             .thenReturn(triggear_config)
-        when(app.controllers.github_controller)\
+        expect(app.controllers.github_controller)\
             .GithubController(github_client=github_client,
                               mongo_client=mongo_client,
-                              jenkins_client=jenkins_client,
                               config=triggear_config)\
             .thenReturn(github_controller)
-        when(app.controllers.pipeline_controller)\
+        expect(app.controllers.pipeline_controller)\
             .PipelineController(github_client=github_client,
                                 mongo_client=mongo_client,
                                 api_token='triggear_token')\
             .thenReturn(pipeline_controller)
-        when(app.controllers.health_controller)\
+        expect(app.controllers.health_controller)\
             .HealthController(api_token='triggear_token')\
             .thenReturn(health_controller)
 
-        when(web)\
+        expect(web)\
             .Application()\
             .thenReturn(web_app)
-        when(github)\
+        expect(github)\
             .Github(login_or_token='gh_token')\
             .thenReturn(github_client)
-        when(motor.motor_asyncio)\
+        expect(motor.motor_asyncio)\
             .AsyncIOMotorClient()\
             .thenReturn(mongo_client)
-        when(jenkins)\
-            .Jenkins(url='url', username='user', password='jenkins_token')\
-            .thenReturn(jenkins_client)
 
         expect(router)\
             .add_post('/github', 'hook_handler_method')
