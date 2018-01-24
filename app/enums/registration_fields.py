@@ -7,3 +7,4 @@ class RegistrationFields:
     change_restrictions = 'change_restrictions'
     file_restrictions = 'file_restrictions'
     missed_times = 'missed_times'
+    jenkins_url = 'jenkins_url'
