@@ -28,6 +28,7 @@ class PipelineController:
         self.api_token = api_token
 
     async def add_or_update_registration(self,
+                                         jenkins_url: str,
                                          event_type: str,
                                          repository: str,
                                          job_name: str,
@@ -38,6 +39,7 @@ class PipelineController:
                                          file_restrictions: Optional[List[str]]):
         collection = self.__mongo_client.registered[event_type]
         job_registration = {
+            RegistrationFields.jenkins_url: jenkins_url,
             RegistrationFields.repository: repository,
             RegistrationFields.job: job_name
         }
@@ -62,6 +64,7 @@ class PipelineController:
         if not RegisterRequestData.is_valid_register_request_data(data):
             return aiohttp.web.Response(reason='Invalid register request params!', status=400)
         await self.add_or_update_registration(
+            jenkins_url=data['jenkins_url'],
             event_type=data['eventType'],
             repository=data['repository'],
             job_name=data['jobName'],

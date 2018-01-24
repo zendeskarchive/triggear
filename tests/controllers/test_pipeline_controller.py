@@ -1,5 +1,4 @@
 import datetime
-import time
 
 import github
 import aiohttp.web
@@ -206,7 +205,8 @@ class TestPipelineController:
         assert response.reason == 'Invalid register request params!'
 
     async def test__when_data_is_valid__should_call_internal_add_registration__and_return_200_response(self):
-        parameters = {'eventType': 'type', 'repository': 'repo', 'jobName': 'job', 'labels': ['label'], 'requested_params': ['branch']}
+        parameters = {'jenkins_url': 'url', 'eventType': 'type', 'repository': 'repo',
+                      'jobName': 'job', 'labels': ['label'], 'requested_params': ['branch']}
         request = mock({'headers': {'Authorization': f'Token {self.API_TOKEN}'}}, spec=aiohttp.web_request.Request, strict=True)
 
         pipeline_controller = PipelineController(mock(), mock(), self.API_TOKEN)
@@ -215,6 +215,7 @@ class TestPipelineController:
         when(request).json().thenReturn(async_value(parameters))
         when(RegisterRequestData).is_valid_register_request_data(parameters).thenReturn(True)
         when(pipeline_controller).add_or_update_registration(
+            jenkins_url='url',
             event_type='type',
             repository='repo',
             job_name='job',
@@ -241,8 +242,9 @@ class TestPipelineController:
         pipeline_controller = PipelineController(mock(), mongo_client, self.API_TOKEN)
 
         # given
-        when(mongo_db).find_one({'repository': 'repo', 'job': 'job'}).thenReturn(async_value(mongo_collection))
-        when(mongo_db).replace_one(mongo_collection, {'repository': 'repo',
+        when(mongo_db).find_one({'jenkins_url': 'url', 'repository': 'repo', 'job': 'job'}).thenReturn(async_value(mongo_collection))
+        when(mongo_db).replace_one(mongo_collection, {'jenkins_url': 'url',
+                                                      'repository': 'repo',
                                                       'job': 'job',
                                                       'labels': ['label1', 'label2'],
                                                       'requested_params': ['branch', 'sha'],
@@ -252,6 +254,7 @@ class TestPipelineController:
 
         # when
         await pipeline_controller.add_or_update_registration(
+            jenkins_url='url',
             event_type='pushed',
             repository='repo',
             job_name='job',
@@ -270,8 +273,9 @@ class TestPipelineController:
         pipeline_controller = PipelineController(mock(), mongo_client, self.API_TOKEN)
 
         # given
-        when(mongo_db).find_one({'repository': 'repo', 'job': 'job'}).thenReturn(async_value(None))
+        when(mongo_db).find_one({'jenkins_url': 'url', 'repository': 'repo', 'job': 'job'}).thenReturn(async_value(None))
         when(mongo_db).insert_one({'repository': 'repo',
+                                   'jenkins_url': 'url',
                                    'job': 'job',
                                    'labels': ['label1', 'label2'],
                                    'requested_params': ['branch', 'sha'],
@@ -281,6 +285,7 @@ class TestPipelineController:
 
         # when
         await pipeline_controller.add_or_update_registration(
+            jenkins_url='url',
             event_type='pushed',
             repository='repo',
             job_name='job',
@@ -299,8 +304,9 @@ class TestPipelineController:
         pipeline_controller = PipelineController(mock(), mongo_client, self.API_TOKEN)
 
         # given
-        when(mongo_db).find_one({'repository': 'repo', 'job': 'job'}).thenReturn(async_value(None))
+        when(mongo_db).find_one({'jenkins_url': 'url', 'repository': 'repo', 'job': 'job'}).thenReturn(async_value(None))
         when(mongo_db).insert_one({'repository': 'repo',
+                                   'jenkins_url': 'url',
                                    'job': 'job',
                                    'labels': ['label1', 'label2'],
                                    'requested_params': ['branch', 'sha'],
@@ -310,6 +316,7 @@ class TestPipelineController:
 
         # when
         await pipeline_controller.add_or_update_registration(
+            jenkins_url= 'url',
             event_type='pushed',
             repository='repo',
             job_name='job',
