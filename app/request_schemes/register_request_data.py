@@ -4,6 +4,7 @@ from app.utilities.functions import starts_with_item_from_list
 
 
 class RegisterRequestData:
+    jenkins_url = 'jenkins_url'
     event_type = 'eventType'
     repository = 'repository'
     job_name = 'jobName'
@@ -25,7 +26,8 @@ class RegisterRequestData:
                 RegisterRequestData.repository,
                 RegisterRequestData.job_name,
                 RegisterRequestData.labels,
-                RegisterRequestData.requested_params]
+                RegisterRequestData.requested_params,
+                RegisterRequestData.jenkins_url]
 
     @staticmethod
     def __has_mandatory_keys(request_data: Dict) -> bool:

@@ -1,7 +1,6 @@
 import os
 
 import github
-import jenkins
 import motor.motor_asyncio
 from aiohttp import web
 
@@ -17,13 +16,9 @@ def main():
     gh_client = github.Github(login_or_token=app_config.github_token)
     mongo_client = motor.motor_asyncio.AsyncIOMotorClient() if not os.environ.get('COMPOSE') == 'true' \
         else motor.motor_asyncio.AsyncIOMotorClient('mongodb://mongodb:27017')
-    jenkins_client = jenkins.Jenkins(url=app_config.jenkins_url,
-                                     username=app_config.jenkins_user_id,
-                                     password=app_config.jenkins_api_token)
 
     github_controller = GithubController(github_client=gh_client,
                                          mongo_client=mongo_client,
-                                         jenkins_client=jenkins_client,
                                          config=app_config)
     pipeline_controller = PipelineController(github_client=gh_client,
                                              mongo_client=mongo_client,
@@ -31,7 +26,6 @@ def main():
     health_controller = HealthController(api_token=app_config.triggear_token)
 
     app = web.Application()
-
     app.router.add_post('/github', github_controller.handle_hook)
     app.router.add_post('/register', pipeline_controller.handle_register)
     app.router.add_post('/status', pipeline_controller.handle_status)

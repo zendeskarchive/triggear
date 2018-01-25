@@ -1,5 +1,4 @@
 import datetime
-import time
 
 import github
 import aiohttp.web
@@ -206,7 +205,8 @@ class TestPipelineController:
         assert response.reason == 'Invalid register request params!'
 
     async def test__when_data_is_valid__should_call_internal_add_registration__and_return_200_response(self):
-        parameters = {'eventType': 'type', 'repository': 'repo', 'jobName': 'job', 'labels': ['label'], 'requested_params': ['branch']}
+        parameters = {'jenkins_url': 'url', 'eventType': 'type', 'repository': 'repo',
+                      'jobName': 'job', 'labels': ['label'], 'requested_params': ['branch']}
         request = mock({'headers': {'Authorization': f'Token {self.API_TOKEN}'}}, spec=aiohttp.web_request.Request, strict=True)
 
         pipeline_controller = PipelineController(mock(), mock(), self.API_TOKEN)
@@ -215,6 +215,7 @@ class TestPipelineController:
         when(request).json().thenReturn(async_value(parameters))
         when(RegisterRequestData).is_valid_register_request_data(parameters).thenReturn(True)
         when(pipeline_controller).add_or_update_registration(
+            jenkins_url='url',
             event_type='type',
             repository='repo',
             job_name='job',
@@ -241,8 +242,9 @@ class TestPipelineController:
         pipeline_controller = PipelineController(mock(), mongo_client, self.API_TOKEN)
 
         # given
-        when(mongo_db).find_one({'repository': 'repo', 'job': 'job'}).thenReturn(async_value(mongo_collection))
-        when(mongo_db).replace_one(mongo_collection, {'repository': 'repo',
+        when(mongo_db).find_one({'jenkins_url': 'url', 'repository': 'repo', 'job': 'job'}).thenReturn(async_value(mongo_collection))
+        when(mongo_db).replace_one(mongo_collection, {'jenkins_url': 'url',
+                                                      'repository': 'repo',
                                                       'job': 'job',
                                                       'labels': ['label1', 'label2'],
                                                       'requested_params': ['branch', 'sha'],
@@ -252,6 +254,7 @@ class TestPipelineController:
 
         # when
         await pipeline_controller.add_or_update_registration(
+            jenkins_url='url',
             event_type='pushed',
             repository='repo',
             job_name='job',
@@ -270,8 +273,9 @@ class TestPipelineController:
         pipeline_controller = PipelineController(mock(), mongo_client, self.API_TOKEN)
 
         # given
-        when(mongo_db).find_one({'repository': 'repo', 'job': 'job'}).thenReturn(async_value(None))
+        when(mongo_db).find_one({'jenkins_url': 'url', 'repository': 'repo', 'job': 'job'}).thenReturn(async_value(None))
         when(mongo_db).insert_one({'repository': 'repo',
+                                   'jenkins_url': 'url',
                                    'job': 'job',
                                    'labels': ['label1', 'label2'],
                                    'requested_params': ['branch', 'sha'],
@@ -281,6 +285,7 @@ class TestPipelineController:
 
         # when
         await pipeline_controller.add_or_update_registration(
+            jenkins_url='url',
             event_type='pushed',
             repository='repo',
             job_name='job',
@@ -299,8 +304,9 @@ class TestPipelineController:
         pipeline_controller = PipelineController(mock(), mongo_client, self.API_TOKEN)
 
         # given
-        when(mongo_db).find_one({'repository': 'repo', 'job': 'job'}).thenReturn(async_value(None))
+        when(mongo_db).find_one({'jenkins_url': 'url', 'repository': 'repo', 'job': 'job'}).thenReturn(async_value(None))
         when(mongo_db).insert_one({'repository': 'repo',
+                                   'jenkins_url': 'url',
                                    'job': 'job',
                                    'labels': ['label1', 'label2'],
                                    'requested_params': ['branch', 'sha'],
@@ -310,6 +316,7 @@ class TestPipelineController:
 
         # when
         await pipeline_controller.add_or_update_registration(
+            jenkins_url= 'url',
             event_type='pushed',
             repository='repo',
             job_name='job',
@@ -349,8 +356,8 @@ class TestPipelineController:
                         'match_info': {'eventType': 'push'}}, spec=aiohttp.web_request.Request, strict=True)
 
         cursor: motor.motor_asyncio.AsyncIOMotorCommandCursor = async_iter(
-            {RegistrationFields.job: 'push_job_1', RegistrationFields.missed_times: 7},
-            {RegistrationFields.job: 'push_job_2', RegistrationFields.missed_times: 13}
+            {RegistrationFields.jenkins_url: 'url', RegistrationFields.job: 'push_job_1', RegistrationFields.missed_times: 7},
+            {RegistrationFields.jenkins_url: 'url', RegistrationFields.job: 'push_job_2', RegistrationFields.missed_times: 13}
         )
         labeled_collection: motor.motor_asyncio.AsyncIOMotorCollection = mock(spec=motor.motor_asyncio.AsyncIOMotorCollection, strict=True)
         push_collection: motor.motor_asyncio.AsyncIOMotorCollection = mock(spec=motor.motor_asyncio.AsyncIOMotorCollection, strict=True)
@@ -366,9 +373,9 @@ class TestPipelineController:
 
         assert result.status == 200
         try:
-            assert result.text == 'push_job_1#7,push_job_2#13'
+            assert result.text == 'url:push_job_1#7,url:push_job_2#13'
         except AssertionError:
-            assert result.text == 'push_job_2#13,push_job_1#7'
+            assert result.text == 'url:push_job_2#13,url:push_job_1#7'
 
     async def test__when_deregister_got_wrong_token__should_return_401(self):
         pipeline_controller = PipelineController(mock(), mock(), self.API_TOKEN)
@@ -413,9 +420,9 @@ class TestPipelineController:
         pipeline_controller = PipelineController(mock(), mongo_client, self.API_TOKEN)
 
         # given
-        when(request).json().thenReturn(async_value({'eventType': 'push', 'jobName': 'job', 'caller': 'del_job#7'}))
-        expect(push_collection).delete_one({RegistrationFields.job: 'job'})
-        expect(labeled_collection, times=0).delete_one({RegistrationFields.job: 'jobName'})
+        when(request).json().thenReturn(async_value({'eventType': 'push', 'jobName': 'job', 'caller': 'del_job#7', 'jenkins_url': 'url'}))
+        expect(push_collection).delete_one({RegistrationFields.job: 'job', RegistrationFields.jenkins_url: 'url'})
+        expect(labeled_collection, times=0).delete_one({RegistrationFields.job: 'jobName', RegistrationFields.jenkins_url: 'url'})
 
         arg_captor = captor()
         expect(deregister_log_collection).insert_one(arg_captor)
@@ -425,6 +432,7 @@ class TestPipelineController:
 
         assert 'job' == arg_captor.value.get('job')
         assert 'del_job#7' == arg_captor.value.get('caller')
+        assert 'url' == arg_captor.value.get('jenkins_url')
 
         assert 'push' == arg_captor.value.get('eventType')
         assert isinstance(arg_captor.value.get('timestamp'), datetime.datetime)
@@ -473,9 +481,10 @@ class TestPipelineController:
         pipeline_controller = PipelineController(mock(), mongo_client, self.API_TOKEN)
 
         # given
-        when(request).json().thenReturn(async_value({'eventType': 'push', 'jobName': 'job', 'caller': 'del_job#7'}))
-        expect(push_collection).update_one({RegistrationFields.job: 'job'}, {'$set': {'missed_times': 0}})
-        expect(labeled_collection, times=0).update_one({RegistrationFields.job: 'jobName'}, {'$set': {'missed_count': 0}})
+        when(request).json().thenReturn(async_value({'eventType': 'push', 'jobName': 'job', 'caller': 'del_job#7', 'jenkins_url': 'url'}))
+        expect(push_collection).update_one({RegistrationFields.job: 'job', RegistrationFields.jenkins_url: 'url'}, {'$set': {'missed_times': 0}})
+        expect(labeled_collection, times=0).update_one({RegistrationFields.job: 'jobName', RegistrationFields.jenkins_url: 'url'},
+                                                       {'$set': {'missed_count': 0}})
 
         # when
         response: aiohttp.web.Response = await pipeline_controller.handle_clear(request)

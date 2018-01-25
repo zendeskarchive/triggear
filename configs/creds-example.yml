@@ -1,5 +1,9 @@
-jenkins_url: "http://JENKINS_URL/"
-jenkins_user_id: "JENKINS_USER"
-jenkins_api_token: "JENKINS_USER_API_TOKEN"
+jenkins_instances:
+    - url: "https://jenkins1.com/"
+      user: "user1"
+      token: "token1"
+    - url: "https://jenkins2.com/"
+      user: "user2"
+      token: "token2"
 github_token: "GITHUB_TOKEN"
 triggear_token: "TRIGGEAR_TOKEN"
