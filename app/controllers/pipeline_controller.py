@@ -132,7 +132,8 @@ class PipelineController:
 
         missed_registered_jobs = []
         async for document in cursor:
-            missed_registered_jobs.append(f'{document[RegistrationFields.job]}#{document[RegistrationFields.missed_times]}')
+            missed_registered_jobs.append(f'{document[RegistrationFields.jenkins_url]}:{document[RegistrationFields.job]}'
+                                          f'#{document[RegistrationFields.missed_times]}')
 
         return aiohttp.web.Response(text=','.join(missed_registered_jobs))
 
@@ -144,11 +145,13 @@ class PipelineController:
         if not DeregisterRequestData.is_valid_deregister_request_data(data):
             return aiohttp.web.Response(reason='Invalid deregister request params!', status=400)
         collection = self.__mongo_client.registered[data[RegisterRequestData.event_type]]
-        collection.delete_one({RegistrationFields.job: data[DeregisterRequestData.job_name]})
+        collection.delete_one({RegistrationFields.job: data[DeregisterRequestData.job_name],
+                               RegistrationFields.jenkins_url: data[DeregisterRequestData.jenkins_url]})
 
         self.__mongo_client.deregistered['log'].insert_one({'job': data[DeregisterRequestData.job_name],
                                                             'caller': data[DeregisterRequestData.caller],
                                                             'eventType': data[DeregisterRequestData.event_type],
+                                                            'jenkins_url': data[DeregisterRequestData.jenkins_url],
                                                             'timestamp': datetime.now()})
         return aiohttp.web.Response(text=f'Deregistration of {data[DeregisterRequestData.job_name]} '
                                          f'for {data[DeregisterRequestData.event_type]} succeeded')
@@ -161,6 +164,8 @@ class PipelineController:
         if not ClearRequestData.is_valid_clear_request_data(data):
             return aiohttp.web.Response(reason='Invalid clear request params!', status=400)
         collection = self.__mongo_client.registered[data[RegisterRequestData.event_type]]
-        collection.update_one({RegistrationFields.job: data[DeregisterRequestData.job_name]}, {'$set': {RegistrationFields.missed_times: 0}})
+        collection.update_one({RegistrationFields.job: data[DeregisterRequestData.job_name],
+                               RegistrationFields.jenkins_url: data[DeregisterRequestData.jenkins_url]},
+                              {'$set': {RegistrationFields.missed_times: 0}})
 
         return aiohttp.web.Response(text=f'Clear of {data[DeregisterRequestData.job_name]} missed counter succeeded')
