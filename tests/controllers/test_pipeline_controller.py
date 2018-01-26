@@ -3,13 +3,12 @@ import datetime
 import github
 import aiohttp.web
 import aiohttp.web_request
-import github.Repository
-import github.Commit
 import pytest
 import motor.motor_asyncio
 from mockito import mock, when, expect, captor
 from pymongo.results import UpdateResult, InsertOneResult
 
+from app.clients.github_client import GithubClient
 from app.controllers.pipeline_controller import PipelineController
 from app.enums.registration_fields import RegistrationFields
 from app.request_schemes.clear_request_data import ClearRequestData
@@ -85,18 +84,14 @@ class TestPipelineController:
         proper_data = {'repository': 'repo', 'sha': '123abc', 'body': 'Comment body', 'jobName': 'job'}
 
         request = mock({'headers': {'Authorization': f'Token {self.API_TOKEN}'}}, spec=aiohttp.web_request.Request)
-        github_client = mock(spec=github.Github)
-        github_repository = mock(spec=github.Repository)
-        github_commit = mock(spec=github.Commit)
+        github_client = mock(spec=GithubClient)
 
         pipeline_controller = PipelineController(github_client, mock(), self.API_TOKEN)
 
         # given
         when(request).json().thenReturn(async_value(proper_data))
         when(CommentRequestData).is_valid_comment_data(proper_data).thenReturn(True)
-        when(github_client).get_repo('repo').thenReturn(github_repository)
-        when(github_repository).get_commit('123abc').thenReturn(github_commit)
-        when(github_commit).create_comment(body='job\nComments: Comment body')
+        expect(github_client).create_comment(repo='repo', sha='123abc', body="job\nComments: Comment body").thenReturn(async_value(None))
 
         # when
         response: aiohttp.web.Response = await pipeline_controller.handle_comment(request)
@@ -124,18 +119,21 @@ class TestPipelineController:
         proper_data = {'repository': 'repo', 'sha': '123abc', 'state': 'State', 'description': 'Description', 'context': 'Context', 'url': 'pr_url'}
 
         request = mock({'headers': {'Authorization': f'Token {self.API_TOKEN}'}}, spec=aiohttp.web_request.Request, strict=True)
-        github_client = mock(spec=github.Github, strict=True)
-        github_repository = mock(spec=github.Repository, strict=True)
-        github_commit = mock(spec=github.Commit, strict=True)
+        github_client = mock(spec=GithubClient, strict=True)
 
         pipeline_controller = PipelineController(github_client, mock(), self.API_TOKEN)
 
         # given
         when(request).json().thenReturn(async_value(proper_data))
         when(StatusRequestData).is_valid_status_data(proper_data).thenReturn(True)
-        when(github_client).get_repo('repo').thenReturn(github_repository)
-        when(github_repository).get_commit('123abc').thenReturn(github_commit)
-        when(github_commit).create_status(state='State', description='Description', target_url='pr_url', context='Context')
+        when(github_client).create_github_build_status(
+            repository='repo',
+            sha='123abc',
+            state='State',
+            description='Description',
+            url='pr_url',
+            context='Context'
+        ).thenReturn(async_value(None))
 
         # when
         response: aiohttp.web.Response = await pipeline_controller.handle_status(request)
@@ -147,17 +145,21 @@ class TestPipelineController:
     async def test__when_github_entity_is_not_found__status_should_return_404_response_with_github_explanation(self):
         parameters = {'repository': 'repo', 'sha': 'null', 'state': 'State', 'description': 'Description', 'context': 'Context', 'url': 'pr_url'}
         request = mock({'headers': {'Authorization': f'Token {self.API_TOKEN}'}}, spec=aiohttp.web_request.Request, strict=True)
-        github_client = mock(spec=github.Github, strict=True)
-        github_repository = mock(spec=github.Repository, strict=True)
+        github_exception_data = {'message': 'Not Found', 'documentation_url': 'https://developer.github.com/v3/'}
 
+        github_client: GithubClient = mock(spec=GithubClient, strict=True)
         pipeline_controller = PipelineController(github_client, mock(), self.API_TOKEN)
 
         # given
         when(request).json().thenReturn(async_value(parameters))
         when(StatusRequestData).is_valid_status_data(parameters).thenReturn(True)
-        when(github_client).get_repo('repo').thenReturn(github_repository)
-        github_exception_data = {'message': 'Not Found', 'documentation_url': 'https://developer.github.com/v3/'}
-        when(github_repository).get_commit('null').thenRaise(github.GithubException(404, github_exception_data))
+        when(github_client).create_github_build_status(
+            repository='repo',
+            sha='null',
+            state='State',
+            url='pr_url',
+            description='Description',
+            context='Context').thenRaise(github.GithubException(404, github_exception_data))
 
         # when
         response: aiohttp.web.Response = await pipeline_controller.handle_status(request)
@@ -169,17 +171,16 @@ class TestPipelineController:
     async def test__when_github_entity_is_not_found__comment_should_return_404_response_with_github_explanation(self):
         parameters = {'repository': 'repo', 'sha': 'null', 'body': 'Comment body', 'jobName': 'job'}
         request = mock({'headers': {'Authorization': f'Token {self.API_TOKEN}'}}, spec=aiohttp.web_request.Request, strict=True)
-        github_client = mock(spec=github.Github, strict=True)
-        github_repository = mock(spec=github.Repository, strict=True)
+        github_exception_data = {'message': 'Not Found', 'documentation_url': 'https://developer.github.com/v3/'}
 
+        github_client: GithubClient = mock(spec=GithubClient, strict=True)
         pipeline_controller = PipelineController(github_client, mock(), self.API_TOKEN)
 
         # given
         when(request).json().thenReturn(async_value(parameters))
         when(CommentRequestData).is_valid_comment_data(parameters).thenReturn(True)
-        when(github_client).get_repo('repo').thenReturn(github_repository)
-        github_exception_data = {'message': 'Not Found', 'documentation_url': 'https://developer.github.com/v3/'}
-        when(github_repository).get_commit('null').thenRaise(github.GithubException(404, github_exception_data))
+        when(github_client).create_comment(repo='repo', sha='null', body="job\nComments: Comment body")\
+            .thenRaise(github.GithubException(404, github_exception_data))
 
         # when
         response: aiohttp.web.Response = await pipeline_controller.handle_comment(request)
@@ -316,7 +317,7 @@ class TestPipelineController:
 
         # when
         await pipeline_controller.add_or_update_registration(
-            jenkins_url= 'url',
+            jenkins_url='url',
             event_type='pushed',
             repository='repo',
             job_name='job',

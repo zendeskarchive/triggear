@@ -4,9 +4,9 @@ from typing import List, Optional, Dict
 
 import aiohttp.web
 import aiohttp.web_request
-import github
 import motor.motor_asyncio
 
+from app.clients.github_client import GithubClient
 from app.enums.event_types import EventTypes
 from app.enums.registration_fields import RegistrationFields
 from app.request_schemes.clear_request_data import ClearRequestData
@@ -20,7 +20,7 @@ from app.utilities.err_handling import handle_exceptions
 
 class PipelineController:
     def __init__(self,
-                 github_client: github.Github,
+                 github_client: GithubClient,
                  mongo_client: motor.motor_asyncio.AsyncIOMotorClient,
                  api_token: str):
         self.__gh_client = github_client
@@ -83,7 +83,7 @@ class PipelineController:
         if not StatusRequestData.is_valid_status_data(data):
             return aiohttp.web.Response(reason='Invalid status request params!', status=400)
         logging.warning(f"Status REQ received: {data}")
-        await self.__create_or_update_status(
+        await self.__gh_client.create_github_build_status(
             repository=data['repository'],
             sha=data['sha'],
             state=data['state'],
@@ -93,14 +93,6 @@ class PipelineController:
         )
         return aiohttp.web.Response(text='Status ACK')
 
-    async def __create_or_update_status(self, repository, sha, state, description, url, context):
-        self.__gh_client.get_repo(repository).get_commit(sha).create_status(
-            state=state,
-            description=description,
-            target_url=url,
-            context=context
-        )
-
     @handle_exceptions()
     @validate_auth_header()
     async def handle_comment(self, request: aiohttp.web_request.Request):
@@ -108,17 +100,12 @@ class PipelineController:
         if not CommentRequestData.is_valid_comment_data(data):
             return aiohttp.web.Response(reason='Invalid comment request params!', status=400)
         logging.warning(f"Comment REQ received: {data}")
-        await self.__create_comment(
-            repository=data['repository'],
+        await self.__gh_client.create_comment(
+            repo=data['repository'],
             sha=data['sha'],
-            body=data['body'],
-            job_name=data['jobName']
+            body=data['jobName'] + "\nComments: " + data['body'],
         )
         return aiohttp.web.Response(text='Comment ACK')
-
-    async def __create_comment(self, repository, sha, body, job_name):
-        body = job_name + "\nComments: " + body
-        self.__gh_client.get_repo(repository).get_commit(sha).create_comment(body=body)
 
     @handle_exceptions()
     @validate_auth_header()
