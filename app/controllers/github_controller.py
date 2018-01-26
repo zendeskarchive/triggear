@@ -14,6 +14,7 @@ import motor.motor_asyncio
 import yaml
 from aiohttp.web_response import Response
 
+from app.clients.github_client import GithubClient
 from app.clients.jenkins_client import JenkinsClient
 from app.config.triggear_config import TriggearConfig
 from app.dto.hook_details import HookDetails
@@ -22,7 +23,6 @@ from app.enums.event_types import EventTypes
 from app.enums.labels import Labels
 from app.enums.registration_fields import RegistrationFields
 from app.exceptions.triggear_error import TriggearError
-from app.exceptions.triggear_timeout_error import TriggearTimeoutError
 from app.request_schemes.register_request_data import RegisterRequestData
 from app.utilities.background_task import BackgroundTask
 from app.utilities.constants import LAST_RUN_IN, BRANCH_DELETED_SHA
@@ -32,10 +32,10 @@ from app.utilities.functions import any_starts_with, get_all_starting_with
 
 class GithubController:
     def __init__(self,
-                 github_client: github.Github,
+                 github_client: GithubClient,
                  mongo_client: motor.motor_asyncio.AsyncIOMotorClient,
                  config: TriggearConfig):
-        self.__gh_client = github_client
+        self.__github_client = github_client
         self.__mongo_client = mongo_client
         self.__jenkins_clients: Dict[str, JenkinsClient] = {}
         self.config = config
@@ -113,29 +113,8 @@ class GithubController:
 
     async def handle_pr_opened(self, data: dict):
         hook_details: HookDetails = HookDetailsFactory.get_pr_opened_details(data)
-        await self.set_sync_label(hook_details.repository, pr_number=data['pull_request']['number'])
+        await self.__github_client.set_sync_label(hook_details.repository, pr_number=data['pull_request']['number'])
         await self.trigger_registered_jobs(hook_details)
-
-    async def set_sync_label(self, repository, pr_number):
-        if Labels.pr_sync in self.get_repo_labels(repository):
-            logging.warning(f'Setting "triggear-pr-sync" label on PR {pr_number} in repo {repository}')
-            await self.set_pr_sync_label_with_retry(repository, pr_number)
-            logging.warning('Label set')
-
-    async def set_pr_sync_label_with_retry(self, repo, pr_number):
-        retries = 3
-        while retries:
-            try:
-                self.__gh_client.get_repo(repo).get_issue(pr_number).add_to_labels(Labels.pr_sync)
-                return
-            except github.GithubException as gh_exception:
-                logging.exception(f'Exception when trying to set label on PR. Exception: {gh_exception}')
-                retries -= 1
-                await asyncio.sleep(1)
-        raise TriggearTimeoutError(f'Failed to set label on PR #{pr_number} in repo {repo} after 3 retries')
-
-    def get_repo_labels(self, repo: str):
-        return [label.name for label in self.__gh_client.get_repo(repo).get_labels()]
 
     async def handle_tagged(self, data: dict):
         hook_details: HookDetails = HookDetailsFactory.get_tag_details(data)
@@ -148,8 +127,8 @@ class GithubController:
         await self.trigger_registered_jobs(HookDetailsFactory.get_labeled_details(data))
 
     async def handle_synchronize(self, data: Dict):
-        pr_labels = self.get_pr_labels(repository=data['pull_request']['head']['repo']['full_name'],
-                                       pr_number=data['pull_request']['number'])
+        pr_labels = await self.__github_client.get_pr_labels(repository=data['pull_request']['head']['repo']['full_name'],
+                                                             pr_number=data['pull_request']['number'])
         try:
             await self.handle_pr_sync(data, pr_labels)
         finally:
@@ -171,9 +150,6 @@ class GithubController:
                 logging.warning(f'Sync hook on PR with {Labels.label_sync} - handling like PR labeled')
                 await self.handle_labeled(data)
 
-    def get_pr_labels(self, repository, pr_number):
-        return [label.name for label in self.__gh_client.get_repo(repository).get_issue(pr_number).labels]
-
     async def handle_comment(self, data):
         comment_body = data['comment']['body']
         if comment_body == Labels.label_sync:
@@ -188,20 +164,14 @@ class GithubController:
     async def get_comment_branch_and_sha(self, data: Dict) -> Tuple:
         repository_name = data['repository']['full_name']
         pr_number = data['issue']['number']
-        head_branch = self.get_pr_branch(pr_number, repository_name)
-        head_sha = self.get_latest_commit_sha(pr_number, repository_name)
+        head_branch = await self.__github_client.get_pr_branch(pr_number, repository_name)
+        head_sha = await self.__github_client.get_latest_commit_sha(pr_number, repository_name)
         return head_branch, head_sha
 
     async def handle_labeled_sync_comment(self, data):
         head_branch, head_sha = await self.get_comment_branch_and_sha(data)
         for hook_details in HookDetailsFactory.get_labeled_sync_details(data, head_branch=head_branch, head_sha=head_sha):
             await self.trigger_registered_jobs(hook_details)
-
-    def get_latest_commit_sha(self, pr_number: int, repository_name: str) -> str:
-        return self.__gh_client.get_repo(repository_name).get_pull(pr_number).head.sha
-
-    def get_pr_branch(self, pr_number: int, repository_name: str) -> str:
-        return self.__gh_client.get_repo(repository_name).get_pull(pr_number).head.ref
 
     async def handle_push(self, data):
         hook_details: HookDetails = HookDetailsFactory.get_push_details(data)
@@ -268,7 +238,7 @@ class GithubController:
     async def are_files_in_repo(self, files: List[str], hook: HookDetails) -> bool:
         try:
             for file in files:
-                self.__gh_client.get_repo(hook.repository).get_file_contents(path=file, ref=hook.sha if hook.sha else hook.branch)
+                await self.__github_client.get_file_content(path=file, repo=hook.repository, ref=hook.sha if hook.sha else hook.branch)
         except github.GithubException as gh_exc:
             logging.exception(f"Exception when looking for file {file} in repo {hook.repository} at ref {hook.sha}/{hook.branch} (Exc: {gh_exc})")
             return False
@@ -276,9 +246,6 @@ class GithubController:
 
     async def get_collection_for_hook_type(self, event_type: EventTypes):
         return self.__mongo_client.registered[event_type]
-
-    def create_pr_comment(self, pr_number, repository, body):
-        self.__gh_client.get_repo(repository).get_issue(pr_number).create_comment(body=body)
 
     async def can_trigger_job_by_branch(self, jenkins_url, job_name, branch):
         last_job_run_in_branch = {"jenkins_url": jenkins_url, "branch": branch, "job": job_name}
@@ -316,17 +283,18 @@ class GithubController:
             logging.exception(f"Job {jenkins_url}:{job_name} did not accept {job_params} as parameters but it requested them "
                               f"(Error: {jenkins_exception})")
 
-            await self.create_github_build_status(repository, sha, "error",
-                                                  await self.get_jenkins(jenkins_url).get_job_url(job_name),
-                                                  f"Job {jenkins_url}:{job_name} did not accept requested parameters {job_params.keys()}",
-                                                  job_name)
+            await self.__github_client.create_github_build_status(repository, sha, "error",
+                                                                  await self.get_jenkins(jenkins_url).get_job_url(job_name),
+                                                                  f"Job {jenkins_url}:{job_name} "
+                                                                  f"did not accept requested parameters {job_params.keys()}",
+                                                                  job_name)
             return
 
         build_info = await self.get_jenkins(jenkins_url).get_build_info(job_name, next_build_number)
         if build_info is not None:
             logging.warning(f"Creating pending status for {jenkins_url}:{job_name} in repo {repository} (branch {pr_branch}, sha {sha}")
 
-            await self.create_github_build_status(repository, sha, "pending", build_info['url'], "build in progress", job_name)
+            await self.__github_client.create_github_build_status(repository, sha, "pending", build_info['url'], "build in progress", job_name)
 
             while await self.get_jenkins(jenkins_url).is_job_building(job_name, next_build_number):
                 await asyncio.sleep(1)
@@ -338,20 +306,13 @@ class GithubController:
             final_description = await self.get_final_build_description(build_info)
             logging.warning(f"Creating build status for {jenkins_url}:{job_name} #{next_build_number} - verdict: {final_state}.")
 
-            await self.create_github_build_status(repository, sha, final_state, build_info['url'], final_description, job_name)
+            await self.__github_client.create_github_build_status(repository, sha, final_state, build_info['url'], final_description, job_name)
         else:
             logging.exception(f"Triggear was not able to find build number {next_build_number} for job {jenkins_url}:{job_name}. Task aborted.")
-
-            await self.create_github_build_status(repository, sha, "error",
-                                                  await self.get_jenkins(jenkins_url).get_job_url(job_name),
-                                                  f"Triggear cant find build {jenkins_url}:{job_name} #{next_build_number}",
-                                                  job_name)
-
-    async def create_github_build_status(self, repository, sha, state, url, description, context):
-        self.__gh_client.get_repo(repository).get_commit(sha).create_status(state=state,
-                                                                            target_url=url,
-                                                                            description=description,
-                                                                            context=context)
+            await self.__github_client.create_github_build_status(repository, sha, "error",
+                                                                  await self.get_jenkins(jenkins_url).get_job_url(job_name),
+                                                                  f"Triggear cant find build {jenkins_url}:{job_name} #{next_build_number}",
+                                                                  job_name)
 
     @staticmethod
     async def get_final_build_state(build_info):
