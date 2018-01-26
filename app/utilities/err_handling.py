@@ -8,7 +8,7 @@ from typing import Any, Tuple
 
 from github import GithubException
 
-from app.controllers.github_controller import TriggearTimeoutError
+from app.exceptions.triggear_timeout_error import TriggearTimeoutError
 
 
 def handle_exceptions():
