@@ -1,6 +1,4 @@
-import github
 import pytest
-import jenkins
 from aiohttp.web_urldispatcher import UrlDispatcher
 
 import app.config.triggear_config
@@ -10,6 +8,8 @@ import app.controllers.health_controller
 from mockito import when, mock, expect
 from aiohttp import web
 import motor.motor_asyncio
+import app.clients.jenkins_client
+import app.clients.github_client
 
 pytestmark = pytest.mark.asyncio
 
@@ -46,7 +46,7 @@ class TestMain:
 
         router = mock(spec=UrlDispatcher, strict=True)
         web_app = mock({'router': router}, spec=web.Application, strict=True)
-        github_client = mock(spec=github.Github, strict=True)
+        github_client = mock(spec=app.clients.github_client.GithubClient, strict=True)
         mongo_client = mock(spec=motor.motor_asyncio, strict=True)
 
         # given
@@ -70,8 +70,8 @@ class TestMain:
         expect(web)\
             .Application()\
             .thenReturn(web_app)
-        expect(github)\
-            .Github(login_or_token='gh_token')\
+        expect(app.clients.github_client)\
+            .GithubClient('gh_token')\
             .thenReturn(github_client)
         expect(motor.motor_asyncio)\
             .AsyncIOMotorClient()\

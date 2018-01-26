@@ -1,9 +1,9 @@
 import os
 
-import github
 import motor.motor_asyncio
 from aiohttp import web
 
+from app.clients.github_client import GithubClient
 from app.config.triggear_config import TriggearConfig
 from app.controllers.github_controller import GithubController
 from app.controllers.health_controller import HealthController
@@ -13,7 +13,7 @@ from app.controllers.pipeline_controller import PipelineController
 def main():
     app_config = TriggearConfig()
 
-    gh_client = github.Github(login_or_token=app_config.github_token)
+    gh_client = GithubClient(app_config.github_token)
     mongo_client = motor.motor_asyncio.AsyncIOMotorClient() if not os.environ.get('COMPOSE') == 'true' \
         else motor.motor_asyncio.AsyncIOMotorClient('mongodb://mongodb:27017')
 
