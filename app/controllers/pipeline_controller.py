@@ -84,7 +84,7 @@ class PipelineController:
             return aiohttp.web.Response(reason='Invalid status request params!', status=400)
         logging.warning(f"Status REQ received: {data}")
         await self.__gh_client.create_github_build_status(
-            repository=data['repository'],
+            repo=data['repository'],
             sha=data['sha'],
             state=data['state'],
             description=data['description'],

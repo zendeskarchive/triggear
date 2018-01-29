@@ -1,25 +1,18 @@
 import asyncio
 
-import github
 import jenkins
 import os
 import pytest
 import motor.motor_asyncio
 import aiohttp.web_request
 import aiohttp.web
-import github.Repository
-import github.Issue
-import github.Label
-import github.PullRequest
-import github.PullRequestPart
-import github.Commit
 import time
-from github import GithubException
 from mockito import mock, when, expect, verify, VerificationError
 
 import app.utilities.background_task
 import app.config.triggear_config
 import app.clients.jenkins_client
+from app.clients.async_client import AsyncClientException
 from app.clients.github_client import GithubClient
 from app.controllers.github_controller import GithubController
 from app.dto.hook_details import HookDetails
@@ -287,14 +280,14 @@ class TestGithubController:
         assert 'Hook ACK' == response.text
 
     async def test__when_handle_pr_opened_is_called__it_should_call_add_sync_label__and_trigger_registered_jobs(self):
-        github_client = mock(spec=github.Github, strict=True)
+        github_client = mock(spec=GithubClient, strict=True)
         github_controller = GithubController(github_client, mock(), mock())
         hook_data = {'repository': 'repo', 'pull_request': {'number': 25}}
 
         hook_details = mock({'repository': 'repo'}, spec=HookDetails, strict=True)
 
         # when
-        when(github_client).set_sync_label('repo', pr_number=25).thenReturn(async_value(None))
+        when(github_client).set_sync_label('repo', number=25).thenReturn(async_value(None))
         when(HookDetailsFactory).get_pr_opened_details(hook_data).thenReturn(hook_details)
         when(github_controller).trigger_registered_jobs(hook_details).thenReturn(async_value(None))
 
@@ -332,7 +325,7 @@ class TestGithubController:
         github_controller = GithubController(github_client, mock(), mock())
 
         # expect
-        expect(github_client, times=1).get_pr_labels(repository='repo', pr_number=12).thenReturn(async_value(pr_labels))
+        expect(github_client, times=1).get_pr_labels(repo='repo', number=12).thenReturn(async_value(pr_labels))
         expect(github_controller).handle_pr_sync(hook_data, pr_labels).thenReturn(async_value(None))
         expect(github_controller).handle_labeled_sync(hook_data, pr_labels).thenReturn(async_value(None))
 
@@ -362,12 +355,12 @@ class TestGithubController:
         github_controller = GithubController(github_client, mock(), mock())
 
         # expect
-        expect(github_client, times=1).get_pr_labels(repository='repo', pr_number=12).thenReturn(async_value(pr_labels))
-        expect(github_controller, times=1).handle_pr_sync(hook_data, pr_labels).thenRaise(GithubException(404, 'PR not found'))
+        expect(github_client, times=1).get_pr_labels(repo='repo', number=12).thenReturn(async_value(pr_labels))
+        expect(github_controller, times=1).handle_pr_sync(hook_data, pr_labels).thenRaise(AsyncClientException('PR not found', 404))
         expect(github_controller, times=1).handle_labeled_sync(hook_data, pr_labels).thenReturn(async_value(None))
 
         # when
-        with pytest.raises(GithubException):
+        with pytest.raises(AsyncClientException):
             await github_controller.handle_synchronize(hook_data)
 
     async def test__handle_synchronize__when_handle_pr_and_labeled_sync_raise_exceptions__it_should_be_raised_up(self):
@@ -377,8 +370,8 @@ class TestGithubController:
         github_controller = GithubController(github_client, mock(), mock())
 
         # expect
-        expect(github_client, times=1).get_pr_labels(repository='repo', pr_number=12).thenReturn(async_value(pr_labels))
-        expect(github_controller, times=1).handle_pr_sync(hook_data, pr_labels).thenRaise(GithubException(404, 'PR not found'))
+        expect(github_client, times=1).get_pr_labels(repo='repo', number=12).thenReturn(async_value(pr_labels))
+        expect(github_controller, times=1).handle_pr_sync(hook_data, pr_labels).thenRaise(AsyncClientException('PR not found', 404))
         expect(github_controller, times=1).handle_labeled_sync(hook_data, pr_labels).thenRaise(jenkins.JenkinsException())
 
         # when
@@ -454,8 +447,8 @@ class TestGithubController:
         github_controller = GithubController(github_client, mock(), mock())
         hook_data = {'repository': {'full_name': 'repo'}, 'issue': {'number': 23}}
 
-        expect(github_client).get_pr_branch(23, 'repo').thenReturn(async_value('master'))
-        expect(github_client).get_latest_commit_sha(23, 'repo').thenReturn(async_value('123asd'))
+        expect(github_client).get_pr_branch('repo', 23).thenReturn(async_value('master'))
+        expect(github_client).get_latest_commit_sha('repo', 23).thenReturn(async_value('123asd'))
 
         branch, sha = await github_controller.get_comment_branch_and_sha(hook_data)
 
@@ -510,8 +503,8 @@ class TestGithubController:
         hook_details = mock({'repository': 'repo', 'sha': '123qwe', 'branch': 'master'}, spec=HookDetails, strict=True)
         files = ['app/main.py', '.gitignore']
 
-        expect(github_client).get_file_content(path='app/main.py', repo='repo', ref='123qwe').thenReturn(async_value(None))
-        expect(github_client).get_file_content(path='.gitignore', repo='repo', ref='123qwe').thenRaise(GithubException(404, 'File not found'))
+        expect(github_client).get_file_content(repo='repo', ref='123qwe', path='app/main.py').thenReturn(async_value(None))
+        expect(github_client).get_file_content(repo='repo', ref='123qwe', path='.gitignore').thenRaise(AsyncClientException('File not found', 404))
 
         assert not await github_controller.are_files_in_repo(files, hook_details)
 
@@ -522,8 +515,8 @@ class TestGithubController:
         hook_details = mock({'repository': 'repo', 'sha': None, 'branch': 'master'}, spec=HookDetails, strict=True)
         files = ['app/main.py', '.gitignore']
 
-        expect(github_client).get_file_content(path='app/main.py', repo='repo', ref='master').thenReturn(async_value(None))
-        expect(github_client).get_file_content(path='.gitignore', repo='repo', ref='master').thenReturn(async_value(None))
+        expect(github_client).get_file_content(repo='repo', ref='master', path='app/main.py').thenReturn(async_value(None))
+        expect(github_client).get_file_content(repo='repo', ref='master', path='.gitignore').thenReturn(async_value(None))
 
         assert await github_controller.are_files_in_repo(files, hook_details)
 
@@ -628,7 +621,8 @@ class TestGithubController:
         when(collection).find_one({'jenkins_url': 'url', "branch": 'master', "job": 'job'}).thenReturn(async_value(found_run))
         when(found_run).__getitem__('timestamp').thenReturn(3)
         when(time).time().thenReturn(23)
-        expect(collection).replace_one(found_run, {'jenkins_url': 'url', 'branch': 'master', 'job': 'job', 'timestamp': 23}).thenReturn(async_value(None))
+        expect(collection).replace_one(found_run, {'jenkins_url': 'url', 'branch': 'master', 'job': 'job', 'timestamp': 23})\
+            .thenReturn(async_value(None))
 
         assert await github_controller.can_trigger_job_by_branch('url', 'job', 'master')
 

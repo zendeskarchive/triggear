@@ -6,8 +6,7 @@ import aiohttp.web
 from aiohttp.web_response import Response
 from typing import Any, Tuple
 
-from github import GithubException
-
+from app.clients.async_client import AsyncClientException
 from app.exceptions.triggear_timeout_error import TriggearTimeoutError
 
 
@@ -23,8 +22,8 @@ def handle_exceptions():
             except TriggearTimeoutError as timeout_error:
                 logging.exception(f'Timeout error raised')
                 return aiohttp.web.Response(text=str(timeout_error), reason=f'Timeout when accessing resources: {str(timeout_error)}', status=504)
-            except GithubException as github_exception:
-                logging.exception(f'Github client raised exception')
-                return aiohttp.web.Response(reason=str(github_exception.data), status=github_exception.status)
+            except AsyncClientException as client_exception:
+                logging.exception(f'Async client raised exception')
+                return aiohttp.web.Response(reason=str(client_exception), status=client_exception.status)
         return wrapped
     return wrapper

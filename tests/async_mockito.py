@@ -1,6 +1,3 @@
-from typing import List, Dict
-
-
 async def async_value(value):
     """
     Gives an object which can be used in .thenReturn for methods that are coroutines

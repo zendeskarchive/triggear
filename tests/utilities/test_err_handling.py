@@ -1,7 +1,7 @@
-import github
 import pytest
 import aiohttp.web
 
+from app.clients.async_client import AsyncClientException
 from app.exceptions.triggear_timeout_error import TriggearTimeoutError
 from app.utilities.err_handling import handle_exceptions
 
@@ -31,12 +31,12 @@ class TestErrHandling:
     async def test__when_method_raises_github_exception__should_return_its_status__and_data_as_reason(self):
         @handle_exceptions()
         async def github_exception_raising_coro():
-            raise github.GithubException(404, {'message': 'Not found'})
+            raise AsyncClientException('Not found', 404)
 
         response: aiohttp.web.Response = await github_exception_raising_coro()
 
         assert response.status == 404
-        assert response.reason == "{'message': 'Not found'}"
+        assert response.reason == '<AsyncClientException> message: Not found, status: 404'
 
     async def test__when_any_other_exception_is_raised__should_let_it_pass(self):
         @handle_exceptions()

@@ -1,6 +1,5 @@
 import datetime
 
-import github
 import aiohttp.web
 import aiohttp.web_request
 import pytest
@@ -8,6 +7,7 @@ import motor.motor_asyncio
 from mockito import mock, when, expect, captor
 from pymongo.results import UpdateResult, InsertOneResult
 
+from app.clients.async_client import AsyncClientException
 from app.clients.github_client import GithubClient
 from app.controllers.pipeline_controller import PipelineController
 from app.enums.registration_fields import RegistrationFields
@@ -127,7 +127,7 @@ class TestPipelineController:
         when(request).json().thenReturn(async_value(proper_data))
         when(StatusRequestData).is_valid_status_data(proper_data).thenReturn(True)
         when(github_client).create_github_build_status(
-            repository='repo',
+            repo='repo',
             sha='123abc',
             state='State',
             description='Description',
@@ -145,7 +145,7 @@ class TestPipelineController:
     async def test__when_github_entity_is_not_found__status_should_return_404_response_with_github_explanation(self):
         parameters = {'repository': 'repo', 'sha': 'null', 'state': 'State', 'description': 'Description', 'context': 'Context', 'url': 'pr_url'}
         request = mock({'headers': {'Authorization': f'Token {self.API_TOKEN}'}}, spec=aiohttp.web_request.Request, strict=True)
-        github_exception_data = {'message': 'Not Found', 'documentation_url': 'https://developer.github.com/v3/'}
+        github_exception_data = 'PR not found'
 
         github_client: GithubClient = mock(spec=GithubClient, strict=True)
         pipeline_controller = PipelineController(github_client, mock(), self.API_TOKEN)
@@ -154,24 +154,24 @@ class TestPipelineController:
         when(request).json().thenReturn(async_value(parameters))
         when(StatusRequestData).is_valid_status_data(parameters).thenReturn(True)
         when(github_client).create_github_build_status(
-            repository='repo',
+            repo='repo',
             sha='null',
             state='State',
             url='pr_url',
             description='Description',
-            context='Context').thenRaise(github.GithubException(404, github_exception_data))
+            context='Context').thenRaise(AsyncClientException(github_exception_data, 404))
 
         # when
         response: aiohttp.web.Response = await pipeline_controller.handle_status(request)
 
         # then
         assert response.status == 404
-        assert response.reason == str(github_exception_data)
+        assert response.reason == '<AsyncClientException> message: PR not found, status: 404'
 
     async def test__when_github_entity_is_not_found__comment_should_return_404_response_with_github_explanation(self):
         parameters = {'repository': 'repo', 'sha': 'null', 'body': 'Comment body', 'jobName': 'job'}
         request = mock({'headers': {'Authorization': f'Token {self.API_TOKEN}'}}, spec=aiohttp.web_request.Request, strict=True)
-        github_exception_data = {'message': 'Not Found', 'documentation_url': 'https://developer.github.com/v3/'}
+        github_exception_data = 'Commit not found'
 
         github_client: GithubClient = mock(spec=GithubClient, strict=True)
         pipeline_controller = PipelineController(github_client, mock(), self.API_TOKEN)
@@ -180,14 +180,14 @@ class TestPipelineController:
         when(request).json().thenReturn(async_value(parameters))
         when(CommentRequestData).is_valid_comment_data(parameters).thenReturn(True)
         when(github_client).create_comment(repo='repo', sha='null', body="job\nComments: Comment body")\
-            .thenRaise(github.GithubException(404, github_exception_data))
+            .thenRaise(AsyncClientException(github_exception_data, 404))
 
         # when
         response: aiohttp.web.Response = await pipeline_controller.handle_comment(request)
 
         # then
         assert response.status == 404
-        assert response.reason == str(github_exception_data)
+        assert response.reason == '<AsyncClientException> message: Commit not found, status: 404'
 
     async def test__when_registration_data_is_not_valid__should_return_400_response(self):
         request = mock({'headers': {'Authorization': f'Token {self.API_TOKEN}'}}, spec=aiohttp.web_request.Request, strict=True)

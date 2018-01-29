@@ -8,12 +8,12 @@ from typing import Tuple
 
 import aiohttp.web
 import aiohttp.web_request
-import github
 import jenkins
 import motor.motor_asyncio
 import yaml
 from aiohttp.web_response import Response
 
+from app.clients.async_client import AsyncClientException
 from app.clients.github_client import GithubClient
 from app.clients.jenkins_client import JenkinsClient
 from app.config.triggear_config import TriggearConfig
@@ -113,7 +113,7 @@ class GithubController:
 
     async def handle_pr_opened(self, data: dict):
         hook_details: HookDetails = HookDetailsFactory.get_pr_opened_details(data)
-        await self.__github_client.set_sync_label(hook_details.repository, pr_number=data['pull_request']['number'])
+        await self.__github_client.set_sync_label(hook_details.repository, number=data['pull_request']['number'])
         await self.trigger_registered_jobs(hook_details)
 
     async def handle_tagged(self, data: dict):
@@ -127,8 +127,8 @@ class GithubController:
         await self.trigger_registered_jobs(HookDetailsFactory.get_labeled_details(data))
 
     async def handle_synchronize(self, data: Dict):
-        pr_labels = await self.__github_client.get_pr_labels(repository=data['pull_request']['head']['repo']['full_name'],
-                                                             pr_number=data['pull_request']['number'])
+        pr_labels = await self.__github_client.get_pr_labels(repo=data['pull_request']['head']['repo']['full_name'],
+                                                             number=data['pull_request']['number'])
         try:
             await self.handle_pr_sync(data, pr_labels)
         finally:
@@ -164,8 +164,8 @@ class GithubController:
     async def get_comment_branch_and_sha(self, data: Dict) -> Tuple:
         repository_name = data['repository']['full_name']
         pr_number = data['issue']['number']
-        head_branch = await self.__github_client.get_pr_branch(pr_number, repository_name)
-        head_sha = await self.__github_client.get_latest_commit_sha(pr_number, repository_name)
+        head_branch = await self.__github_client.get_pr_branch(repository_name, pr_number)
+        head_sha = await self.__github_client.get_latest_commit_sha(repository_name, pr_number)
         return head_branch, head_sha
 
     async def handle_labeled_sync_comment(self, data):
@@ -238,8 +238,8 @@ class GithubController:
     async def are_files_in_repo(self, files: List[str], hook: HookDetails) -> bool:
         try:
             for file in files:
-                await self.__github_client.get_file_content(path=file, repo=hook.repository, ref=hook.sha if hook.sha else hook.branch)
-        except github.GithubException as gh_exc:
+                await self.__github_client.get_file_content(repo=hook.repository, ref=hook.sha if hook.sha else hook.branch, path=file)
+        except AsyncClientException as gh_exc:
             logging.exception(f"Exception when looking for file {file} in repo {hook.repository} at ref {hook.sha}/{hook.branch} (Exc: {gh_exc})")
             return False
         return True
