@@ -7,15 +7,12 @@ name = "pypi"
 
 [packages]
 
-python-jenkins = "*"
 aiohttp = "*"
 motor = "*"
 PyYAML = "*"
 pytest = "*"
 pytest-asyncio = "*"
 pytest-cov = "*"
-pytest-mock = "*"
-asynctest = "*"
 mockito = "*"
 pytest-mockito = "*"
 

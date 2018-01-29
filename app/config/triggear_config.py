@@ -4,12 +4,7 @@ from typing import List, Dict
 
 import yaml
 
-
-class JenkinsInstanceConfig:
-    def __init__(self, url, username, token):
-        self.username: str = username
-        self.token: str = token
-        self.url = url
+from app.clients.jenkins_client import JenkinsInstanceConfig
 
 
 class TriggearConfig:

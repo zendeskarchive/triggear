@@ -1,18 +1,17 @@
 import asyncio
 
-import jenkins
 import os
 import pytest
 import motor.motor_asyncio
 import aiohttp.web_request
 import aiohttp.web
 import time
-from mockito import mock, when, expect, verify, VerificationError
+from mockito import mock, when, expect, captor
 
 import app.utilities.background_task
 import app.config.triggear_config
 import app.clients.jenkins_client
-from app.clients.async_client import AsyncClientException
+from app.clients.async_client import AsyncClientException, AsyncClient, AsyncClientNotFoundException
 from app.clients.github_client import GithubClient
 from app.controllers.github_controller import GithubController
 from app.dto.hook_details import HookDetails
@@ -66,7 +65,7 @@ class TestGithubController:
         when(cursor).get('change_restrictions').thenReturn([])
         when(cursor).get('file_restrictions').thenReturn([])
         when(github_controller).get_jenkins('url').thenReturn(jenkins_client)
-        when(jenkins_client).get_jobs_next_build_number(job_name).thenRaise(jenkins.NotFoundException())
+        when(jenkins_client).get_jobs_next_build_number(job_name).thenRaise(AsyncClientNotFoundException('not found', 404))
         expect(collection).update_one({'job': job_name, **hook_query}, {'$inc': {'missed_times': 1}}).thenReturn(async_value(any))
 
         # when
@@ -372,11 +371,13 @@ class TestGithubController:
         # expect
         expect(github_client, times=1).get_pr_labels(repo='repo', number=12).thenReturn(async_value(pr_labels))
         expect(github_controller, times=1).handle_pr_sync(hook_data, pr_labels).thenRaise(AsyncClientException('PR not found', 404))
-        expect(github_controller, times=1).handle_labeled_sync(hook_data, pr_labels).thenRaise(jenkins.JenkinsException())
+        expect(github_controller, times=1).handle_labeled_sync(hook_data, pr_labels).thenRaise(AsyncClientException('Something went wrong', 500))
 
         # when
-        with pytest.raises(jenkins.JenkinsException):
+        with pytest.raises(AsyncClientException) as exception:
             await github_controller.handle_synchronize(hook_data)
+        assert exception.value.status == 500
+        assert exception.value.message == 'Something went wrong'
 
     async def test__handle_labeled_sync__when_sync_label_is_not_in_labels__should_abort(self):
         github_controller = GithubController(mock(), mock(), mock())
@@ -672,7 +673,7 @@ class TestGithubController:
             .thenReturn(async_value(321))
         when(jenkins_client)\
             .build_jenkins_job('job', {'branch': branch})\
-            .thenRaise(jenkins.JenkinsException())
+            .thenRaise(AsyncClientException('Job did not accept parameters', 404))
 
         expect(jenkins_client)\
             .get_job_url('job')\
@@ -707,9 +708,10 @@ class TestGithubController:
             .get_jobs_next_build_number(job_name) \
             .thenReturn(async_value(321))
         when(jenkins_client) \
-            .build_jenkins_job(job_name, {'branch': branch})
+            .build_jenkins_job(job_name, {'branch': branch})\
+            .thenReturn(async_value(None))
         expect(jenkins_client, times=2) \
-            .get_build_info(job_name, 321) \
+            .get_build_info_data(job_name, 321) \
             .thenReturn(async_value(None))
         expect(jenkins_client) \
             .get_job_url(job_name) \
@@ -745,10 +747,11 @@ class TestGithubController:
             .get_jobs_next_build_number(job_name)\
             .thenReturn(async_value(321))
         when(jenkins_client)\
-            .build_jenkins_job(job_name, {'branch': branch})
+            .build_jenkins_job(job_name, {'branch': branch})\
+            .thenReturn(async_value(None))
         build_info = {'url': build_url}
         expect(jenkins_client, times=2)\
-            .get_build_info(job_name, 321)\
+            .get_build_info_data(job_name, 321)\
             .thenReturn(async_value(build_info))\
             .thenReturn(async_value({**build_info, 'finished': 'yes'}))
 
@@ -834,8 +837,9 @@ class TestGithubController:
         # given
         when(github_controller).get_jenkins('jenkins_url').thenReturn(jenkins_client)
         when(jenkins_client).get_jobs_next_build_number('job').thenReturn(async_value(3))
-        when(jenkins_client).build_jenkins_job('job', any)
-        when(jenkins_client).get_build_info('job', 3).thenReturn(async_value(None))
+        arg_captor = captor()
+        expect(jenkins_client).build_jenkins_job('job', arg_captor).thenReturn(async_value(None))
+        when(jenkins_client).get_build_info_data('job', 3).thenReturn(async_value(None))
         when(github_client)\
             .create_github_build_status('repo', '123321', 'error', 'url', 'Triggear cant find build jenkins_url:job #3', 'job')\
             .thenReturn(async_value(None))
@@ -847,11 +851,11 @@ class TestGithubController:
         await github_controller.trigger_registered_job('jenkins_url', 'job', ['branch', 'changes'], 'repo', '123321', 'branch', '1.0',
                                                        {'README.md', '.gitignore'})
 
-        try:
-            verify(jenkins_client).build_jenkins_job('job', {'branch': 'branch', 'changes': 'README.md,.gitignore'})
-        except VerificationError:
-            # we cant know the order of joined set, so...
-            verify(jenkins_client).build_jenkins_job('job', {'branch': 'branch', 'changes': '.gitignore,README.md'})
+        assert isinstance(arg_captor.value, dict)
+        assert arg_captor.value.get('branch') == 'branch'
+        changes = arg_captor.value.get('changes').split(',')
+        assert 'README.md' in changes
+        assert '.gitignore' in changes
 
     async def test__trigger_registered_jobs__when_change_restrictions_are_not_met__background_task_to_trigger_it_is_not_started(self):
         jenkins_url = 'jenkins_url'
@@ -1093,52 +1097,48 @@ class TestGithubController:
         await github_controller.handle_tagged(hook_data)
 
     async def test__get_jenkins_client__should_setup_client__if_it_does_not_exist(self):
-        instance = app.config.triggear_config.JenkinsInstanceConfig('jenkins_url', 'user', 'token')
+        instance = app.clients.jenkins_client.JenkinsInstanceConfig('jenkins_url', 'user', 'token')
         jenkins_instances = {'jenkins_url': instance}
         config: app.config.triggear_config.TriggearConfig = mock({'jenkins_instances': jenkins_instances,
                                                                   'rerun_time_limit': 2,
                                                                   'triggear_token': 'triggear_token'},
                                                                  spec=app.config.triggear_config.TriggearConfig,
                                                                  strict=True)
-        jenkins_client = mock(spec=jenkins.Jenkins, strict=True)
-
-        expect(jenkins, times=1).Jenkins(url='jenkins_url', username='user', password='token').thenReturn(jenkins_client)
         github_controller = GithubController(mock(), mock(), config)
 
         tested_jenkins_client = github_controller.get_jenkins('jenkins_url')
-        assert tested_jenkins_client.client == jenkins_client
+        async_jenkins_client = tested_jenkins_client.get_async_jenkins()
+        assert isinstance(async_jenkins_client, AsyncClient)
+        assert async_jenkins_client.base_url == 'jenkins_url'
 
     async def test__when_jenkins_url_not_found_in_config__should_recreate_triggear_config__and_try_again(self):
-        instance = app.config.triggear_config.JenkinsInstanceConfig('jenkins_url', 'user', 'token')
+        instance = app.clients.jenkins_client.JenkinsInstanceConfig('jenkins_url', 'user', 'token')
         jenkins_instances = {'jenkins_url': instance}
         config: app.config.triggear_config.TriggearConfig = mock({'jenkins_instances': jenkins_instances,
                                                                   'rerun_time_limit': 2,
                                                                   'triggear_token': 'triggear_token'},
                                                                  spec=app.config.triggear_config.TriggearConfig,
                                                                  strict=True)
-        jenkins_client = mock(spec=jenkins.Jenkins, strict=True)
 
         expect(os).getenv('CREDS_PATH').thenReturn('./tests/config/example_configs/creds.yaml')
         expect(os).getenv('CONFIG_PATH').thenReturn('./tests/config/example_configs/config.yaml')
-        expect(jenkins).Jenkins(url="https://ci.triggear.com/", username="other_user", password="other_api_token").thenReturn(jenkins_client)
         github_controller = GithubController(mock(), mock(), config)
 
         tested_jenkins_client = github_controller.get_jenkins("https://ci.triggear.com/")
-        assert tested_jenkins_client.client == jenkins_client
+        assert tested_jenkins_client.get_async_jenkins().base_url == "https://ci.triggear.com/"
         assert github_controller.config != config
 
     async def test__when_jenkins_url_not_found_in_config__and_reading_config_raises__should_keep_previous_config(self):
-        instance = app.config.triggear_config.JenkinsInstanceConfig('jenkins_url', 'user', 'token')
+        instance = app.clients.jenkins_client.JenkinsInstanceConfig('jenkins_url', 'user', 'token')
         jenkins_instances = {'jenkins_url': instance}
         config: app.config.triggear_config.TriggearConfig = mock({'jenkins_instances': jenkins_instances,
                                                                   'rerun_time_limit': 2,
                                                                   'triggear_token': 'triggear_token'},
                                                                  spec=app.config.triggear_config.TriggearConfig,
                                                                  strict=True)
-        jenkins_client = mock(spec=jenkins.Jenkins, strict=True)
 
         expect(os).getenv('CREDS_PATH').thenReturn('./tests/config/example_configs/config.yaml')
-        expect(jenkins, times=0).Jenkins(url="https://ci.triggear.com/", username="other_user", password="other_api_token").thenReturn(jenkins_client)
+        expect(app.clients.jenkins_client, times=0).JenkinsClient(any)
         github_controller = GithubController(mock(), mock(), config)
 
         with pytest.raises(KeyError):
@@ -1146,18 +1146,17 @@ class TestGithubController:
         assert github_controller.config == config
 
     async def test__when_jenkins_url_not_found_in_config__and_config_did_not_change__should_raise_triggear_error(self):
-        instance = app.config.triggear_config.JenkinsInstanceConfig('jenkins_url', 'user', 'token')
+        instance = app.clients.jenkins_client.JenkinsInstanceConfig('jenkins_url', 'user', 'token')
         jenkins_instances = {'jenkins_url': instance}
         config: app.config.triggear_config.TriggearConfig = mock({'jenkins_instances': jenkins_instances,
                                                                   'rerun_time_limit': 2,
                                                                   'triggear_token': 'triggear_token'},
                                                                  spec=app.config.triggear_config.TriggearConfig,
                                                                  strict=True)
-        jenkins_client = mock(spec=jenkins.Jenkins, strict=True)
 
         expect(os).getenv('CREDS_PATH').thenReturn('./tests/config/example_configs/creds.yaml')
         expect(os).getenv('CONFIG_PATH').thenReturn('./tests/config/example_configs/config.yaml')
-        expect(jenkins, times=0).Jenkins(url="https://ci.invalid.com/", username="other_user", password="other_api_token").thenReturn(jenkins_client)
+        expect(app.clients.jenkins_client, times=0).JenkinsClient(any)
         github_controller = GithubController(mock(), mock(), config)
 
         with pytest.raises(TriggearError):

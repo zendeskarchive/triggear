@@ -44,7 +44,7 @@ class TestAsyncClient:
         expect(aiohttp, times=1).ClientSession(headers={'Authorization': 'token dummy'}).thenReturn(session)
         expect(response).__aenter__().thenReturn(async_value(response))
         expect(response).__aexit__(None, None, None).thenReturn(async_value(None))
-        expect(session).post('http://example.com/subpage', json=payload.data).thenReturn(response)
+        expect(session).post('http://example.com/subpage', json=payload.data, headers=None, params=None).thenReturn(response)
         expect(async_client).validate_response(response).thenReturn(async_value(response))
 
         assert await async_client.post('subpage', payload) == response
@@ -66,7 +66,17 @@ class TestAsyncClient:
 
         assert await async_client.get('subpage', params) == response
 
-    @pytest.mark.parametrize("status", [400, 404, 500])
+    async def test__validate_response__raises_not_found__for_status_404(self):
+        response: aiohttp.ClientResponse = mock({'status': 404}, spec=aiohttp.ClientResponse, strict=True)
+
+        expect(response).text().thenReturn(async_value('exception info'))
+
+        with pytest.raises(AsyncClientException) as exception:
+            await AsyncClient.validate_response(response)
+        assert exception.value.status == 404
+        assert exception.value.message == '<AC> not found: 404 - exception info'
+
+    @pytest.mark.parametrize("status", [400, 500])
     async def test__validate_response__raises__for_statuses_higher_or_eq_to_400(self, status: int):
         response: aiohttp.ClientResponse = mock({'status': status}, spec=aiohttp.ClientResponse, strict=True)
 
@@ -75,7 +85,7 @@ class TestAsyncClient:
         with pytest.raises(AsyncClientException) as exception:
             await AsyncClient.validate_response(response)
         assert exception.value.status == status
-        assert exception.value.message == f'Call failed: {status} - exception info'
+        assert exception.value.message == f'<AC> request failed: {status} - exception info'
 
     @pytest.mark.parametrize("status", [200, 201, 304])
     async def test__validate_response__returns_response__for_statuses_lower_then_400(self, status: int):

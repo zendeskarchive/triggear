@@ -12,6 +12,10 @@ class AsyncClientException(Exception):
         return f"<AsyncClientException> message: {self.message}, status: {self.status}"
 
 
+class AsyncClientNotFoundException(AsyncClientException):
+    pass
+
+
 class Payload:
     def __init__(self, data):
         self.data = data
@@ -43,19 +47,30 @@ class AsyncClient:
         else:
             return f'{self.base_url}/{route}'
 
-    async def post(self, route: str, payload: Payload) -> aiohttp.client_reqrep.ClientResponse:
+    async def post(self,
+                   route: str,
+                   payload: Payload=None,
+                   params: Payload=None,
+                   headers: Dict=None) -> aiohttp.client_reqrep.ClientResponse:
         async with self.session.post(self.build_url(route),
-                                     json=payload.data) as resp:
+                                     json=payload.data if payload else None,
+                                     headers=headers,
+                                     params=params.data if params else None) as resp:
             return await self.validate_response(resp)
 
-    async def get(self, route: str, params: Payload=None) -> aiohttp.client_reqrep.ClientResponse:
+    async def get(self,
+                  route: str,
+                  params: Payload=None) -> aiohttp.client_reqrep.ClientResponse:
         async with self.session.get(self.build_url(route), params=params.data if params is not None else None) as resp:
             return await self.validate_response(resp)
 
     @staticmethod
     async def validate_response(response: aiohttp.client_reqrep.ClientResponse) -> aiohttp.client_reqrep.ClientResponse:
+        if response.status == 404:
+            response_text: str = await response.text()
+            raise AsyncClientNotFoundException(f'<AC> not found: {response.status} - {response_text}', response.status)
         if response.status >= 400:
             response_text: str = await response.text()
-            raise AsyncClientException(f'Call failed: {response.status} - {response_text}', response.status)
+            raise AsyncClientException(f'<AC> request failed: {response.status} - {response_text}', response.status)
         else:
             return response

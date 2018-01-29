@@ -5,7 +5,8 @@ import pytest
 import yaml
 from mockito import when
 
-from app.config.triggear_config import TriggearConfig, JenkinsInstanceConfig
+from app.config.triggear_config import TriggearConfig
+from app.clients.jenkins_client import JenkinsInstanceConfig
 
 pytestmark = pytest.mark.asyncio
 

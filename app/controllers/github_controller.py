@@ -8,12 +8,11 @@ from typing import Tuple
 
 import aiohttp.web
 import aiohttp.web_request
-import jenkins
 import motor.motor_asyncio
 import yaml
 from aiohttp.web_response import Response
 
-from app.clients.async_client import AsyncClientException
+from app.clients.async_client import AsyncClientException, AsyncClientNotFoundException
 from app.clients.github_client import GithubClient
 from app.clients.jenkins_client import JenkinsClient
 from app.config.triggear_config import TriggearConfig
@@ -214,7 +213,7 @@ class GithubController:
                                                                get_all_starting_with(hook_details.changes, change_restrictions)
                                                            ),
                                                            callback=None)
-                        except jenkins.NotFoundException:
+                        except AsyncClientNotFoundException:
                             update_query = hook_details.query
                             update_query[RegistrationFields.job] = job_name
                             logging.exception(f"Job {jenkins_url}:{job_name} was not found on Jenkins anymore - "
@@ -277,9 +276,9 @@ class GithubController:
         job_params = await self.get_requested_parameters_values(job_requested_params, pr_branch, sha, tag, relevant_changes)
         next_build_number = await self.get_jenkins(jenkins_url).get_jobs_next_build_number(job_name)
         try:
-            self.get_jenkins(jenkins_url).build_jenkins_job(job_name, job_params)
+            await self.get_jenkins(jenkins_url).build_jenkins_job(job_name, job_params)
             logging.warning(f"Scheduled build of: {jenkins_url}:{job_name} #{next_build_number}")
-        except jenkins.JenkinsException as jenkins_exception:
+        except AsyncClientException as jenkins_exception:
             logging.exception(f"Job {jenkins_url}:{job_name} did not accept {job_params} as parameters but it requested them "
                               f"(Error: {jenkins_exception})")
 
@@ -290,7 +289,7 @@ class GithubController:
                                                                   job_name)
             return
 
-        build_info = await self.get_jenkins(jenkins_url).get_build_info(job_name, next_build_number)
+        build_info = await self.get_jenkins(jenkins_url).get_build_info_data(job_name, next_build_number)
         if build_info is not None:
             logging.warning(f"Creating pending status for {jenkins_url}:{job_name} in repo {repository} (branch {pr_branch}, sha {sha}")
 
@@ -299,7 +298,7 @@ class GithubController:
             while await self.get_jenkins(jenkins_url).is_job_building(job_name, next_build_number):
                 await asyncio.sleep(1)
 
-            build_info = await self.get_jenkins(jenkins_url).get_build_info(job_name, next_build_number)
+            build_info = await self.get_jenkins(jenkins_url).get_build_info_data(job_name, next_build_number)
             logging.warning(f"Build {jenkins_url}:{job_name} #{next_build_number} finished.")
 
             final_state = await self.get_final_build_state(build_info)
