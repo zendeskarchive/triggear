@@ -19,6 +19,8 @@ class RegisterRequestData:
         branch = 'branch'
         sha = 'sha'
         tag = 'tag'
+        release_target = 'release_target'
+        is_prerelease = 'is_prerelease'
 
     @staticmethod
     def __get_mandatory_fields():
@@ -41,7 +43,9 @@ class RegisterRequestData:
         return [RegisterRequestData.RequestedParams.branch,
                 RegisterRequestData.RequestedParams.sha,
                 RegisterRequestData.RequestedParams.tag,
-                RegisterRequestData.RequestedParams.changes]
+                RegisterRequestData.RequestedParams.changes,
+                RegisterRequestData.RequestedParams.release_target,
+                RegisterRequestData.RequestedParams.is_prerelease]
 
     @staticmethod
     def __get_allowed_requested_params_prefixes() -> List[str]:
