@@ -13,7 +13,9 @@ class HookDetails:
                f"sha: {self.sha}, " \
                f"tag: {self.tag}, " \
                f"changes: {self.changes}, " \
-               f"query: {self.query})"
+               f"query: {self.query}, " \
+               f"release_target: {self.release_target}, " \
+               f"is_prerelease: {self.is_prerelease})"
 
     def __init__(self, event_type: EventTypes, repository: str, branch: str, sha: str, **additional_queries):
         self.__event_type = event_type
@@ -21,6 +23,8 @@ class HookDetails:
         self.__branch: str = branch
         self.__sha: str = sha
         self.__tag: str = None
+        self.__release_target: str = None
+        self.__is_prerelease: bool = None
         self.__changes: Set[str] = set()
         self.__query: Dict[str, str] = dict(repository=repository, **additional_queries)
         logging.warning(str(self))
@@ -73,3 +77,19 @@ class HookDetails:
     @changes.setter
     def changes(self, value: Set[str]):
         self.__changes = set(value)
+
+    @property
+    def release_target(self) -> str:
+        return self.__release_target
+
+    @release_target.setter
+    def release_target(self, value: str):
+        self.__release_target = value
+
+    @property
+    def is_prerelease(self) -> bool:
+        return self.__is_prerelease
+
+    @is_prerelease.setter
+    def is_prerelease(self, value: bool):
+        self.__is_prerelease = value

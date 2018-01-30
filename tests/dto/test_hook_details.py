@@ -42,7 +42,8 @@ class TestHookDetails:
         assert str(hook_details) == "HookDetails(eventType: push, " \
                                     "repo: repo, branch: master, " \
                                     "sha: sha, tag: None, changes: set(), " \
-                                    "query: {'repository': 'repo', 'anything': 'other'})"
+                                    "query: {'repository': 'repo', 'anything': 'other'}, " \
+                                    "release_target: None, is_prerelease: None)"
 
     async def test__hook_details__should_provide_proper_field_getters_and_setters(self):
         hook_details = HookDetails(event_type=EventTypes.push,

@@ -75,3 +75,14 @@ class HookDetailsFactory:
             branch=head_branch,
             sha=head_sha
         )
+
+    @staticmethod
+    def get_release_details(data: Dict):
+        hook_details = HookDetails(event_type=EventTypes.release,
+                                   repository=data['repository']['full_name'],
+                                   branch='',
+                                   sha='')
+        hook_details.tag = data['release']['tag_name']
+        hook_details.release_target = data['release']['target_commitish']
+        hook_details.is_prerelease = data['release']['prerelease']
+        return hook_details

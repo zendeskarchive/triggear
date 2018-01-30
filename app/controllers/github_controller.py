@@ -104,13 +104,19 @@ class GithubController:
                 await self.handle_push(data)
             elif data['ref'].startswith('refs/tags/'):
                 await self.handle_tagged(data)
+        elif await self.get_request_event_header(request) == EventTypes.release:
+            await self.handle_release(data)
         return aiohttp.web.Response(text='Hook ACK')
 
     @staticmethod
     async def get_request_event_header(request: aiohttp.web_request.Request) -> str:
         return request.headers.get('X-GitHub-Event')
 
-    async def handle_pr_opened(self, data: dict):
+    async def handle_release(self, data: Dict):
+        hook_details: HookDetails = HookDetailsFactory.get_release_details(data)
+        await self.trigger_registered_jobs(hook_details)
+
+    async def handle_pr_opened(self, data: Dict):
         hook_details: HookDetails = HookDetailsFactory.get_pr_opened_details(data)
         await self.__github_client.set_sync_label(hook_details.repository, number=data['pull_request']['number'])
         await self.trigger_registered_jobs(hook_details)

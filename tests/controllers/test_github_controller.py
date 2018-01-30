@@ -1162,3 +1162,32 @@ class TestGithubController:
         with pytest.raises(TriggearError):
             github_controller.get_jenkins("https://ci.invalid.com/")
         assert github_controller.config == config
+
+    async def test__when_event_type_is_release__should_call_handle_release(self):
+        github_controller = GithubController(mock(), mock(), mock())
+        request = mock({'headers': {'X-GitHub-Event': 'release'}}, spec=aiohttp.web_request.Request, strict=True)
+        request_data = mock()
+
+        when(github_controller).validate_webhook_secret(request).thenReturn(async_value('AUTHORIZED'))
+        when(github_controller).get_request_json(request).thenReturn(async_value(request_data))
+
+        expect(github_controller, times=1).handle_release(request_data).thenReturn(async_value(None))
+
+        response: aiohttp.web.Response = await github_controller.handle_hook(request)
+
+        assert 200 == response.status
+        assert 'Hook ACK' == response.text
+
+    async def test__when_handle_release_is_called__should_trigger_registered_jobs(self):
+        github_client = mock(spec=GithubClient, strict=True)
+        github_controller = GithubController(github_client, mock(), mock())
+        hook_data = mock()
+
+        hook_details = mock(spec=HookDetails, strict=True)
+
+        # expect
+        expect(HookDetailsFactory, times=1).get_release_details(hook_data).thenReturn(hook_details)
+        expect(github_controller, times=1).trigger_registered_jobs(hook_details).thenReturn(async_value(None))
+
+        # then
+        await github_controller.handle_release(hook_data)

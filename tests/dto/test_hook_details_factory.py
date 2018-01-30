@@ -92,3 +92,23 @@ class TestHookDetailsFactory:
                                             branch='master',
                                             sha='123456')
         assert HookDetailsFactory.get_pr_sync_details(hook_data, 'master', '123456') == expected_hook_details
+
+    async def test__when_release_hook_is_provided__should_return_proper_hook_details(self):
+        hook_data = {
+            "release": {
+                "tag_name": "theTag",
+                "target_commitish": "123321",
+                "prerelease": True
+            },
+            "repository": {
+                "full_name": "repo",
+            }
+        }
+        expected_hook_details = HookDetails(EventTypes.release,
+                                            repository='repo',
+                                            branch='',
+                                            sha='')
+        expected_hook_details.tag = 'theTag'
+        expected_hook_details.release_target = '123321'
+        expected_hook_details.is_prerelease = True
+        assert HookDetailsFactory.get_release_details(hook_data) == expected_hook_details

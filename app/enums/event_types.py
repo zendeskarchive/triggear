@@ -1,4 +1,5 @@
 class EventTypes:
+    release = 'release'
     comment = 'created'
     synchronize = 'synchronize'
     labeled = 'labeled'
@@ -12,4 +13,5 @@ class EventTypes:
         return [EventTypes.labeled,
                 EventTypes.tagged,
                 EventTypes.pr_opened,
-                EventTypes.push]
+                EventTypes.push,
+                EventTypes.release]
