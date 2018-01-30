@@ -6,7 +6,7 @@ from aiohttp import ClientResponse
 from mockito import mock, expect, when, captor
 
 from app.clients.async_client import AsyncClient, AsyncClientException, Payload
-from app.clients.github_client import GithubClient, DeploymentState
+from app.clients.github_client import GithubClient
 from app.exceptions.triggear_timeout_error import TriggearTimeoutError
 from tests.async_mockito import async_value
 
@@ -300,7 +300,7 @@ class TestGithubClient:
 
         assert await github_client.create_deployment_status(repo='repo',
                                                             deployment_id=123,
-                                                            state=DeploymentState.SUCCESS,
+                                                            state='success',
                                                             target_url='http://app.futuresimple.com',
                                                             description='something mildly interesting') is None
 

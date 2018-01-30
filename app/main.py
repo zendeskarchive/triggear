@@ -34,6 +34,8 @@ def main():
     app.router.add_get('/missing/{eventType}', pipeline_controller.handle_missing)
     app.router.add_post('/deregister', pipeline_controller.handle_deregister)
     app.router.add_post('/clear', pipeline_controller.handle_clear)
+    app.router.add_post('/deployment', pipeline_controller.handle_deployment)
+    app.router.add_post('/deployment_status', pipeline_controller.handle_deployment_status)
 
     web.run_app(app)
 

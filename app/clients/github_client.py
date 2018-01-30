@@ -1,6 +1,5 @@
 import asyncio
 import logging
-from enum import Enum
 from typing import List
 
 from aiohttp import ClientResponse
@@ -8,12 +7,6 @@ from aiohttp import ClientResponse
 from app.clients.async_client import AsyncClient, Payload, AsyncClientException
 from app.enums.labels import Labels
 from app.exceptions.triggear_timeout_error import TriggearTimeoutError
-
-
-class DeploymentState(Enum):
-    SUCCESS = 'success'
-    FAILURE = 'failure'
-    ERROR = 'error'
 
 
 class GithubClient:
@@ -182,12 +175,12 @@ class GithubClient:
     async def create_deployment_status(self,
                                        repo: str,
                                        deployment_id: int,
-                                       state: DeploymentState,
+                                       state: str,
                                        target_url: str,
                                        description: str='') -> ClientResponse:
         route = f'/repos/{repo}/deployments/{deployment_id}/statuses'
         payload = Payload.from_kwargs(
-            state=state.value,
+            state=state,
             target_url=target_url,
             description=description
         )

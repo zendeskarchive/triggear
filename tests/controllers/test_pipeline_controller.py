@@ -1,9 +1,11 @@
 import datetime
+from typing import List, Dict
 
 import aiohttp.web
 import aiohttp.web_request
 import pytest
 import motor.motor_asyncio
+from aiohttp import ClientResponse
 from mockito import mock, when, expect, captor
 from pymongo.results import UpdateResult, InsertOneResult
 
@@ -13,6 +15,8 @@ from app.controllers.pipeline_controller import PipelineController
 from app.enums.registration_fields import RegistrationFields
 from app.request_schemes.clear_request_data import ClearRequestData
 from app.request_schemes.comment_request_data import CommentRequestData
+from app.request_schemes.deployment_request_data import DeploymentRequestData
+from app.request_schemes.deployment_status_request_data import DeploymentStatusRequestData
 from app.request_schemes.deregister_request_data import DeregisterRequestData
 from app.request_schemes.register_request_data import RegisterRequestData
 from app.request_schemes.status_request_data import StatusRequestData
@@ -492,3 +496,181 @@ class TestPipelineController:
 
         assert response.status == 200
         assert response.text == 'Clear of job missed counter succeeded'
+
+    async def test__when_invalid_token_is_sent_to_deployment__should_return_401_response(self):
+        pipeline_controller = PipelineController(mock(), mock(), self.API_TOKEN)
+
+        # given
+        request = mock({'headers': {'Authorization': f'Invalid token'}}, spec=aiohttp.web_request.Request)
+
+        # when
+        response: aiohttp.web.Response = await pipeline_controller.handle_deployment(request)
+
+        # then
+        assert response.status == 401
+        assert response.body == b'Unauthorized'
+
+    async def test__when_invalid_data_is_sent_to_deployment__400_response_should_be_returned(self):
+        request = mock({'headers': {'Authorization': f'Token {self.API_TOKEN}'}}, spec=aiohttp.web_request.Request, strict=True)
+
+        pipeline_controller = PipelineController(mock(), mock(), self.API_TOKEN)
+
+        # given
+        when(request).json().thenReturn(async_value({}))
+        when(DeploymentRequestData).is_valid_deployment_request_data({}).thenReturn(False)
+
+        # when
+        response: aiohttp.web.Response = await pipeline_controller.handle_deployment(request)
+
+        # then
+        assert response.status == 400
+        assert response.reason == 'Invalid deployment request payload!'
+
+    async def test__when_deployment_data_is_valid__github_deployment_should_be_created(self):
+        request = mock({'headers': {'Authorization': f'Token {self.API_TOKEN}'}}, spec=aiohttp.web_request.Request, strict=True)
+        github_client: GithubClient = mock(spec=GithubClient, strict=True)
+
+        pipeline_controller = PipelineController(mock(), mock(), self.API_TOKEN)
+
+        # given
+        when(request).json().thenReturn(async_value({'repo': 'triggear',
+                                                     'ref': '123321',
+                                                     'environment': 'prod',
+                                                     'description': 'something unique'}))
+        when(pipeline_controller).get_github().thenReturn(github_client)
+
+        # expect
+        expect(github_client)\
+            .create_deployment(repo='triggear', ref='123321', environment='prod', description='something unique')\
+            .thenReturn(async_value(None))
+
+        # when
+        response: aiohttp.web.Response = await pipeline_controller.handle_deployment(request)
+
+        # then
+        assert response.status == 200
+        assert response.text == 'Deployment ACK'
+
+    async def test__when_invalid_token_is_sent_to_deployment_status__should_return_401_response(self):
+        pipeline_controller = PipelineController(mock(), mock(), self.API_TOKEN)
+
+        # given
+        request = mock({'headers': {'Authorization': f'Invalid token'}}, spec=aiohttp.web_request.Request)
+
+        # when
+        response: aiohttp.web.Response = await pipeline_controller.handle_deployment_status(request)
+
+        # then
+        assert response.status == 401
+        assert response.body == b'Unauthorized'
+
+    async def test__when_invalid_data_is_sent_to_deployment_status__400_response_should_be_returned(self):
+        request = mock({'headers': {'Authorization': f'Token {self.API_TOKEN}'}}, spec=aiohttp.web_request.Request, strict=True)
+
+        pipeline_controller = PipelineController(mock(), mock(), self.API_TOKEN)
+
+        # given
+        when(request).json().thenReturn(async_value({}))
+        when(DeploymentStatusRequestData).is_valid_deployment_status_request_data({}).thenReturn(False)
+
+        # when
+        response: aiohttp.web.Response = await pipeline_controller.handle_deployment_status(request)
+
+        # then
+        assert response.status == 400
+        assert response.reason == 'Invalid deployment status request payload!'
+
+    async def test__when_deployment_status_data_is_valid__and_matching_deployment_is_found__its_status_should_be_created(self):
+        request = mock({'headers': {'Authorization': f'Token {self.API_TOKEN}'}}, spec=aiohttp.web_request.Request, strict=True)
+        get_deployments_response = mock(spec=ClientResponse, strict=True)
+        github_client: GithubClient = mock(spec=GithubClient, strict=True)
+
+        pipeline_controller = PipelineController(mock(), mock(), self.API_TOKEN)
+
+        # given
+        when(request).json().thenReturn(async_value({'repo': 'triggear',
+                                                     'ref': '123321',
+                                                     'environment': 'prod',
+                                                     'description': 'something unique',
+                                                     'targetUrl': 'http://app.futuresimple.com',
+                                                     'state': 'pending'}))
+        when(pipeline_controller).get_github().thenReturn(github_client)
+
+        # expect
+        expect(github_client).get_deployments(repo='triggear', ref='123321', environment='prod').thenReturn(async_value(get_deployments_response))
+        expect(get_deployments_response).json()\
+            .thenReturn(async_value([
+                {
+                    'id': 123,
+                    'ref': '123321',
+                    'environment': 'prod',
+                    'description': 'something unique'
+                },
+                {
+                    'id': 321,
+                    'ref': '321123',
+                    'environment': 'staging',
+                    'description': 'something other'
+                }
+            ]))
+        expect(github_client).create_deployment_status(repo='triggear',
+                                                       deployment_id=123,
+                                                       state='pending',
+                                                       target_url='http://app.futuresimple.com',
+                                                       description='something unique')\
+            .thenReturn(async_value(None))
+
+        # when
+        response: aiohttp.web.Response = await pipeline_controller.handle_deployment_status(request)
+
+        # then
+        assert response.status == 200
+        assert response.text == 'Deployment status ACK'
+
+    @pytest.mark.parametrize("deployments", [
+        [
+            {
+                'id': 123,
+                'ref': 'zxcasd',
+                'environment': 'prod',
+                'description': 'something unique'
+            },
+            {
+                'id': 321,
+                'ref': '321123',
+                'environment': 'staging',
+                'description': 'something other'
+            }
+        ],
+        []
+    ])
+    async def test__when_deployment_status_data_is_valid__and_no_matching_deployment_is_found__no_status_should_be_created(self,
+                                                                                                                           deployments: List[Dict]):
+        request = mock({'headers': {'Authorization': f'Token {self.API_TOKEN}'}}, spec=aiohttp.web_request.Request, strict=True)
+        get_deployments_response = mock(spec=ClientResponse, strict=True)
+        github_client: GithubClient = mock(spec=GithubClient, strict=True)
+
+        pipeline_controller = PipelineController(mock(), mock(), self.API_TOKEN)
+
+        # given
+        when(request).json().thenReturn(async_value({'repo': 'triggear',
+                                                     'ref': '123321',
+                                                     'environment': 'prod',
+                                                     'description': 'something unique',
+                                                     'targetUrl': 'http://app.futuresimple.com',
+                                                     'state': 'pending'}))
+        when(pipeline_controller).get_github().thenReturn(github_client)
+
+        # expect
+        expect(github_client, times=2).get_deployments(repo='triggear', ref='123321', environment='prod')\
+            .thenReturn(async_value(get_deployments_response))
+        expect(get_deployments_response).json()\
+            .thenReturn(async_value(deployments))
+        expect(github_client, times=0).create_deployment_status(any)
+
+        # when
+        response: aiohttp.web.Response = await pipeline_controller.handle_deployment_status(request)
+
+        # then
+        assert response.status == 404
+        assert response.reason == "Deployment matching {'environment': 'prod', 'ref': '123321', 'description': 'something unique'} not found"

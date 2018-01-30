@@ -5,12 +5,15 @@ from typing import List, Optional, Dict
 import aiohttp.web
 import aiohttp.web_request
 import motor.motor_asyncio
+from aiohttp import ClientResponse
 
 from app.clients.github_client import GithubClient
 from app.enums.event_types import EventTypes
 from app.enums.registration_fields import RegistrationFields
 from app.request_schemes.clear_request_data import ClearRequestData
 from app.request_schemes.comment_request_data import CommentRequestData
+from app.request_schemes.deployment_request_data import DeploymentRequestData
+from app.request_schemes.deployment_status_request_data import DeploymentStatusRequestData
 from app.request_schemes.deregister_request_data import DeregisterRequestData
 from app.request_schemes.register_request_data import RegisterRequestData
 from app.request_schemes.status_request_data import StatusRequestData
@@ -23,9 +26,12 @@ class PipelineController:
                  github_client: GithubClient,
                  mongo_client: motor.motor_asyncio.AsyncIOMotorClient,
                  api_token: str):
-        self.__gh_client = github_client
-        self.__mongo_client = mongo_client
-        self.api_token = api_token
+        self.__gh_client: GithubClient = github_client
+        self.__mongo_client: motor.motor_asyncio.AsyncIOMotorClient = mongo_client
+        self.api_token: str = api_token
+
+    def get_github(self) -> GithubClient:
+        return self.__gh_client
 
     async def add_or_update_registration(self,
                                          jenkins_url: str,
@@ -83,7 +89,7 @@ class PipelineController:
         if not StatusRequestData.is_valid_status_data(data):
             return aiohttp.web.Response(reason='Invalid status request params!', status=400)
         logging.warning(f"Status REQ received: {data}")
-        await self.__gh_client.create_github_build_status(
+        await self.get_github().create_github_build_status(
             repo=data['repository'],
             sha=data['sha'],
             state=data['state'],
@@ -100,7 +106,7 @@ class PipelineController:
         if not CommentRequestData.is_valid_comment_data(data):
             return aiohttp.web.Response(reason='Invalid comment request params!', status=400)
         logging.warning(f"Comment REQ received: {data}")
-        await self.__gh_client.create_comment(
+        await self.get_github().create_comment(
             repo=data['repository'],
             sha=data['sha'],
             body=data['jobName'] + "\nComments: " + data['body'],
@@ -156,3 +162,46 @@ class PipelineController:
                               {'$set': {RegistrationFields.missed_times: 0}})
 
         return aiohttp.web.Response(text=f'Clear of {data[DeregisterRequestData.job_name]} missed counter succeeded')
+
+    @handle_exceptions()
+    @validate_auth_header()
+    async def handle_deployment(self, request: aiohttp.web_request.Request) -> aiohttp.web.Response:
+        data: Dict = await request.json()
+        logging.warning(f'Deployment request received: {data}')
+        if not DeploymentRequestData.is_valid_deployment_request_data(data):
+            return aiohttp.web.Response(reason='Invalid deployment request payload!', status=400)
+        await self.get_github().create_deployment(repo=data[DeploymentRequestData.repo],
+                                                  ref=data[DeploymentRequestData.ref],
+                                                  environment=data[DeploymentRequestData.environment],
+                                                  description=data[DeploymentRequestData.description])
+        return aiohttp.web.Response(text='Deployment ACK')
+
+    @handle_exceptions()
+    @validate_auth_header()
+    async def handle_deployment_status(self, request: aiohttp.web_request.Request) -> aiohttp.web.Response:
+        data: Dict = await request.json()
+        logging.warning(f'Deployment status request received: {data}')
+        if not DeploymentStatusRequestData.is_valid_deployment_status_request_data(data):
+            return aiohttp.web.Response(reason='Invalid deployment status request payload!', status=400)
+        get_deployments_response: ClientResponse = await self.get_github().get_deployments(repo=data[DeploymentRequestData.repo],
+                                                                                           ref=data[DeploymentRequestData.ref],
+                                                                                           environment=data[DeploymentRequestData.environment])
+
+        deployments = await get_deployments_response.json()
+        deployment_matcher = {
+            'environment': data[DeploymentRequestData.environment],
+            'ref': data[DeploymentRequestData.ref],
+            'description': data[DeploymentRequestData.description]
+        }
+        for deployment in deployments:
+            match = {k: deployment[k] for k in deployment_matcher.keys()}
+            if match == deployment_matcher:
+                await self.get_github().create_deployment_status(repo=data[DeploymentRequestData.repo],
+                                                                 deployment_id=deployment['id'],
+                                                                 state=data[DeploymentStatusRequestData.state],
+                                                                 target_url=data[DeploymentStatusRequestData.target_url],
+                                                                 description=data[DeploymentStatusRequestData.description])
+                return aiohttp.web.Response(text='Deployment status ACK')
+        logging.error(f'Deployment matching {deployment_matcher} not found')
+        return aiohttp.web.Response(reason=f'Deployment matching {deployment_matcher} not found', status=404)
+
