@@ -1,63 +1,49 @@
 import asyncio
-from asyncio.selector_events import BaseSelectorEventLoop
 
 import pytest
 from mockito import mock, expect
 
 from app.utilities.background_task import BackgroundTask
-from tests.async_mockito import async_value
 
 pytestmark = pytest.mark.asyncio
 
 
 @pytest.mark.usefixtures('unstub')
 class TestBackgroundTask:
-    async def test__when_coroutine_with_no_arguments_is_passed__should_be_run_with_no_args(self):
-        test_background_task = mock()
+    async def test__when_coroutine_is_passed__should_be_passed_to_loop_executor(self):
+        coro = mock()
+        loop = mock(spec=asyncio.BaseEventLoop, strict=True)
 
-        # when
-        expect(test_background_task, times=1).empty_coro().thenReturn(async_value(None))
-        await BackgroundTask().run(test_background_task.empty_coro, ())
+        background_task = BackgroundTask()
 
-    async def test__when_coroutine_with_args_is_passed__should_be_run_with_all_of_them(self):
-        test_background_task = mock()
+        expect(asyncio).get_event_loop().thenReturn(loop)
+        expect(loop, times=1).run_in_executor(None, background_task.task_runner, coro, None)
 
-        # when
-        expect(test_background_task, times=1).empty_coro(1, 2).thenReturn(async_value(None))
-        await BackgroundTask().run(test_background_task.empty_coro, (1, 2))
+        await background_task.run(coro)
 
-    async def test__when_task_is_ran__should_open_and_close_event_loop(self):
-        test_background_task = mock()
-        loop = mock()
+    async def test__when_coroutine_is_passed__and_callback_is_passed__should_be_both_passed_to_loop_executor(self):
+        coro = mock()
+        callback = mock()
+        loop = mock(spec=asyncio.BaseEventLoop, strict=True)
 
-        # given
-        expect(test_background_task, times=2).empty_coro(1, 2)
-        expect(asyncio).new_event_loop().thenReturn(loop)
-        expect(asyncio).set_event_loop(loop)
-        expect(asyncio).ensure_future(test_background_task.empty_coro(1, 2))
-        expect(BaseSelectorEventLoop).close()
+        background_task = BackgroundTask()
 
-        # when
-        await BackgroundTask().run(test_background_task.empty_coro, (1, 2))
+        expect(asyncio, times=1, strict=True).get_event_loop().thenReturn(loop)
+        expect(loop, times=1, strict=True).run_in_executor(None, background_task.task_runner, coro, callback)
 
-    async def test__when_callback_is_passed__it_is_called_when_coro_is_done(self):
-        test_background_task = mock()
+        await background_task.run(coro, callback)
 
-        # when
-        expect(test_background_task, times=1).empty_coro(1, 2).thenReturn(async_value(None))
-        expect(test_background_task, times=1).callback(any).thenReturn(None)
-        await BackgroundTask().run(test_background_task.empty_coro, (1, 2), callback=test_background_task.callback)
-        await asyncio.sleep(0.2)
+    async def test__task_runner__executes_coro_on_new_event_loop(self):
+        coro = mock()
+        callback = mock()
+        future = mock()
+        loop = mock(spec=asyncio.BaseEventLoop, strict=True)
 
-    async def test__when_callback_is_passed__and_coro_raises__callback_is_called_anyway(self):
-        async def exception_coro():
-            raise Exception()
+        expect(asyncio, times=1, strict=True).new_event_loop().thenReturn(loop)
+        expect(asyncio, times=1, strict=True).set_event_loop(loop)
+        expect(asyncio, times=1, strict=True).ensure_future(coro).thenReturn(future)
+        expect(future, times=1, strict=True).add_done_callback(callback)
+        expect(loop, times=1, strict=True).run_until_complete(future)
+        expect(loop, times=1, strict=True).close()
 
-        test_background_task = mock()
-
-        # when
-        expect(test_background_task, times=1).exception_coro(1, 2).thenReturn(exception_coro())
-        expect(test_background_task, times=1).callback(any).thenReturn(None)
-        await BackgroundTask().run(test_background_task.exception_coro, (1, 2), callback=test_background_task.callback)
-        await asyncio.sleep(0.2)
-
+        BackgroundTask.task_runner(coro, callback)
