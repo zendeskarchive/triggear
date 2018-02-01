@@ -5,7 +5,6 @@ import pytest
 import motor.motor_asyncio
 import aiohttp.web_request
 import aiohttp.web
-import time
 from mockito import mock, when, expect, captor
 
 import app.config.triggear_config
@@ -89,7 +88,7 @@ class TestGithubController:
         assert await github_controller.validate_webhook_secret(request) == (501, "Only SHA1 auth supported")
 
     async def test__when_invalid_signature_is_sent__should_return_401_from_validation(self):
-        triggear_config = mock({'triggear_token': 'api_token', 'rerun_time_limit': 1}, spec=app.config.triggear_config.TriggearConfig, strict=True)
+        triggear_config = mock({'triggear_token': 'api_token'}, spec=app.config.triggear_config.TriggearConfig, strict=True)
         github_controller = GithubController(github_client=mock(),
                                              mongo_client=mock(),
                                              config=triggear_config)
@@ -103,7 +102,7 @@ class TestGithubController:
         assert await github_controller.validate_webhook_secret(request) == (401, 'Unauthorized')
 
     async def test__when_valid_signature_is_sent__should_return_authorized_from_validation(self):
-        triggear_config = mock({'triggear_token': 'api_token', 'rerun_time_limit': 1}, spec=app.config.triggear_config.TriggearConfig, strict=True)
+        triggear_config = mock({'triggear_token': 'api_token'}, spec=app.config.triggear_config.TriggearConfig, strict=True)
         github_controller = GithubController(github_client=mock(),
                                              mongo_client=mock(),
                                              config=triggear_config)
@@ -584,72 +583,6 @@ class TestGithubController:
         except AssertionError:
             assert {'branch': 'master', 'changes': '.gitignore,README.md'} == result
 
-    async def test__can_trigger_job_by_branch__when_job_was_not_run__should_add_it_to_mongo__and_return_true(self):
-        collection = mock(
-            spec=motor.motor_asyncio.AsyncIOMotorCollection,
-            strict=True
-        )
-        mongo_client: motor.motor_asyncio.AsyncIOMotorClient = mock(
-            {'registered': {'last_run_in': collection}},
-            spec=motor.motor_asyncio.AsyncIOMotorClient,
-            strict=True
-        )
-        github_controller = GithubController(mock(), mongo_client, mock())
-        mock(time)
-
-        when(time).time().thenReturn(1)
-        when(collection).find_one({'jenkins_url': 'url', "branch": 'master', "job": 'job'}).thenReturn(async_value(None))
-        expect(collection).insert_one({'jenkins_url': 'url', 'branch': 'master', 'job': 'job', 'timestamp': 1}).thenReturn(async_value(None))
-
-        assert await github_controller.can_trigger_job_by_branch('url', 'job', 'master')
-
-    async def test__can_trigger_job_by_branch__when_job_was_run_long_ago__should_add_update_mongo__and_return_true(self):
-        found_run = mock()
-        collection = mock(
-            spec=motor.motor_asyncio.AsyncIOMotorCollection,
-            strict=True
-        )
-        mongo_client: motor.motor_asyncio.AsyncIOMotorClient = mock(
-            {'registered': {'last_run_in': collection}},
-            spec=motor.motor_asyncio.AsyncIOMotorClient,
-            strict=True
-        )
-        triggear_config = mock({'rerun_time_limit': 20, 'triggear_token': 'token'}, spec=app.config.triggear_config.TriggearConfig)
-        github_controller = GithubController(mock(), mongo_client, triggear_config)
-        mock(time)
-
-        when(collection).find_one({'jenkins_url': 'url', "branch": 'master', "job": 'job'}).thenReturn(async_value(found_run))
-        when(found_run).__getitem__('timestamp').thenReturn(3)
-        when(time).time().thenReturn(23)
-        expect(collection).replace_one(found_run, {'jenkins_url': 'url', 'branch': 'master', 'job': 'job', 'timestamp': 23})\
-            .thenReturn(async_value(None))
-
-        assert await github_controller.can_trigger_job_by_branch('url', 'job', 'master')
-
-    async def test__can_trigger_job_by_branch__when_job_was_not_so_long_ago__should_return_false(self):
-        found_run = mock()
-        collection = mock(
-            spec=motor.motor_asyncio.AsyncIOMotorCollection,
-            strict=True
-        )
-        mongo_client: motor.motor_asyncio.AsyncIOMotorClient = mock(
-            {'registered': {'last_run_in': collection}},
-            spec=motor.motor_asyncio.AsyncIOMotorClient,
-            strict=True
-        )
-        triggear_config = mock({'rerun_time_limit': 20, 'triggear_token': 'token'}, spec=app.config.triggear_config.TriggearConfig)
-        github_controller = GithubController(mock(), mongo_client, triggear_config)
-        mock(time)
-
-        when(collection).find_one({'jenkins_url': 'url', "branch": 'master', "job": 'job'}).thenReturn(async_value(found_run))
-        when(found_run).__getitem__('timestamp').thenReturn(3)
-        when(time).time().thenReturn(22)
-        expect(collection, times=0)\
-            .replace_one(found_run, {'jenkins_url': 'url', 'branch': 'master', 'job': 'job', 'timestamp': 23})\
-            .thenReturn(async_value(None))
-
-        assert not await github_controller.can_trigger_job_by_branch('url', 'job', 'master')
-
     async def test__trigger_registered_job__when_build_job_raises__error_status_should_be_created(self):
         jenkins_url = 'jenkins_url'
         requested_parameters = ['branch']
@@ -821,7 +754,6 @@ class TestGithubController:
         when(cursor).get('change_restrictions').thenReturn([])
         when(cursor).get('file_restrictions').thenReturn([])
         when(jenkins_client).get_jobs_next_build_number(job_name).thenReturn(async_value(231))
-        when(github_controller).can_trigger_job_by_branch(jenkins_url, job_name, branch_name).thenReturn(async_value(True))
 
         trigger_coroutine = mock()
         expect(github_controller).trigger_registered_job(jenkins_url=jenkins_url,
@@ -1030,7 +962,6 @@ class TestGithubController:
         when(cursor).get('change_restrictions').thenReturn([])
         when(cursor).get('file_restrictions').thenReturn([])
         when(jenkins_client).get_jobs_next_build_number(job_name).thenReturn(async_value(231))
-        when(github_controller).can_trigger_job_by_branch(jenkins_url, job_name, branch_name).thenReturn(async_value(True))
 
         expect(github_controller).trigger_registered_job(jenkins_url=jenkins_url,
                                                          job_name=job_name,
@@ -1091,7 +1022,6 @@ class TestGithubController:
         when(cursor).get('change_restrictions').thenReturn(['docs'])
         when(cursor).get('file_restrictions').thenReturn([])
         when(jenkins_client).get_jobs_next_build_number(job_name).thenReturn(async_value(231))
-        when(github_controller).can_trigger_job_by_branch(jenkins_url, job_name, branch_name).thenReturn(async_value(True))
 
         expect(github_controller).trigger_registered_job(jenkins_url=jenkins_url,
                                                          job_name=job_name,
@@ -1120,7 +1050,6 @@ class TestGithubController:
         instance = app.clients.jenkins_client.JenkinsInstanceConfig('jenkins_url', 'user', 'token')
         jenkins_instances = {'jenkins_url': instance}
         config: app.config.triggear_config.TriggearConfig = mock({'jenkins_instances': jenkins_instances,
-                                                                  'rerun_time_limit': 2,
                                                                   'triggear_token': 'triggear_token'},
                                                                  spec=app.config.triggear_config.TriggearConfig,
                                                                  strict=True)
@@ -1135,13 +1064,11 @@ class TestGithubController:
         instance = app.clients.jenkins_client.JenkinsInstanceConfig('jenkins_url', 'user', 'token')
         jenkins_instances = {'jenkins_url': instance}
         config: app.config.triggear_config.TriggearConfig = mock({'jenkins_instances': jenkins_instances,
-                                                                  'rerun_time_limit': 2,
                                                                   'triggear_token': 'triggear_token'},
                                                                  spec=app.config.triggear_config.TriggearConfig,
                                                                  strict=True)
 
         expect(os).getenv('CREDS_PATH').thenReturn('./tests/config/example_configs/creds.yaml')
-        expect(os).getenv('CONFIG_PATH').thenReturn('./tests/config/example_configs/config.yaml')
         github_controller = GithubController(mock(), mock(), config)
 
         tested_jenkins_client = github_controller.get_jenkins("https://ci.triggear.com/")
@@ -1152,7 +1079,6 @@ class TestGithubController:
         instance = app.clients.jenkins_client.JenkinsInstanceConfig('jenkins_url', 'user', 'token')
         jenkins_instances = {'jenkins_url': instance}
         config: app.config.triggear_config.TriggearConfig = mock({'jenkins_instances': jenkins_instances,
-                                                                  'rerun_time_limit': 2,
                                                                   'triggear_token': 'triggear_token'},
                                                                  spec=app.config.triggear_config.TriggearConfig,
                                                                  strict=True)
@@ -1169,13 +1095,11 @@ class TestGithubController:
         instance = app.clients.jenkins_client.JenkinsInstanceConfig('jenkins_url', 'user', 'token')
         jenkins_instances = {'jenkins_url': instance}
         config: app.config.triggear_config.TriggearConfig = mock({'jenkins_instances': jenkins_instances,
-                                                                  'rerun_time_limit': 2,
                                                                   'triggear_token': 'triggear_token'},
                                                                  spec=app.config.triggear_config.TriggearConfig,
                                                                  strict=True)
 
         expect(os).getenv('CREDS_PATH').thenReturn('./tests/config/example_configs/creds.yaml')
-        expect(os).getenv('CONFIG_PATH').thenReturn('./tests/config/example_configs/config.yaml')
         expect(app.clients.jenkins_client, times=0).JenkinsClient(any)
         github_controller = GithubController(mock(), mock(), config)
 

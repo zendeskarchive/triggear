@@ -1,7 +1,6 @@
 import asyncio
 import hmac
 import logging
-import time
 from typing import Dict, List, Set
 from typing import Optional
 from typing import Tuple
@@ -23,7 +22,7 @@ from app.enums.labels import Labels
 from app.enums.registration_fields import RegistrationFields
 from app.exceptions.triggear_error import TriggearError
 from app.request_schemes.register_request_data import RegisterRequestData
-from app.utilities.constants import LAST_RUN_IN, BRANCH_DELETED_SHA
+from app.utilities.constants import BRANCH_DELETED_SHA
 from app.utilities.err_handling import handle_exceptions
 from app.utilities.functions import any_starts_with, get_all_starting_with
 
@@ -205,17 +204,16 @@ class GithubController:
                         job_requested_params = document[RegistrationFields.requested_params]
                         try:
                             await self.get_jenkins(jenkins_url).get_jobs_next_build_number(job_name)  # Raises if job does not exist on Jenkins
-                            if await self.can_trigger_job_by_branch(jenkins_url, job_name, hook_details.branch):
-                                asyncio.get_event_loop().create_task(self.trigger_registered_job(
-                                    jenkins_url=jenkins_url,
-                                    job_name=job_name,
-                                    job_requested_params=job_requested_params,
-                                    repository=document[RegistrationFields.repository],
-                                    sha=hook_details.sha,
-                                    pr_branch=hook_details.branch,
-                                    tag=hook_details.tag,
-                                    relevant_changes=get_all_starting_with(hook_details.changes, change_restrictions)
-                                ))
+                            asyncio.get_event_loop().create_task(self.trigger_registered_job(
+                                jenkins_url=jenkins_url,
+                                job_name=job_name,
+                                job_requested_params=job_requested_params,
+                                repository=document[RegistrationFields.repository],
+                                sha=hook_details.sha,
+                                pr_branch=hook_details.branch,
+                                tag=hook_details.tag,
+                                relevant_changes=get_all_starting_with(hook_details.changes, change_restrictions)
+                            ))
                         except AsyncClientNotFoundException:
                             update_query = hook_details.query
                             update_query[RegistrationFields.job] = job_name
@@ -248,24 +246,6 @@ class GithubController:
 
     async def get_collection_for_hook_type(self, event_type: EventTypes):
         return self.__mongo_client.registered[event_type]
-
-    async def can_trigger_job_by_branch(self, jenkins_url, job_name, branch):
-        last_job_run_in_branch = {"jenkins_url": jenkins_url, "branch": branch, "job": job_name}
-        collection = self.__mongo_client.registered[LAST_RUN_IN]
-        found_run = await collection.find_one(last_job_run_in_branch)
-        last_job_run_in_branch['timestamp'] = int(time.time())
-        if not found_run:
-            await collection.insert_one(last_job_run_in_branch)
-            logging.warning(f"Job {job_name} was never run in branch {branch}")
-        else:
-            if int(time.time()) - found_run['timestamp'] < self.config.rerun_time_limit:
-                logging.warning(f"Job {job_name} was run in branch {branch} less then {self.config.rerun_time_limit} - won't be triggered")
-                return False
-            else:
-                await collection.replace_one(found_run, last_job_run_in_branch)
-                logging.warning(f"Job {job_name} for branch {branch} ran more then {self.config.rerun_time_limit} ago. "
-                                f"Will be run, last run time updated.")
-        return True
 
     async def trigger_registered_job(self,
                                      jenkins_url: str,

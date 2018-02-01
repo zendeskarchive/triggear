@@ -43,23 +43,10 @@ class TestTriggearConfig:
             TriggearConfig()
         assert str(key_error.value) == f"'{missing_key}'"
 
-    async def test__when_key_is_missing_in_config_file__should_set_default_timeout(self):
-        when(os).getenv('CREDS_PATH').thenReturn('./tests/config/example_configs/creds.yaml')
-        when(os).getenv('CONFIG_PATH').thenReturn('./tests/config/example_configs/config.yaml')
-        when(yaml).load(any).thenReturn(self.VALID_CREDS_DATA).thenReturn({})
-
-        triggear_config = TriggearConfig()
-
-        assert triggear_config.rerun_time_limit == 30
-
     async def test__when_yaml_files_are_valid__should_store_proper_values(self):
         when(os).getenv('CREDS_PATH').thenReturn('./tests/config/example_configs/creds.yaml')
-        when(os).getenv('CONFIG_PATH').thenReturn('./tests/config/example_configs/config.yaml')
 
         triggear_config = TriggearConfig()
-
-        assert triggear_config.rerun_time_limit == 2
-        assert triggear_config.RERUN_DEFAULT_TIME == 30
 
         assert triggear_config.triggear_token == 'TRIGGEAR_TOKEN'
         assert triggear_config.github_token == 'GITHUB_TOKEN'
