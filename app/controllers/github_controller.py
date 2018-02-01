@@ -23,7 +23,6 @@ from app.enums.labels import Labels
 from app.enums.registration_fields import RegistrationFields
 from app.exceptions.triggear_error import TriggearError
 from app.request_schemes.register_request_data import RegisterRequestData
-from app.utilities.background_task import BackgroundTask
 from app.utilities.constants import LAST_RUN_IN, BRANCH_DELETED_SHA
 from app.utilities.err_handling import handle_exceptions
 from app.utilities.functions import any_starts_with, get_all_starting_with
@@ -207,18 +206,16 @@ class GithubController:
                         try:
                             await self.get_jenkins(jenkins_url).get_jobs_next_build_number(job_name)  # Raises if job does not exist on Jenkins
                             if await self.can_trigger_job_by_branch(jenkins_url, job_name, hook_details.branch):
-                                await BackgroundTask().run(self.trigger_registered_job,
-                                                           (
-                                                               jenkins_url,
-                                                               job_name,
-                                                               job_requested_params,
-                                                               document[RegistrationFields.repository],
-                                                               hook_details.sha,
-                                                               hook_details.branch,
-                                                               hook_details.tag,
-                                                               get_all_starting_with(hook_details.changes, change_restrictions)
-                                                           ),
-                                                           callback=None)
+                                asyncio.get_event_loop().create_task(self.trigger_registered_job(
+                                    jenkins_url=jenkins_url,
+                                    job_name=job_name,
+                                    job_requested_params=job_requested_params,
+                                    repository=document[RegistrationFields.repository],
+                                    sha=hook_details.sha,
+                                    pr_branch=hook_details.branch,
+                                    tag=hook_details.tag,
+                                    relevant_changes=get_all_starting_with(hook_details.changes, change_restrictions)
+                                ))
                         except AsyncClientNotFoundException:
                             update_query = hook_details.query
                             update_query[RegistrationFields.job] = job_name

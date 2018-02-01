@@ -8,7 +8,6 @@ import aiohttp.web
 import time
 from mockito import mock, when, expect, captor
 
-import app.utilities.background_task
 import app.config.triggear_config
 import app.clients.jenkins_client
 from app.clients.async_client import AsyncClientException, AsyncClient, AsyncClientNotFoundException
@@ -824,9 +823,16 @@ class TestGithubController:
         when(jenkins_client).get_jobs_next_build_number(job_name).thenReturn(async_value(231))
         when(github_controller).can_trigger_job_by_branch(jenkins_url, job_name, branch_name).thenReturn(async_value(True))
 
-        expect(github_controller).trigger_registered_job(jenkins_url, job_name, [], 'repo', sha, branch_name, None, set())
+        trigger_coroutine = mock()
+        expect(github_controller).trigger_registered_job(jenkins_url=jenkins_url,
+                                                         job_name=job_name,
+                                                         job_requested_params=[],
+                                                         repository='repo',
+                                                         sha=sha,
+                                                         pr_branch=branch_name,
+                                                         tag=None,
+                                                         relevant_changes=set()).thenReturn(trigger_coroutine)
 
-        # when
         await github_controller.trigger_registered_jobs(hook_details)
 
     async def test__when_changes_are_passed_to_trigger_registered_job__should_be_passed_to_build_job(self):
@@ -894,7 +900,7 @@ class TestGithubController:
         when(cursor).get('branch_restrictions').thenReturn([])
         when(cursor).get('change_restrictions').thenReturn(['.gitignore'])
         when(cursor).get('file_restrictions').thenReturn([])
-        expect(app.utilities.background_task, times=0).BackgroundTask()
+        expect(asyncio, times=0).get_event_loop()
 
         # when
         await github_controller.trigger_registered_jobs(hook_details)
@@ -935,7 +941,7 @@ class TestGithubController:
         when(cursor).get('branch_restrictions').thenReturn(['master'])
         when(cursor).get('change_restrictions').thenReturn([])
         when(cursor).get('file_restrictions').thenReturn([])
-        expect(app.utilities.background_task, times=0).BackgroundTask()
+        expect(asyncio, times=0).get_event_loop()
 
         # when
         await github_controller.trigger_registered_jobs(hook_details)
@@ -977,7 +983,7 @@ class TestGithubController:
         when(cursor).get('change_restrictions').thenReturn([])
         when(cursor).get('file_restrictions').thenReturn(['README.md'])
         expect(github_controller).are_files_in_repo(files=['README.md'], hook=hook_details).thenReturn(async_value(False))
-        expect(app.utilities.background_task, times=0).BackgroundTask()
+        expect(asyncio, times=0).get_event_loop()
 
         # when
         await github_controller.trigger_registered_jobs(hook_details)
@@ -1026,7 +1032,14 @@ class TestGithubController:
         when(jenkins_client).get_jobs_next_build_number(job_name).thenReturn(async_value(231))
         when(github_controller).can_trigger_job_by_branch(jenkins_url, job_name, branch_name).thenReturn(async_value(True))
 
-        expect(github_controller).trigger_registered_job(jenkins_url, job_name, [], 'repo', sha, branch_name, None, set())
+        expect(github_controller).trigger_registered_job(jenkins_url=jenkins_url,
+                                                         job_name=job_name,
+                                                         job_requested_params=[],
+                                                         repository='repo',
+                                                         sha=sha,
+                                                         pr_branch=branch_name,
+                                                         tag=None,
+                                                         relevant_changes=set())
 
         # when
         await github_controller.trigger_registered_jobs(hook_details)
@@ -1080,7 +1093,14 @@ class TestGithubController:
         when(jenkins_client).get_jobs_next_build_number(job_name).thenReturn(async_value(231))
         when(github_controller).can_trigger_job_by_branch(jenkins_url, job_name, branch_name).thenReturn(async_value(True))
 
-        expect(github_controller).trigger_registered_job(jenkins_url, job_name, [], 'repo', sha, branch_name, None, {'docs/README.md'})
+        expect(github_controller).trigger_registered_job(jenkins_url=jenkins_url,
+                                                         job_name=job_name,
+                                                         job_requested_params=[],
+                                                         repository='repo',
+                                                         sha=sha,
+                                                         pr_branch=branch_name,
+                                                         tag=None,
+                                                         relevant_changes={'docs/README.md'})
 
         # when
         await github_controller.trigger_registered_jobs(hook_details)
