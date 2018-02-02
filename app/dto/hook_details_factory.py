@@ -8,6 +8,18 @@ from typing import Set
 
 class HookDetailsFactory:
     @staticmethod
+    def get_labeled_sync_details(data, head_branch: str, head_sha: str) -> List[HookDetails]:
+        return [
+            HookDetails(
+                event_type=EventTypes.labeled,
+                repository=data['repository']['full_name'],
+                branch=head_branch,
+                sha=head_sha,
+                labels=label
+            ) for label in [label['name'] for label in data['issue']['labels']]
+        ]
+    
+    @staticmethod
     def get_pr_opened_details(data: Dict) -> HookDetails:
         return HookDetails(
             event_type=EventTypes.pr_opened,
@@ -54,18 +66,6 @@ class HookDetailsFactory:
             sha=data['pull_request']['head']['sha'],
             labels=data['label']['name']
         )
-
-    @staticmethod
-    def get_labeled_sync_details(data, head_branch: str, head_sha: str) -> List[HookDetails]:
-        return [
-            HookDetails(
-                event_type=EventTypes.labeled,
-                repository=data['repository']['full_name'],
-                branch=head_branch,
-                sha=head_sha,
-                labels=label
-            ) for label in [label['name'] for label in data['issue']['labels']]
-        ]
 
     @staticmethod
     def get_pr_sync_details(data: Dict, head_branch: str, head_sha: str) -> HookDetails:

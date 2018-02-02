@@ -1,8 +1,15 @@
-from typing import List, Any, Set
+from typing import List, Any, Set, Optional
 
 
 def starts_with_item_from_list(string: str, list_of_strings: List[str]) -> bool:
     return any([string.startswith(restriction) for restriction in list_of_strings])
+
+
+def item_starting_with_from_list(string: str, set_of_strings: Set[str]) -> Optional[str]:
+    for item in set_of_strings:
+        if string.startswith(item):
+            return string
+    return None
 
 
 def any_starts_with(any_list: Set[str], starts_with_list: List[str]) -> bool:

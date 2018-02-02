@@ -331,7 +331,3 @@ class GithubController:
                     param_key = await GithubController.__get_parsed_param_key(RegisterRequestData.RequestedParams.changes, param)
                     job_params[param_key] = ','.join(changes)
         return job_params if job_params != {} else None
-
-    @staticmethod
-    async def __get_parsed_param_key(prefix, param):
-        return prefix if param == prefix else param.split(':', 1)[1]
