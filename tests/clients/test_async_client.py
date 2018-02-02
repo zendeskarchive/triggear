@@ -4,7 +4,7 @@ import aiohttp
 import pytest
 from mockito import expect, mock
 
-from app.clients.async_client import AsyncClient, Payload, AsyncClientException
+from app.clients.async_client import AsyncClient, Payload, AsyncClientException, AsyncClientNotFoundException
 from tests.async_mockito import async_value
 
 pytestmark = pytest.mark.asyncio
@@ -71,7 +71,7 @@ class TestAsyncClient:
 
         expect(response).text().thenReturn(async_value('exception info'))
 
-        with pytest.raises(AsyncClientException) as exception:
+        with pytest.raises(AsyncClientNotFoundException) as exception:
             await AsyncClient.validate_response(response)
         assert exception.value.status == 404
         assert exception.value.message == '<AC> not found: 404 - exception info'
