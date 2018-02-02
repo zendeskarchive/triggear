@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, List
 
 
 class DeploymentStatusRequestData:
@@ -16,7 +16,7 @@ class DeploymentStatusRequestData:
         pending = 'pending'
 
     @staticmethod
-    def __get_all_mandatory_fields():
+    def __get_all_mandatory_fields() -> List[str]:
         return [DeploymentStatusRequestData.repo,
                 DeploymentStatusRequestData.ref,
                 DeploymentStatusRequestData.environment,
@@ -25,14 +25,14 @@ class DeploymentStatusRequestData:
                 DeploymentStatusRequestData.target_url]
 
     @staticmethod
-    def __get_allowed_deployment_states():
+    def __get_allowed_deployment_states() -> List[str]:
         return [DeploymentStatusRequestData.DeploymentState.success,
                 DeploymentStatusRequestData.DeploymentState.error,
                 DeploymentStatusRequestData.DeploymentState.failure,
                 DeploymentStatusRequestData.DeploymentState.pending]
 
     @staticmethod
-    def is_valid_deployment_status_request_data(data: Dict):
+    def is_valid_deployment_status_request_data(data: Dict) -> bool:
         for field in DeploymentStatusRequestData.__get_all_mandatory_fields():
             if field not in data.keys():
                 return False

@@ -1,22 +1,22 @@
 import asyncio
 import logging
-from typing import List
+from typing import List, Dict, Tuple, Optional
 
 from aiohttp import ClientResponse
 
 from app.clients.async_client import AsyncClient, Payload, AsyncClientException
-from app.enums.labels import Labels
+from app.enums.triggear_pr_label import TriggearPrLabel
 from app.exceptions.triggear_timeout_error import TriggearTimeoutError
 
 
 class GithubClient:
-    def __init__(self, token: str):
+    def __init__(self, token: str) -> None:
         self.token: str = token
-        self.__async_github = None
+        self.__async_github: Optional[AsyncClient] = None
 
-    def get_async_github(self):
+    def get_async_github(self) -> AsyncClient:
         if self.__async_github is None:
-            self.__async_github = AsyncClient(
+            self.__async_github: AsyncClient = AsyncClient(
                 base_url='https://api.github.com',
                 session_headers={
                     'Authorization': f'token {self.token}',
@@ -60,7 +60,7 @@ class GithubClient:
             return sha
         commit_response = await self.get_commit(repo=repo, sha=sha)
         commit_data = await commit_response.json()
-        return commit_data['sha']
+        return str(commit_data['sha'])
 
     async def get_repo_labels(self,
                               repo: str) -> List[str]:
@@ -80,30 +80,30 @@ class GithubClient:
                                     number: int) -> str:
         pr_response = await self.get_pull_request(repo=repo, number=number)
         pr_data = await pr_response.json()
-        return pr_data['head']['sha']
+        return str(pr_data['head']['sha'])
 
     async def get_pr_branch(self,
                             repo: str,
                             number: int) -> str:
         pr_response = await self.get_pull_request(repo=repo, number=number)
         pr_data = await pr_response.json()
-        return pr_data['head']['ref']
+        return str(pr_data['head']['ref'])
 
     async def set_sync_label(self,
                              repo: str,
-                             number: int):
-        if Labels.pr_sync in await self.get_repo_labels(repo):
+                             number: int) -> None:
+        if TriggearPrLabel.PR_SYNC in await self.get_repo_labels(repo):
             logging.warning(f'Setting "triggear-pr-sync" label on PR {number} in repo {repo}')
             await self.set_pr_sync_label_with_retry(repo, number)
             logging.warning('Label set')
 
     async def set_pr_sync_label_with_retry(self,
                                            repo: str,
-                                           number: int):
+                                           number: int) -> None:
         retries = 3
         while retries:
             try:
-                await self.add_to_pr_labels(repo=repo, number=number, label=Labels.pr_sync)
+                await self.add_to_pr_labels(repo=repo, number=number, label=TriggearPrLabel.PR_SYNC.label_name)
                 return
             except AsyncClientException as gh_exception:
                 logging.exception(f'Exception when trying to set label on PR. Exception: {gh_exception}')
@@ -114,7 +114,7 @@ class GithubClient:
     async def add_to_pr_labels(self,
                                repo: str,
                                number: int,
-                               label: str):
+                               label: str) -> ClientResponse:
         route = f'/repos/{repo}/issues/{number}/labels'
         payload = Payload.from_args(label)
         return await self.get_async_github().post(route=route, payload=payload)
@@ -163,8 +163,8 @@ class GithubClient:
 
     async def get_deployments(self,
                               repo: str,
-                              ref: str=None,
-                              environment: str=None) -> ClientResponse:
+                              ref: Optional[str]=None,
+                              environment: Optional[str]=None) -> ClientResponse:
         route = f'/repos/{repo}/deployments'
         params = Payload.from_kwargs(
             ref=ref,
@@ -185,3 +185,19 @@ class GithubClient:
             description=description
         )
         return await self.get_async_github().post(route=route, payload=payload)
+
+    async def are_files_in_repo(self, repo: str, ref: str, files: List[str]) -> bool:
+        try:
+            for file in files:
+                await self.get_file_content(repo=repo, ref=ref, path=file)
+        except AsyncClientException:
+            logging.exception(f"Exception when looking for file {file} in repo {repo} at ref {ref}")
+            return False
+        return True
+
+    async def get_pr_comment_branch_and_sha(self, issue_comment_hook_data: Dict) -> Tuple[str, str]:
+        repository_name = issue_comment_hook_data['repository']['full_name']
+        pr_number = issue_comment_hook_data['issue']['number']
+        head_branch = await self.get_pr_branch(repository_name, pr_number)
+        head_sha = await self.get_latest_commit_sha(repository_name, pr_number)
+        return head_branch, head_sha

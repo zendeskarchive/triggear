@@ -5,7 +5,7 @@ import pytest
 from aiohttp import ClientResponse
 from mockito import mock, expect, when, captor
 
-from app.clients.async_client import AsyncClient, AsyncClientException, Payload
+from app.clients.async_client import AsyncClient, AsyncClientException, Payload, AsyncClientNotFoundException
 from app.clients.github_client import GithubClient
 from app.exceptions.triggear_timeout_error import TriggearTimeoutError
 from tests.async_mockito import async_value
@@ -228,10 +228,9 @@ class TestGithubClient:
 
     async def test__get_commit_sha1__returns_unchanged_sha__when_sha_len_is_40(self):
         github_client = GithubClient(mock())
-        response = mock(spec=ClientResponse, strict=True)
 
         sha_with_len_40 = '12312' * 8
-        expect(github_client, times=0).get_commit(repo='repo', sha=sha_with_len_40).thenReturn(async_value(response))
+        expect(github_client, times=0).get_commit(repo='repo', sha=sha_with_len_40)
 
         assert sha_with_len_40 == await github_client.get_commit_sha1('repo', sha_with_len_40)
 
@@ -309,3 +308,30 @@ class TestGithubClient:
         assert payload.data.get('state') == 'success'
         assert payload.data.get('target_url') == 'http://app.futuresimple.com'
         assert payload.data.get('description') == 'something mildly interesting'
+
+    async def test__are_files_in_repo__returns_true_if_all_files_exist(self):
+        github_client = GithubClient(mock())
+
+        expect(github_client).get_file_content(repo='repo', ref='123321', path='.gitignore').thenReturn(async_value("content"))
+        expect(github_client).get_file_content(repo='repo', ref='123321', path='README.md').thenReturn(async_value("content"))
+
+        assert await github_client.are_files_in_repo('repo', '123321', ['.gitignore', 'README.md'])
+
+    async def test__are_files_in_repo__returns_false_if_any_of_files_is_missing(self):
+        github_client = GithubClient(mock())
+
+        expect(github_client).get_file_content(repo='repo', ref='123321', path='.gitignore').thenReturn(async_value("content"))
+        expect(github_client).get_file_content(repo='repo', ref='123321', path='README.md').thenRaise(AsyncClientNotFoundException('file not found'))
+
+        assert not await github_client.are_files_in_repo('repo', '123321', ['.gitignore', 'README.md'])
+
+    async def test__get_branch_and_sha_from_pr_hook(self):
+        data = {'repository': {'full_name': 'triggear'}, 'issue': {'number': 23}}
+        github_client = GithubClient(mock())
+
+        expect(github_client).get_pr_branch('triggear', 23).thenReturn(async_value('master'))
+        expect(github_client).get_latest_commit_sha('triggear', 23).thenReturn(async_value('123321'))
+
+        result = await github_client.get_pr_comment_branch_and_sha(data)
+        assert result[0] == 'master'
+        assert result[1] == '123321'

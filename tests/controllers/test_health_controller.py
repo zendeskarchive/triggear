@@ -10,16 +10,9 @@ pytestmark = pytest.mark.asyncio
 
 @pytest.mark.usefixtures('unstub')
 class TestHealthController:
-    async def test__when_invalid_token_is_provided__should_return_200_response__as_endpoint_is_public(self):
-        request = mock({'headers': {'Authorization': 'invalid'}, 'host': 'custom_host'}, spec=aiohttp.web_request.Request, strict=True)
-        response: aiohttp.web.Response = await HealthController('api_token').handle_health_check(request)
-        assert response.status == 200
-        assert response.text == 'TriggearIsOk'
-        assert response.reason == 'Host custom_host asked'
-
-    async def test__when_token_is_valid__should_return_200_response(self):
-        request = mock({'headers': {'Authorization': 'Token api_token'}, 'host': 'custom_host'}, spec=aiohttp.web_request.Request, strict=True)
-        response: aiohttp.web.Response = await HealthController('api_token').handle_health_check(request)
+    async def test__handle_health_check__should_return_200_response(self):
+        request = mock({'host': 'custom_host'}, spec=aiohttp.web_request.Request, strict=True)
+        response: aiohttp.web.Response = await HealthController().handle_health_check(request)
         assert response.status == 200
         assert response.text == 'TriggearIsOk'
         assert response.reason == 'Host custom_host asked'
