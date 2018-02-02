@@ -3,7 +3,7 @@ from typing import Dict
 
 import pytest
 import yaml
-from mockito import when
+from mockito import when, expect
 
 from app.config.triggear_config import TriggearConfig
 from app.clients.jenkins_client import JenkinsInstanceConfig
@@ -24,10 +24,10 @@ class TestTriggearConfig:
     }
 
     async def test__when_creds_path_is_invalid__should_raise_file_not_found_error(self):
-        when(os).getenv('CREDS_PATH').thenReturn('does/not/exist')
+        when(os).getenv('CREDS_PATH', 'creds.yml').thenReturn('does/not/exist')
 
         with pytest.raises(FileNotFoundError) as file_not_found_error:
-            TriggearConfig()
+            TriggearConfig().read_credentials_file()
         assert str(file_not_found_error.value) == "[Errno 2] No such file or directory: 'does/not/exist'"
 
     @pytest.mark.parametrize("yaml_data, missing_key", [
@@ -36,15 +36,15 @@ class TestTriggearConfig:
         ({'jenkins_instances': [], 'github_token': ''}, 'triggear_token')
     ])
     async def test__when_any_key_is_missing_in_creds_file__should_raise_proper_key_error(self, yaml_data: Dict, missing_key: str):
-        when(os).getenv('CREDS_PATH').thenReturn('./tests/config/example_configs/creds.yaml')
+        when(os).getenv('CREDS_PATH', 'creds.yml').thenReturn('./tests/config/example_configs/creds.yaml')
         when(yaml).load(any).thenReturn(yaml_data)
 
         with pytest.raises(KeyError) as key_error:
-            TriggearConfig()
+            TriggearConfig().read_credentials_file()
         assert str(key_error.value) == f"'{missing_key}'"
 
     async def test__when_yaml_files_are_valid__should_store_proper_values(self):
-        when(os).getenv('CREDS_PATH').thenReturn('./tests/config/example_configs/creds.yaml')
+        when(os).getenv('CREDS_PATH', 'creds.yml').thenReturn('./tests/config/example_configs/creds.yaml')
 
         triggear_config = TriggearConfig()
 
@@ -63,3 +63,16 @@ class TestTriggearConfig:
         assert second_instance.url == second_instance_url
         assert second_instance.username == "other_user"
         assert second_instance.token == "other_api_token"
+
+    async def test__when_properties_are_not_set__setter_is_called(self):
+        triggear_config = TriggearConfig()
+        expect(triggear_config).read_credentials_file().thenReturn(('gh_token', 'token', {}))
+        assert triggear_config.github_token == 'gh_token'
+
+        triggear_config = TriggearConfig()
+        expect(triggear_config).read_credentials_file().thenReturn(('token', 'triggear_token', {}))
+        assert triggear_config.jenkins_instances == {}
+
+        triggear_config = TriggearConfig()
+        expect(triggear_config).read_credentials_file().thenReturn(('token', 'triggear_token', {}))
+        assert triggear_config.triggear_token == 'triggear_token'

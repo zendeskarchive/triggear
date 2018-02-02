@@ -2,7 +2,7 @@ import asyncio
 import base64
 import logging
 import time
-from typing import List, Tuple, Dict, Union
+from typing import List, Tuple, Dict, Union, Optional
 
 from aiohttp import ClientResponse
 
@@ -10,23 +10,22 @@ from app.clients.async_client import AsyncClient, AsyncClientException, Payload
 
 
 class JenkinsInstanceConfig:
-    def __init__(self, url, username, token):
+    def __init__(self, url: str, username: str, token: str) -> None:
         self.username: str = username
         self.token: str = token
         self.url = url
 
-    def get_auth_header(self):
-        auth = f'{self.username}:{self.token}'
-        auth = auth.encode('utf-8')
+    def get_auth_header(self) -> str:
+        auth: bytes = f'{self.username}:{self.token}'.encode('utf-8')
         return 'Basic ' + base64.urlsafe_b64encode(auth).decode('utf8')
 
 
 class JenkinsClient:
-    def __init__(self, instance_config: JenkinsInstanceConfig):
+    def __init__(self, instance_config: JenkinsInstanceConfig) -> None:
         self.config: JenkinsInstanceConfig = instance_config
-        self.__async_jenkins: AsyncClient = None
-        self.__crumb_header: str = None
-        self.__crumb_value: str = None
+        self.__async_jenkins: Optional[AsyncClient] = None
+        self.__crumb_header: Optional[str] = None
+        self.__crumb_value: Optional[str] = None
 
     def get_async_jenkins(self) -> AsyncClient:
         if self.__async_jenkins is None:
@@ -39,14 +38,14 @@ class JenkinsClient:
             )
         return self.__async_jenkins
 
-    async def set_crumb_header(self):
+    async def set_crumb_header(self) -> None:
         route = 'crumbIssuer/api/json'
         crumb_response = await self.get_async_jenkins().get(route=route)
         crumb_data = await crumb_response.json()
         self.__crumb_header = crumb_data['crumbRequestField']
         self.__crumb_value = crumb_data['crumb']
 
-    async def get_crumb_header(self) -> Union[Dict[str, str], None]:
+    async def get_crumb_header(self) -> Optional[Dict[str, str]]:
         if self.__crumb_header is not None and self.__crumb_value is not None:
             return {self.__crumb_header: self.__crumb_value}
         return None
@@ -68,7 +67,7 @@ class JenkinsClient:
                                          job_path: str) -> int:
         job_info_response = await self.get_job_info(job_path)
         job_info = await job_info_response.json()
-        return job_info['nextBuildNumber']
+        return int(job_info['nextBuildNumber'])
 
     async def get_build_info(self,
                              job_path: str,
@@ -78,21 +77,22 @@ class JenkinsClient:
         return await self.get_async_jenkins().get(route=route)
 
     async def get_job_url(self,
-                          job_path: str) -> str:
+                          job_path: str) -> Optional[str]:
         job_info_response = await self.get_job_info(job_path)
-        job_info = await job_info_response.json()
+        job_info: Dict[str, str] = await job_info_response.json()
         return job_info.get('url')
 
     async def get_build_info_data(self,
                                   job_path: str,
                                   build_number: int,
-                                  timeout: int=30) -> Union[Dict, None]:
+                                  timeout: float=30.0) -> Optional[Dict]:
         timeout = time.monotonic() + timeout
         while time.monotonic() < timeout:
             try:
                 build_info_response = await self.get_build_info(job_path=job_path,
                                                                 build_number=build_number)
-                return await build_info_response.json()
+                build_info_data: Dict = await build_info_response.json()
+                return build_info_data
             except AsyncClientException as exception:
                 if exception.status == 404:
                     logging.warning(f"Build number {build_number} was not yet found for job {job_path}."
@@ -106,15 +106,15 @@ class JenkinsClient:
 
     async def is_job_building(self,
                               job_path: str,
-                              build_number: int) -> Union[bool, None]:
+                              build_number: int) -> Optional[bool]:
         build_info = await self.get_build_info_data(job_path, build_number)
         if build_info is not None:
-            return build_info['building']
+            return bool(build_info['building'])
         return None
 
     async def build_jenkins_job(self,
                                 job_path: str,
-                                parameters: Union[None, Dict]):
+                                parameters: Union[None, Dict]) -> ClientResponse:
         try:
             return await self._build_jenkins_job(job_path, parameters=parameters)
         except AsyncClientException as exception:
@@ -132,7 +132,7 @@ class JenkinsClient:
 
     async def _build_jenkins_job(self,
                                  job_path: str,
-                                 parameters: Union[None, Dict]):
+                                 parameters: Optional[Dict]) -> ClientResponse:
         folder_url, job_name = self.get_job_folder_and_name(job_path)
         route = f'{folder_url}job/{job_name}/buildWithParameters' if parameters else f'{folder_url}job/{job_name}/build'
         return await self.get_async_jenkins().post(route=route,

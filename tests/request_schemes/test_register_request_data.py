@@ -5,7 +5,6 @@ from app.request_schemes.register_request_data import RegisterRequestData
 pytestmark = pytest.mark.asyncio
 
 
-@pytest.mark.usefixtures('unstub')
 class TestRegisterRequestData:
     @pytest.mark.parametrize("data", [
         {'eventType': ''},
