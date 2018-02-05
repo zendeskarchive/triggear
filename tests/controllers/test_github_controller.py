@@ -12,10 +12,10 @@ import app.clients.jenkins_client
 from app.clients.async_client import AsyncClientException, AsyncClient, AsyncClientNotFoundException
 from app.clients.github_client import GithubClient
 from app.controllers.github_controller import GithubController
-from app.hook_details import HookDetails
-from app.hook_details import HookDetailsFactory
-from app.enums.event_types import EventTypes
+from app.enums.event_types import EventType
 from app.exceptions.triggear_error import TriggearError
+from app.hook_details.hook_details import HookDetails
+from app.hook_details.hook_details_factory import HookDetailsFactory
 from tests.async_mockito import async_iter, async_value
 
 pytestmark = pytest.mark.asyncio
@@ -37,12 +37,12 @@ class TestGithubController:
             strict=True
         )
         mongo_client: motor.motor_asyncio.AsyncIOMotorClient = mock(
-            {'registered': {EventTypes.push: collection}},
+            {'registered': {EventType.push: collection}},
             spec=motor.motor_asyncio.AsyncIOMotorClient,
             strict=True
         )
         hook_details = mock(
-            {'event_type': EventTypes.push, 'query': hook_query, 'branch': branch_name},
+            {'event_type': EventType.push, 'query': hook_query, 'branch': branch_name},
             spec=HookDetails,
             strict=True
         )
@@ -728,12 +728,12 @@ class TestGithubController:
             strict=True
         )
         mongo_client: motor.motor_asyncio.AsyncIOMotorClient = mock(
-            {'registered': {EventTypes.push: collection}},
+            {'registered': {EventType.push: collection}},
             spec=motor.motor_asyncio.AsyncIOMotorClient,
             strict=True
         )
         hook_details = mock(
-            {'event_type': EventTypes.push, 'query': hook_query, 'branch': branch_name, 'sha': sha, 'tag': None, 'changes': {'.gitignore'}},
+            {'event_type': EventType.push, 'query': hook_query, 'branch': branch_name, 'sha': sha, 'tag': None, 'changes': {'.gitignore'}},
             spec=HookDetails,
             strict=True
         )
@@ -811,12 +811,12 @@ class TestGithubController:
             strict=True
         )
         mongo_client: motor.motor_asyncio.AsyncIOMotorClient = mock(
-            {'registered': {EventTypes.push: collection}},
+            {'registered': {EventType.push: collection}},
             spec=motor.motor_asyncio.AsyncIOMotorClient,
             strict=True
         )
         hook_details = mock(
-            {'event_type': EventTypes.push, 'query': hook_query, 'branch': branch_name, 'sha': sha, 'tag': None, 'changes': {'README.md'}},
+            {'event_type': EventType.push, 'query': hook_query, 'branch': branch_name, 'sha': sha, 'tag': None, 'changes': {'README.md'}},
             spec=HookDetails,
             strict=True
         )
@@ -852,12 +852,12 @@ class TestGithubController:
             strict=True
         )
         mongo_client: motor.motor_asyncio.AsyncIOMotorClient = mock(
-            {'registered': {EventTypes.push: collection}},
+            {'registered': {EventType.push: collection}},
             spec=motor.motor_asyncio.AsyncIOMotorClient,
             strict=True
         )
         hook_details = mock(
-            {'event_type': EventTypes.push, 'query': hook_query, 'branch': branch_name, 'sha': sha, 'tag': None},
+            {'event_type': EventType.push, 'query': hook_query, 'branch': branch_name, 'sha': sha, 'tag': None},
             spec=HookDetails,
             strict=True
         )
@@ -893,12 +893,12 @@ class TestGithubController:
             strict=True
         )
         mongo_client: motor.motor_asyncio.AsyncIOMotorClient = mock(
-            {'registered': {EventTypes.push: collection}},
+            {'registered': {EventType.push: collection}},
             spec=motor.motor_asyncio.AsyncIOMotorClient,
             strict=True
         )
         hook_details = mock(
-            {'event_type': EventTypes.push, 'query': hook_query, 'branch': branch_name, 'sha': sha, 'tag': None},
+            {'event_type': EventType.push, 'query': hook_query, 'branch': branch_name, 'sha': sha, 'tag': None},
             spec=HookDetails,
             strict=True
         )
@@ -936,12 +936,12 @@ class TestGithubController:
             strict=True
         )
         mongo_client: motor.motor_asyncio.AsyncIOMotorClient = mock(
-            {'registered': {EventTypes.push: collection}},
+            {'registered': {EventType.push: collection}},
             spec=motor.motor_asyncio.AsyncIOMotorClient,
             strict=True
         )
         hook_details = mock(
-            {'event_type': EventTypes.push, 'query': hook_query, 'branch': branch_name, 'sha': sha, 'tag': None, 'changes': {'README.md'}},
+            {'event_type': EventType.push, 'query': hook_query, 'branch': branch_name, 'sha': sha, 'tag': None, 'changes': {'README.md'}},
             spec=HookDetails,
             strict=True
         )
@@ -991,12 +991,12 @@ class TestGithubController:
             strict=True
         )
         mongo_client: motor.motor_asyncio.AsyncIOMotorClient = mock(
-            {'registered': {EventTypes.push: collection}},
+            {'registered': {EventType.push: collection}},
             spec=motor.motor_asyncio.AsyncIOMotorClient,
             strict=True
         )
         hook_details = mock(
-            {'event_type': EventTypes.push,
+            {'event_type': EventType.push,
              'query': hook_query,
              'branch': branch_name,
              'sha': sha,

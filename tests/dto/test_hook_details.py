@@ -1,7 +1,7 @@
 import pytest
 
-from app.hook_details import HookDetails
-from app.enums.event_types import EventTypes
+from app.enums.event_types import EventType
+from app.hook_details.hook_details import HookDetails
 
 pytestmark = pytest.mark.asyncio
 
@@ -9,19 +9,19 @@ pytestmark = pytest.mark.asyncio
 @pytest.mark.usefixtures('unstub')
 class TestHookDetails:
     async def test__hook_details__should_be_comparable(self):
-        hook_details = HookDetails(event_type=EventTypes.push,
+        hook_details = HookDetails(event_type=EventType.push,
                                    repository='repo',
                                    branch='master',
                                    sha='sha',
                                    anything='other')
 
-        different_hook_details = HookDetails(event_type=EventTypes.push,
+        different_hook_details = HookDetails(event_type=EventType.push,
                                              repository='repo',
                                              branch='master',
                                              sha='sha',
                                              anything='different')
 
-        same_hook_details = HookDetails(event_type=EventTypes.push,
+        same_hook_details = HookDetails(event_type=EventType.push,
                                         repository='repo',
                                         branch='master',
                                         sha='sha',
@@ -33,7 +33,7 @@ class TestHookDetails:
         assert not hook_details != same_hook_details
 
     async def test__hook_details__should_provide_proper_description(self):
-        hook_details = HookDetails(event_type=EventTypes.push,
+        hook_details = HookDetails(event_type=EventType.push,
                                    repository='repo',
                                    branch='master',
                                    sha='sha',
@@ -46,7 +46,7 @@ class TestHookDetails:
                                     "release_target: None, is_prerelease: None)"
 
     async def test__hook_details__should_provide_proper_field_getters_and_setters(self):
-        hook_details = HookDetails(event_type=EventTypes.push,
+        hook_details = HookDetails(event_type=EventType.push,
                                    repository='repo',
                                    branch='master',
                                    sha='sha',

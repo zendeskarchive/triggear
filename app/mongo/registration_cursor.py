@@ -1,6 +1,6 @@
 from typing import Optional, List
 
-from motor import MotorCursor
+import motor.motor_asyncio
 
 from app.enums.registration_fields import RegistrationFields
 
@@ -19,7 +19,7 @@ class RegistrationCursor:
                f"file_restrictions {self.file_restrictions} " \
                f">"
 
-    def __init__(self, event_type: str, cursor: MotorCursor):
+    def __init__(self, event_type: str, cursor: motor.motor_asyncio.AsyncIOMotorCursor):
         self.event_type = event_type
         self.cursor = cursor
 

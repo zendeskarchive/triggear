@@ -1,6 +1,6 @@
 from typing import Dict, Set
 
-from app.enums.event_types import EventTypes
+from app.enums.event_types import EventType
 from app.hook_details.hook_details import HookDetails
 from app.mongo.registration_cursor import RegistrationCursor
 from app.request_schemes.register_request_data import RegisterRequestData
@@ -37,7 +37,7 @@ class PushHookDetails(HookDetails):
         return dict(repository=self.repository)
 
     def get_event_type(self) -> str:
-        return EventTypes.pr_opened
+        return EventType.pr_opened
 
     def get_ref(self) -> str:
         return self.sha

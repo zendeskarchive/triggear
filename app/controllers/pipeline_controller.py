@@ -8,7 +8,7 @@ import motor.motor_asyncio
 from aiohttp import ClientResponse
 
 from app.clients.github_client import GithubClient
-from app.enums.event_types import EventTypes
+from app.enums.event_types import EventType
 from app.enums.registration_fields import RegistrationFields
 from app.request_schemes.clear_request_data import ClearRequestData
 from app.request_schemes.comment_request_data import CommentRequestData
@@ -117,7 +117,7 @@ class PipelineController:
     @validate_auth_header()
     async def handle_missing(self, request: aiohttp.web_request.Request) -> aiohttp.web.Response:
         event_type = request.match_info.get('eventType')
-        if event_type not in EventTypes.get_allowed_registration_event_types():
+        if event_type not in EventType.get_allowed_registration_event_types():
             return aiohttp.web.Response(status=400, text='Invalid eventType requested')
         logging.warning(f"Missing REQ received for: {event_type}")
         collection: motor.motor_asyncio.AsyncIOMotorCollection = self.__mongo_client.registered[event_type]

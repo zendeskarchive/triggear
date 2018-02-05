@@ -1,8 +1,8 @@
 import pytest
 
-from app.hook_details import HookDetails
-from app.hook_details import HookDetailsFactory
-from app.enums.event_types import EventTypes
+from app.enums.event_types import EventType
+from app.hook_details.hook_details import HookDetails
+from app.hook_details.hook_details_factory import HookDetailsFactory
 
 pytestmark = pytest.mark.asyncio
 
@@ -11,7 +11,7 @@ pytestmark = pytest.mark.asyncio
 class TestHookDetailsFactory:
     async def test__when_pr_opened_hook_is_provided__should_return_proper_hook_details(self):
         hook_data = {'repository': {'full_name': 'repo'}, 'pull_request': {'head': {'ref': 'master', 'sha': '123abc'}}}
-        expected_hook_details = HookDetails(EventTypes.pr_opened,
+        expected_hook_details = HookDetails(EventType.pr_opened,
                                             repository='repo',
                                             branch='master',
                                             sha='123abc')
@@ -20,7 +20,7 @@ class TestHookDetailsFactory:
 
     async def test__when_tag_hook_is_provided__should_return_proper_hook_details(self):
         hook_data = {'repository': {'full_name': 'repo'}, 'after': '123qwe', 'ref': 'refs/tags/2.0'}
-        expected_hook_details = HookDetails(EventTypes.tagged,
+        expected_hook_details = HookDetails(EventType.tagged,
                                             repository='repo',
                                             branch='',
                                             sha='123qwe')
@@ -42,7 +42,7 @@ class TestHookDetailsFactory:
                              'modified': ['app/controllers/github_controller.py', '.gitignore']
                          },
                      ]}
-        expected_hook_details = HookDetails(EventTypes.push,
+        expected_hook_details = HookDetails(EventType.push,
                                             repository='repo',
                                             branch='staging',
                                             sha='321123')
@@ -52,7 +52,7 @@ class TestHookDetailsFactory:
 
     async def test__when_ref_in_push_hook_does_not_start_with_refs_heads__should_be_placed_in_hook_details_as_whole(self):
         hook_data_with_different_ref_format = {'repository': {'full_name': 'repo'}, 'ref': 'staging', 'after': '321123', 'commits': []}
-        expected_hook_details = HookDetails(EventTypes.push,
+        expected_hook_details = HookDetails(EventType.push,
                                             repository='repo',
                                             branch='staging',
                                             sha='321123')
@@ -60,7 +60,7 @@ class TestHookDetailsFactory:
 
     async def test__when_labels_hook_is_provided__should_return_proper_hook_details(self):
         hook_data = {'pull_request': {'head': {'repo': {'full_name': 'repo'}, 'ref': 'sandbox', 'sha': '321321'}}, 'label': {'name': 'triggear'}}
-        expected_hook_details = HookDetails(EventTypes.labeled,
+        expected_hook_details = HookDetails(EventType.labeled,
                                             repository='repo',
                                             branch='sandbox',
                                             sha='321321',
@@ -71,13 +71,13 @@ class TestHookDetailsFactory:
     async def test__when_labeled_sync_hook_is_provided__should_return_proper_hook_details_list(self):
         hook_data = {'repository': {'full_name': 'repo'}, 'issue': {'labels': [{'name': 'first_label'}, {'name': 'second_label'}]}}
         expected_hook_details = [
-            HookDetails(EventTypes.labeled,
+            HookDetails(EventType.labeled,
                         repository='repo',
                         branch='master',
                         sha='123456',
                         labels='first_label'),
 
-            HookDetails(EventTypes.labeled,
+            HookDetails(EventType.labeled,
                         repository='repo',
                         branch='master',
                         sha='123456',
@@ -87,7 +87,7 @@ class TestHookDetailsFactory:
 
     async def test__when_pr_sync_hook_is_provided__should_return_proper_hook_details(self):
         hook_data = {'repository': {'full_name': 'repo'}}
-        expected_hook_details = HookDetails(EventTypes.pr_opened,
+        expected_hook_details = HookDetails(EventType.pr_opened,
                                             repository='repo',
                                             branch='master',
                                             sha='123456')
@@ -104,7 +104,7 @@ class TestHookDetailsFactory:
                 "full_name": "repo",
             }
         }
-        expected_hook_details = HookDetails(EventTypes.release,
+        expected_hook_details = HookDetails(EventType.release,
                                             repository='repo',
                                             branch='',
                                             sha='')

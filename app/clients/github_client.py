@@ -5,7 +5,7 @@ from typing import List, Dict, Tuple
 from aiohttp import ClientResponse
 
 from app.clients.async_client import AsyncClient, Payload, AsyncClientException
-from app.enums.labels import Labels
+from app.enums.triggear_pr_label import TriggearPrLabel
 from app.exceptions.triggear_timeout_error import TriggearTimeoutError
 
 
@@ -92,7 +92,7 @@ class GithubClient:
     async def set_sync_label(self,
                              repo: str,
                              number: int):
-        if Labels.pr_sync in await self.get_repo_labels(repo):
+        if TriggearPrLabel.PR_SYNC in await self.get_repo_labels(repo):
             logging.warning(f'Setting "triggear-pr-sync" label on PR {number} in repo {repo}')
             await self.set_pr_sync_label_with_retry(repo, number)
             logging.warning('Label set')
@@ -103,7 +103,7 @@ class GithubClient:
         retries = 3
         while retries:
             try:
-                await self.add_to_pr_labels(repo=repo, number=number, label=Labels.pr_sync)
+                await self.add_to_pr_labels(repo=repo, number=number, label=TriggearPrLabel.PR_SYNC)
                 return
             except AsyncClientException as gh_exception:
                 logging.exception(f'Exception when trying to set label on PR. Exception: {gh_exception}')

@@ -10,8 +10,8 @@ from aiohttp.web_response import Response
 
 from app.clients.github_client import GithubClient
 from app.config.triggear_config import TriggearConfig
-from app.enums.event_types import EventTypes
-from app.enums.labels import Labels
+from app.enums.event_types import EventType
+from app.enums.triggear_pr_label import TriggearPrLabel
 from app.hook_details.hook_details_factory import HookDetailsFactory
 from app.hook_details.pr_opened_hook_details import PrOpenedHookDetails
 from app.hook_details.push_hook_details import PushHookDetails
@@ -63,23 +63,23 @@ class GithubController:
 
         action = data.get('action')
         triggear_task = None
-        if action == EventTypes.labeled:
+        if action == EventType.labeled:
             triggear_task = self.handle_labeled(data)
-        elif action == EventTypes.synchronize:
+        elif action == EventType.synchronize:
             triggear_task = self.handle_synchronize(data)
-        elif action == EventTypes.comment:
+        elif action == EventType.comment:
             await self.handle_comment(data)
         else:
             event_header = request.headers.get(self.GITHUB_EVENT_HEADER)
-            if event_header == EventTypes.pull_request:
-                if action == EventTypes.pr_opened:
+            if event_header == EventType.pull_request:
+                if action == EventType.pr_opened:
                     triggear_task = self.handle_pr_opened(data)
-            elif event_header == EventTypes.push:
+            elif event_header == EventType.push:
                 if data['ref'].startswith('refs/heads/'):
                     triggear_task = self.handle_push(data)
                 elif data['ref'].startswith('refs/tags/'):
                     triggear_task = self.handle_tagged(data)
-            elif event_header == EventTypes.release:
+            elif event_header == EventType.release:
                 triggear_task = self.handle_release(data)
         asyncio.get_event_loop().create_task(triggear_task)
         return aiohttp.web.Response(text='Hook ACK')
@@ -111,26 +111,26 @@ class GithubController:
         )
 
     async def handle_pr_sync(self, data, pr_labels):
-        if Labels.pr_sync in pr_labels:
-            logging.warning(f'Sync hook on PR with {Labels.pr_sync} - handling like PR open')
+        if TriggearPrLabel.PR_SYNC in pr_labels:
+            logging.warning(f'Sync hook on PR with {TriggearPrLabel.PR_SYNC} - handling like PR open')
             await self.handle_pr_opened(data)
 
     async def handle_labeled_sync(self, data, pr_labels):
-        if Labels.label_sync in pr_labels and len(pr_labels) > 1:
-            pr_labels.remove(Labels.label_sync)
+        if TriggearPrLabel.LABEL_SYNC in pr_labels and len(pr_labels) > 1:
+            pr_labels.remove(TriggearPrLabel.LABEL_SYNC)
             for label in pr_labels:
                 # update data to have fields required from labeled hook
                 # it's necessary for HookDetailsFactory in handle_labeled
                 data.update({'label': {'name': label}})
-                logging.warning(f'Sync hook on PR with {Labels.label_sync} - handling like PR labeled')
+                logging.warning(f'Sync hook on PR with {TriggearPrLabel.LABEL_SYNC} - handling like PR labeled')
                 await self.handle_labeled(data)
 
     async def handle_comment(self, data):
         comment_body = data['comment']['body']
         branch, sha = await self.__github_client.get_pr_comment_branch_and_sha(data)
-        if comment_body == Labels.label_sync:
+        if comment_body == TriggearPrLabel.LABEL_SYNC:
             await self.handle_labeled_sync_comment(data, branch, sha)
-        elif comment_body == Labels.pr_sync:
+        elif comment_body == TriggearPrLabel.PR_SYNC:
             await self.handle_pr_sync_comment(data, branch, sha)
 
     async def handle_pr_sync_comment(self, data: Dict, branch: str, sha: str):
