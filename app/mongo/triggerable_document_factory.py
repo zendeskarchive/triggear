@@ -13,14 +13,14 @@ from app.mongo.triggerable_document import TriggerableDocument
 class TriggerableDocumentFactory:
     @staticmethod
     def get_document(cursor: RegistrationCursor, github_client: GithubClient) -> TriggerableDocument:
-        if cursor.event_type == EventType.labeled:
+        if cursor.event_type == EventType.PR_LABELED:
             return LabeledDocument(cursor, github_client)
-        elif cursor.event_type == EventType.tagged:
+        elif cursor.event_type == EventType.TAGGED:
             return TagDocument(cursor, github_client)
-        elif cursor.event_type == EventType.pr_opened:
+        elif cursor.event_type == EventType.PR_OPENED:
             return PrOpenedDocument(cursor, github_client)
-        elif cursor.event_type == EventType.push:
+        elif cursor.event_type == EventType.PUSH:
             return PushDocument(cursor, github_client)
-        elif cursor.event_type == EventType.release:
+        elif cursor.event_type == EventType.RELEASE:
             return ReleaseDocument(cursor, github_client)
         raise TriggearError(f'No document type found for event type {event_type}')

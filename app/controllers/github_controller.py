@@ -10,6 +10,7 @@ from aiohttp.web_response import Response
 
 from app.clients.github_client import GithubClient
 from app.config.triggear_config import TriggearConfig
+from app.data_objects.github_event import GithubEvent
 from app.enums.event_types import EventType
 from app.enums.triggear_pr_label import TriggearPrLabel
 from app.hook_details.hook_details_factory import HookDetailsFactory
@@ -61,28 +62,30 @@ class GithubController:
         data = await self.get_request_json(request)
         logging.warning(f"Hook received")
 
-        action = data.get('action')
-        triggear_task = None
-        if action == EventType.labeled:
-            triggear_task = self.handle_labeled(data)
-        elif action == EventType.synchronize:
-            triggear_task = self.handle_synchronize(data)
-        elif action == EventType.comment:
-            await self.handle_comment(data)
-        else:
-            event_header = request.headers.get(self.GITHUB_EVENT_HEADER)
-            if event_header == EventType.pull_request:
-                if action == EventType.pr_opened:
-                    triggear_task = self.handle_pr_opened(data)
-            elif event_header == EventType.push:
-                if data['ref'].startswith('refs/heads/'):
-                    triggear_task = self.handle_push(data)
-                elif data['ref'].startswith('refs/tags/'):
-                    triggear_task = self.handle_tagged(data)
-            elif event_header == EventType.release:
-                triggear_task = self.handle_release(data)
-        asyncio.get_event_loop().create_task(triggear_task)
+        github_event = GithubEvent(event_header=request.headers.get(self.GITHUB_EVENT_HEADER),
+                                   action=data.get('action'),
+                                   ref=data.get('ref'))
+        handler_task = await self.get_event_handler_task(data, github_event)
+        if handler_task is not None:
+            asyncio.get_event_loop().create_task(handler_task)
         return aiohttp.web.Response(text='Hook ACK')
+
+    async def get_event_handler_task(self, data, github_event):
+        if github_event == EventType.PR_LABELED:
+            return self.handle_labeled(data)
+        elif github_event == EventType.SYNCHRONIZE:
+            return self.handle_synchronize(data)
+        elif github_event == EventType.ISSUE_COMMENT:
+            await self.handle_comment(data)
+        elif github_event == EventType.PR_OPENED:
+            return self.handle_pr_opened(data)
+        elif github_event == EventType.PUSH:
+            return self.handle_push(data)
+        elif github_event == EventType.TAGGED:
+            return self.handle_tagged(data)
+        elif github_event == EventType.RELEASE:
+            return self.handle_release(data)
+        return None
 
     async def handle_release(self, data: Dict):
         await self.__triggear_heart.trigger_registered_jobs(HookDetailsFactory.get_release_details(data))

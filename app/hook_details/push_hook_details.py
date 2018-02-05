@@ -36,8 +36,8 @@ class PushHookDetails(HookDetails):
     def get_query(self):
         return dict(repository=self.repository)
 
-    def get_event_type(self) -> str:
-        return EventType.pr_opened
+    def get_event_type(self) -> EventType:
+        return EventType.PUSH
 
     def get_ref(self) -> str:
         return self.sha

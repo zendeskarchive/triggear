@@ -34,8 +34,8 @@ class LabeledHookDetails(HookDetails):
             RegisterRequestData.RequestedParams.sha: self.sha
         }
 
-    def get_event_type(self) -> str:
-        return EventType.labeled
+    def get_event_type(self) -> EventType:
+        return EventType.PR_LABELED
 
     def get_ref(self) -> str:
         return self.sha

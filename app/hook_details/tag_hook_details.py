@@ -31,8 +31,8 @@ class TagHookDetails(HookDetails):
             RegisterRequestData.RequestedParams.sha: self.sha
         }
 
-    def get_event_type(self) -> str:
-        return EventType.pr_opened
+    def get_event_type(self) -> EventType:
+        return EventType.TAGGED
 
     def get_ref(self) -> str:
         return self.sha

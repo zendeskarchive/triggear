@@ -35,8 +35,8 @@ class ReleaseHookDetails(HookDetails):
             RegisterRequestData.RequestedParams.is_prerelease: self.is_prerelease
         }
 
-    def get_event_type(self) -> str:
-        return EventType.pr_opened
+    def get_event_type(self) -> EventType:
+        return EventType.RELEASE
 
     def get_ref(self) -> str:
         return self.release_target
