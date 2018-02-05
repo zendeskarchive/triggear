@@ -1,37 +1,29 @@
 import asyncio
 import logging
 
-import motor.motor_asyncio
-
 from app.clients.async_client import AsyncClientNotFoundException, AsyncClientException
 from app.clients.github_client import GithubClient
 from app.clients.jenkinses_clients import JenkinsesClients
+from app.clients.mongo_client import MongoClient
 from app.enums.jenkins_build_state import JenkinsBuildState
-from app.enums.registration_fields import RegistrationFields
+from app.mongo.registration_fields import RegistrationFields
 from app.hook_details.hook_details import HookDetails
 from app.hook_details.hook_params_parser import HookParamsParser
 from app.mongo.registration_cursor import RegistrationCursor
 from app.mongo.triggerable_document_factory import TriggerableDocumentFactory
-from app.mongo.registrations_client import RegistrationsClient
 
 
 class TriggearHeart:
     def __init__(self,
-                 mongo_client: motor.motor_asyncio.AsyncIOMotorClient,
+                 mongo_client: MongoClient,
                  github_client: GithubClient,
                  jenkinses_clients: JenkinsesClients):
-        self.__mongo_client: motor.motor_asyncio.AsyncIOMotorClient = mongo_client
+        self.__mongo_client: MongoClient = mongo_client
         self.__github_client: GithubClient = github_client
         self.__jenkinses_clients: JenkinsesClients = jenkinses_clients
-        self.__registration_finder: RegistrationsClient = None
-
-    def get_registrations_client(self):
-        if self.__registration_finder is None:
-            self.__registration_finder = RegistrationsClient(self.__mongo_client)
-        return self.__registration_finder
 
     async def trigger_registered_jobs(self, hook_details: HookDetails):
-        async for registration_cursor in self.__registration_finder.get_registered_jobs(hook_details):
+        async for registration_cursor in self.__mongo_client.get_registered_jobs(hook_details):
             registration_document = TriggerableDocumentFactory.get_document(registration_cursor, self.__github_client)
             if registration_document.should_be_triggered_by(hook_details):
                 try:
@@ -40,8 +32,8 @@ class TriggearHeart:
                     await self.trigger_registered_job(hook_details, registration_cursor)
                 except AsyncClientNotFoundException:
                     logging.exception(f"Job {registration_cursor.jenkins_url}:{registration_cursor.job_name} was not found on Jenkins anymore - "
-                                      f"incrementing {RegistrationFields.missed_times} for query {hook_details.get_query()}")
-                    await self.get_registrations_client().increment_missed_counter(hook_details, registration_cursor)
+                                      f"incrementing {RegistrationFields.MISSED_TIMES} for query {hook_details.get_query()}")
+                    await self.__mongo_client.increment_missed_counter(hook_details, registration_cursor)
 
             else:
                 logging.warning(f'Hook details {hook_details} will not be run due to unmet registration restrictions in {registration_cursor}')

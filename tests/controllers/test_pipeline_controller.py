@@ -12,7 +12,7 @@ from pymongo.results import UpdateResult, InsertOneResult
 from app.clients.async_client import AsyncClientException
 from app.clients.github_client import GithubClient
 from app.controllers.pipeline_controller import PipelineController
-from app.enums.registration_fields import RegistrationFields
+from app.mongo.registration_fields import RegistrationFields
 from app.request_schemes.clear_request_data import ClearRequestData
 from app.request_schemes.comment_request_data import CommentRequestData
 from app.request_schemes.deployment_request_data import DeploymentRequestData
@@ -361,8 +361,8 @@ class TestPipelineController:
                         'match_info': {'eventType': 'push'}}, spec=aiohttp.web_request.Request, strict=True)
 
         cursor: motor.motor_asyncio.AsyncIOMotorCommandCursor = async_iter(
-            {RegistrationFields.jenkins_url: 'url', RegistrationFields.job: 'push_job_1', RegistrationFields.missed_times: 7},
-            {RegistrationFields.jenkins_url: 'url', RegistrationFields.job: 'push_job_2', RegistrationFields.missed_times: 13}
+            {RegistrationFields.JENKINS_URL: 'url', RegistrationFields.JOB: 'push_job_1', RegistrationFields.MISSED_TIMES: 7},
+            {RegistrationFields.JENKINS_URL: 'url', RegistrationFields.JOB: 'push_job_2', RegistrationFields.MISSED_TIMES: 13}
         )
         labeled_collection: motor.motor_asyncio.AsyncIOMotorCollection = mock(spec=motor.motor_asyncio.AsyncIOMotorCollection, strict=True)
         push_collection: motor.motor_asyncio.AsyncIOMotorCollection = mock(spec=motor.motor_asyncio.AsyncIOMotorCollection, strict=True)
@@ -371,8 +371,8 @@ class TestPipelineController:
 
         pipeline_controller = PipelineController(mock(), mongo_client, self.API_TOKEN)
 
-        expect(push_collection).find({RegistrationFields.missed_times: {'$gt': 0}}).thenReturn(cursor)
-        expect(labeled_collection, times=0).find({RegistrationFields.missed_times: {'$gt': 0}})
+        expect(push_collection).find({RegistrationFields.MISSED_TIMES: {'$gt': 0}}).thenReturn(cursor)
+        expect(labeled_collection, times=0).find({RegistrationFields.MISSED_TIMES: {'$gt': 0}})
 
         result: aiohttp.web.Response = await pipeline_controller.handle_missing(request)
 
@@ -426,8 +426,8 @@ class TestPipelineController:
 
         # given
         when(request).json().thenReturn(async_value({'eventType': 'push', 'jobName': 'job', 'caller': 'del_job#7', 'jenkins_url': 'url'}))
-        expect(push_collection).delete_one({RegistrationFields.job: 'job', RegistrationFields.jenkins_url: 'url'})
-        expect(labeled_collection, times=0).delete_one({RegistrationFields.job: 'jobName', RegistrationFields.jenkins_url: 'url'})
+        expect(push_collection).delete_one({RegistrationFields.JOB: 'job', RegistrationFields.JENKINS_URL: 'url'})
+        expect(labeled_collection, times=0).delete_one({RegistrationFields.JOB: 'jobName', RegistrationFields.JENKINS_URL: 'url'})
 
         arg_captor = captor()
         expect(deregister_log_collection).insert_one(arg_captor)
@@ -487,8 +487,8 @@ class TestPipelineController:
 
         # given
         when(request).json().thenReturn(async_value({'eventType': 'push', 'jobName': 'job', 'caller': 'del_job#7', 'jenkins_url': 'url'}))
-        expect(push_collection).update_one({RegistrationFields.job: 'job', RegistrationFields.jenkins_url: 'url'}, {'$set': {'missed_times': 0}})
-        expect(labeled_collection, times=0).update_one({RegistrationFields.job: 'jobName', RegistrationFields.jenkins_url: 'url'},
+        expect(push_collection).update_one({RegistrationFields.JOB: 'job', RegistrationFields.JENKINS_URL: 'url'}, {'$set': {'missed_times': 0}})
+        expect(labeled_collection, times=0).update_one({RegistrationFields.JOB: 'jobName', RegistrationFields.JENKINS_URL: 'url'},
                                                        {'$set': {'missed_count': 0}})
 
         # when

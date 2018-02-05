@@ -1,16 +1,24 @@
 from enum import Enum
-from typing import List
+from typing import List, Optional
 
 from app.data_objects.github_event import GithubEvent
 
 
+class CollectionNames:
+    RELEASE = 'release'
+    LABELED = 'labeled'
+    OPENED = 'opened'
+    TAGGED = 'tagged'
+    PUSH = 'push'
+
+
 class EventType(Enum):
-    RELEASE = ('release', 'published', None, 'release')
-    PR_LABELED = ('pull_request', 'labeled', None, 'labeled')
+    RELEASE = ('release', 'published', None, CollectionNames.RELEASE)
+    PR_LABELED = ('pull_request', 'labeled', None, CollectionNames.LABELED)
     ISSUE_COMMENT = ('issue_comment', 'created', None, None)
-    PR_OPENED = ('pull_request', 'opened', None, 'opened')
-    TAGGED = ('push', None, 'refs/tags/', 'tagged')
-    PUSH = ('push', None, 'refs/heads/', 'push')
+    PR_OPENED = ('pull_request', 'opened', None, CollectionNames.OPENED)
+    TAGGED = ('push', None, 'refs/tags/', CollectionNames.TAGGED)
+    PUSH = ('push', None, 'refs/heads/', CollectionNames.PUSH)
     SYNCHRONIZE = ('pull_request', 'synchronize', None, None)
 
     def __init__(self,
@@ -43,3 +51,17 @@ class EventType(Enum):
                 EventType.PR_OPENED,
                 EventType.PUSH,
                 EventType.RELEASE]
+
+    @staticmethod
+    def get_by_collection_name(name: str) -> Optional['EventType']:
+        if name == CollectionNames.PUSH:
+            return EventType.PUSH
+        elif name == CollectionNames.OPENED:
+            return EventType.PR_OPENED
+        elif name == CollectionNames.TAGGED:
+            return EventType.TAGGED
+        elif name == CollectionNames.LABELED:
+            return EventType.PR_LABELED
+        elif name == CollectionNames.RELEASE:
+            return EventType.RELEASE
+        return None

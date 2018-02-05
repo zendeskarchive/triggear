@@ -2,7 +2,8 @@ from typing import Optional, List
 
 import motor.motor_asyncio
 
-from app.enums.registration_fields import RegistrationFields
+from app.enums.event_types import EventType
+from app.mongo.registration_fields import RegistrationFields
 
 
 class RegistrationCursor:
@@ -19,38 +20,38 @@ class RegistrationCursor:
                f"file_restrictions {self.file_restrictions} " \
                f">"
 
-    def __init__(self, event_type: str, cursor: motor.motor_asyncio.AsyncIOMotorCursor):
+    def __init__(self, event_type: EventType, cursor: motor.motor_asyncio.AsyncIOMotorCursor):
         self.event_type = event_type
         self.cursor = cursor
 
     @property
     def job_name(self) -> str:
-        return self.cursor[RegistrationFields.job]
+        return self.cursor[RegistrationFields.JOB]
 
     @property
     def repo(self) -> str:
-        return self.cursor[RegistrationFields.repository]
+        return self.cursor[RegistrationFields.REPO]
 
     @property
     def jenkins_url(self) -> str:
-        return self.cursor[RegistrationFields.repository]
+        return self.cursor[RegistrationFields.REPO]
 
     @property
     def labels(self) -> Optional[List[str]]:
-        return self.cursor.get(RegistrationFields.labels)
+        return self.cursor.get(RegistrationFields.LABELS)
 
     @property
     def requested_params(self) -> Optional[List[str]]:
-        return self.cursor.get(RegistrationFields.requested_params)
+        return self.cursor.get(RegistrationFields.REQUESTED_PARAMS)
 
     @property
     def change_restrictions(self) -> Optional[List[str]]:
-        return self.cursor.get(RegistrationFields.change_restrictions)
+        return self.cursor.get(RegistrationFields.CHANGE_RESTRICTIONS)
 
     @property
     def branch_restrictions(self) -> Optional[List[str]]:
-        return self.cursor.get(RegistrationFields.branch_restrictions)
+        return self.cursor.get(RegistrationFields.BRANCH_RESTRICTIONS)
 
     @property
     def file_restrictions(self) -> Optional[List[str]]:
-        return self.cursor.get(RegistrationFields.file_restrictions)
+        return self.cursor.get(RegistrationFields.FILE_RESTRICTIONS)
