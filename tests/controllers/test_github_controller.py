@@ -12,8 +12,8 @@ import app.clients.jenkins_client
 from app.clients.async_client import AsyncClientException, AsyncClient, AsyncClientNotFoundException
 from app.clients.github_client import GithubClient
 from app.controllers.github_controller import GithubController
-from app.dto.hook_details import HookDetails
-from app.dto.hook_details_factory import HookDetailsFactory
+from app.hook_details import HookDetails
+from app.hook_details import HookDetailsFactory
 from app.enums.event_types import EventTypes
 from app.exceptions.triggear_error import TriggearError
 from tests.async_mockito import async_iter, async_value
@@ -435,7 +435,7 @@ class TestGithubController:
         hook_data = mock()
         hook_details = mock(spec=HookDetails, strict=True)
 
-        expect(github_controller).get_comment_branch_and_sha(hook_data).thenReturn(async_value(('branch', 'sha')))
+        expect(github_controller).get_pr_comment_branch_and_sha(hook_data).thenReturn(async_value(('branch', 'sha')))
         expect(HookDetailsFactory).get_pr_sync_details(hook_data, 'branch', 'sha').thenReturn(hook_details)
         expect(github_controller).trigger_registered_jobs(hook_details).thenReturn(async_value(None))
 
@@ -449,7 +449,7 @@ class TestGithubController:
         expect(github_client).get_pr_branch('repo', 23).thenReturn(async_value('master'))
         expect(github_client).get_latest_commit_sha('repo', 23).thenReturn(async_value('123asd'))
 
-        branch, sha = await github_controller.get_comment_branch_and_sha(hook_data)
+        branch, sha = await github_controller.get_pr_comment_branch_and_sha(hook_data)
 
         assert 'master' == branch
         assert '123asd' == sha
@@ -461,7 +461,7 @@ class TestGithubController:
         hook_data = mock()
 
         expect(github_controller, times=1)\
-            .get_comment_branch_and_sha(hook_data)\
+            .get_pr_comment_branch_and_sha(hook_data)\
             .thenReturn(async_value(('staging', '321456')))
         expect(HookDetailsFactory, times=1)\
             .get_labeled_sync_details(hook_data, head_branch='staging', head_sha='321456')\

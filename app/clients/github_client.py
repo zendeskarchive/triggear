@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import List
+from typing import List, Dict, Tuple
 
 from aiohttp import ClientResponse
 
@@ -185,3 +185,19 @@ class GithubClient:
             description=description
         )
         return await self.get_async_github().post(route=route, payload=payload)
+
+    async def are_files_in_repo(self, repo: str, ref: str, files: List[str]) -> bool:
+        try:
+            for file in files:
+                await self.get_file_content(repo=repo, ref=ref, path=file)
+        except AsyncClientException:
+            logging.exception(f"Exception when looking for file {file} in repo {repo} at ref {ref}")
+            return False
+        return True
+
+    async def get_pr_comment_branch_and_sha(self, data: Dict) -> Tuple[str, str]:
+        repository_name = data['repository']['full_name']
+        pr_number = data['issue']['number']
+        head_branch = await self.get_pr_branch(repository_name, pr_number)
+        head_sha = await self.get_latest_commit_sha(repository_name, pr_number)
+        return head_branch, head_sha

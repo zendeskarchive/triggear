@@ -4,10 +4,12 @@ import motor.motor_asyncio
 from aiohttp import web
 
 from app.clients.github_client import GithubClient
+from app.clients.jenkinses_clients import JenkinsesClients
 from app.config.triggear_config import TriggearConfig
 from app.controllers.github_controller import GithubController
 from app.controllers.health_controller import HealthController
 from app.controllers.pipeline_controller import PipelineController
+from app.triggear_heart import TriggearHeart
 
 
 def main():
@@ -16,9 +18,11 @@ def main():
     gh_client = GithubClient(app_config.github_token)
     mongo_client = motor.motor_asyncio.AsyncIOMotorClient() if not os.environ.get('COMPOSE') == 'true' \
         else motor.motor_asyncio.AsyncIOMotorClient('mongodb://mongodb:27017')
+    jenkinses_clients = JenkinsesClients(app_config)
+    triggear_heart = TriggearHeart(mongo_client, gh_client, jenkinses_clients)
 
-    github_controller = GithubController(github_client=gh_client,
-                                         mongo_client=mongo_client,
+    github_controller = GithubController(triggear_heart=triggear_heart,
+                                         github_client=gh_client,
                                          config=app_config)
     pipeline_controller = PipelineController(github_client=gh_client,
                                              mongo_client=mongo_client,

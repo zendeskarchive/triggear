@@ -1,11 +1,19 @@
 from typing import Dict
 
-from app.dto.abstract_hook_details import AbstractHookDetails
 from app.enums.event_types import EventTypes
+from app.hook_details.hook_details import HookDetails
+from app.mongo.registration_cursor import RegistrationCursor
 from app.request_schemes.register_request_data import RegisterRequestData
 
 
-class TagHookDetails(AbstractHookDetails):
+class TagHookDetails(HookDetails):
+    def __repr__(self):
+        return f"<PrOpenedHookDetails " \
+               f"repository: {self.repository} " \
+               f"tag: {self.tag} " \
+               f"sha: {self.sha} " \
+               f">"
+
     def __init__(self,
                  repository: str,
                  sha: str,
@@ -25,3 +33,9 @@ class TagHookDetails(AbstractHookDetails):
 
     def get_event_type(self) -> str:
         return EventTypes.pr_opened
+
+    def get_ref(self) -> str:
+        return self.sha
+
+    def setup_final_param_values(self, registration_cursor: RegistrationCursor):
+        pass

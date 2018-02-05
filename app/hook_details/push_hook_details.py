@@ -1,11 +1,21 @@
 from typing import Dict, Set
 
-from app.dto.abstract_hook_details import AbstractHookDetails
 from app.enums.event_types import EventTypes
+from app.hook_details.hook_details import HookDetails
+from app.mongo.registration_cursor import RegistrationCursor
 from app.request_schemes.register_request_data import RegisterRequestData
+from app.utilities.functions import get_all_starting_with
 
 
-class PushHookDetails(AbstractHookDetails):
+class PushHookDetails(HookDetails):
+    def __repr__(self):
+        return f"<PrOpenedHookDetails " \
+               f"repository: {self.repository} " \
+               f"branch: {self.branch} " \
+               f"sha: {self.sha} " \
+               f"changes: {self.changes} " \
+               f">"
+
     def __init__(self,
                  repository: str,
                  branch: str,
@@ -28,3 +38,9 @@ class PushHookDetails(AbstractHookDetails):
 
     def get_event_type(self) -> str:
         return EventTypes.pr_opened
+
+    def get_ref(self) -> str:
+        return self.sha
+
+    def setup_final_param_values(self, registration_cursor: RegistrationCursor):
+        self.changes = get_all_starting_with(self.changes, registration_cursor.change_restrictions)

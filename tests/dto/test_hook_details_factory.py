@@ -1,7 +1,7 @@
 import pytest
 
-from app.dto.hook_details import HookDetails
-from app.dto.hook_details_factory import HookDetailsFactory
+from app.hook_details import HookDetails
+from app.hook_details import HookDetailsFactory
 from app.enums.event_types import EventTypes
 
 pytestmark = pytest.mark.asyncio

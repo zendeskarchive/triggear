@@ -204,4 +204,3 @@ class PipelineController:
                 return aiohttp.web.Response(text='Deployment status ACK')
         logging.error(f'Deployment matching {deployment_matcher} not found')
         return aiohttp.web.Response(reason=f'Deployment matching {deployment_matcher} not found', status=404)
-
