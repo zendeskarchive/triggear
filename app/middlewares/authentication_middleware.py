@@ -91,5 +91,4 @@ class AuthenticationMiddleware:
         elif authentication_result == AuthenticationResult.NOT_IMPLEMENTED:
             return aiohttp.web.Response(text='Unsupported authentication method', status=501)
         else:
-            resp = await handler(request)
-            return resp
+            return await handler(request)

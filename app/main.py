@@ -11,6 +11,7 @@ from app.controllers.github_controller import GithubController
 from app.controllers.health_controller import HealthController
 from app.controllers.pipeline_controller import PipelineController
 from app.middlewares.authentication_middleware import AuthenticationMiddleware
+from app.middlewares.exceptions_middleware import exceptions
 from app.routes import Routes
 from app.triggear_heart import TriggearHeart
 
@@ -32,10 +33,10 @@ def main():
     pipeline_controller = PipelineController(github_client=gh_client,
                                              mongo_client=mongo_client,
                                              api_token=app_config.triggear_token)
-    health_controller = HealthController(api_token=app_config.triggear_token)
+    health_controller = HealthController()
     authentication_middleware = AuthenticationMiddleware(config=app_config)
 
-    app = web.Application(middlewares=(authentication_middleware.authentication, ))
+    app = web.Application(middlewares=(authentication_middleware.authentication, exceptions))
     app.router.add_post(Routes.GITHUB.route, github_controller.handle_hook)
     app.router.add_post(Routes.REGISTER.route, pipeline_controller.handle_register)
     app.router.add_post(Routes.STATUS.route, pipeline_controller.handle_status)

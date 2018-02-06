@@ -18,7 +18,6 @@ from app.hook_details.push_hook_details import PushHookDetails
 from app.hook_details.tag_hook_details import TagHookDetails
 from app.triggear_heart import TriggearHeart
 from app.utilities.constants import BRANCH_DELETED_SHA
-from app.utilities.err_handling import handle_exceptions
 
 
 class GithubController:
@@ -36,7 +35,6 @@ class GithubController:
     async def get_request_json(request: aiohttp.web_request.Request) -> Dict:
         return await request.json()
 
-    @handle_exceptions()
     async def handle_hook(self, request: aiohttp.web_request.Request) -> Optional[Response]:
         data = await self.get_request_json(request)
         logging.warning(f"Hook received")
