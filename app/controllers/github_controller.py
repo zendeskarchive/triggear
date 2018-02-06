@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Dict
+from typing import Dict, Awaitable
 from typing import Optional
 
 import aiohttp.web
@@ -40,7 +40,6 @@ class GithubController:
     async def handle_hook(self, request: aiohttp.web_request.Request) -> Optional[Response]:
         data = await self.get_request_json(request)
         logging.warning(f"Hook received")
-
         github_event = GithubEvent(event_header=request.headers.get(self.GITHUB_EVENT_HEADER),
                                    action=data.get('action'),
                                    ref=data.get('ref'))
@@ -49,7 +48,7 @@ class GithubController:
             asyncio.get_event_loop().create_task(handler_task)
         return aiohttp.web.Response(text='Hook ACK')
 
-    async def get_event_handler_task(self, data, github_event):
+    async def get_event_handler_task(self, data: Dict, github_event: GithubEvent) -> Optional[Awaitable]:
         if github_event == EventType.PR_LABELED:
             return self.handle_labeled(data)
         elif github_event == EventType.SYNCHRONIZE:
@@ -74,14 +73,14 @@ class GithubController:
         await self.__github_client.set_sync_label(hook_details.repository, number=data['pull_request']['number'])
         await self.__triggear_heart.trigger_registered_jobs(hook_details)
 
-    async def handle_tagged(self, data: dict):
+    async def handle_tagged(self, data: Dict):
         hook_details: TagHookDetails = HookDetailsFactory.get_tag_details(data)
         if hook_details.sha != BRANCH_DELETED_SHA:
             await self.__triggear_heart.trigger_registered_jobs(hook_details)
         else:
             logging.warning(f"Tag {hook_details.tag} was deleted as SHA was zeros only!")
 
-    async def handle_labeled(self, data: dict):
+    async def handle_labeled(self, data: Dict):
         await self.__triggear_heart.trigger_registered_jobs(HookDetailsFactory.get_labeled_details(data))
 
     async def handle_synchronize(self, data: Dict):
@@ -97,7 +96,7 @@ class GithubController:
             logging.warning(f'Sync hook on PR with {TriggearPrLabel.PR_SYNC} - handling like PR open')
             await self.handle_pr_opened(data)
 
-    async def handle_labeled_sync(self, data, pr_labels):
+    async def handle_labeled_sync(self, data: Dict, pr_labels):
         if TriggearPrLabel.LABEL_SYNC in pr_labels and len(pr_labels) > 1:
             pr_labels.remove(TriggearPrLabel.LABEL_SYNC)
             for label in pr_labels:
@@ -107,7 +106,7 @@ class GithubController:
                 logging.warning(f'Sync hook on PR with {TriggearPrLabel.LABEL_SYNC} - handling like PR labeled')
                 await self.handle_labeled(data)
 
-    async def handle_comment(self, data):
+    async def handle_comment(self, data: Dict):
         comment_body = data['comment']['body']
         branch, sha = await self.__github_client.get_pr_comment_branch_and_sha(data)
         if comment_body == TriggearPrLabel.LABEL_SYNC:
@@ -118,11 +117,11 @@ class GithubController:
     async def handle_pr_sync_comment(self, data: Dict, branch: str, sha: str):
         await self.__triggear_heart.trigger_registered_jobs(HookDetailsFactory.get_pr_sync_details(data, branch, sha))
 
-    async def handle_labeled_sync_comment(self, data, branch: str, sha: str):
+    async def handle_labeled_sync_comment(self, data: Dict, branch: str, sha: str):
         for hook_details in HookDetailsFactory.get_labeled_sync_details(data, head_branch=branch, head_sha=sha):
             await self.__triggear_heart.trigger_registered_jobs(hook_details)
 
-    async def handle_push(self, data):
+    async def handle_push(self, data: Dict):
         hook_details: PushHookDetails = HookDetailsFactory.get_push_details(data)
         if hook_details.sha != BRANCH_DELETED_SHA:
             await self.__triggear_heart.trigger_registered_jobs(hook_details)
