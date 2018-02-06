@@ -79,7 +79,7 @@ class AuthenticationMiddleware:
 
     @staticmethod
     async def none_handler(request: aiohttp.web_request.Request) -> AuthenticationResult:
-        logging.warning(f'{request.host} has requested open endpoint')
+        logging.warning(f'{request.remote} has requested open endpoint')
         return AuthenticationResult.AUTHENTICATED
 
     @web.middleware
