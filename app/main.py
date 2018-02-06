@@ -10,6 +10,8 @@ from app.config.triggear_config import TriggearConfig
 from app.controllers.github_controller import GithubController
 from app.controllers.health_controller import HealthController
 from app.controllers.pipeline_controller import PipelineController
+from app.middlewares.authentication_middleware import AuthenticationMiddleware
+from app.routes import Routes
 from app.triggear_heart import TriggearHeart
 
 
@@ -31,18 +33,19 @@ def main():
                                              mongo_client=mongo_client,
                                              api_token=app_config.triggear_token)
     health_controller = HealthController(api_token=app_config.triggear_token)
+    authentication_middleware = AuthenticationMiddleware(config=app_config)
 
-    app = web.Application()
-    app.router.add_post('/github', github_controller.handle_hook)
-    app.router.add_post('/register', pipeline_controller.handle_register)
-    app.router.add_post('/status', pipeline_controller.handle_status)
-    app.router.add_post('/comment', pipeline_controller.handle_comment)
-    app.router.add_get('/health', health_controller.handle_health_check)
-    app.router.add_get('/missing/{eventType}', pipeline_controller.handle_missing)
-    app.router.add_post('/deregister', pipeline_controller.handle_deregister)
-    app.router.add_post('/clear', pipeline_controller.handle_clear)
-    app.router.add_post('/deployment', pipeline_controller.handle_deployment)
-    app.router.add_post('/deployment_status', pipeline_controller.handle_deployment_status)
+    app = web.Application(middlewares=(authentication_middleware.authentication, ))
+    app.router.add_post(Routes.GITHUB.route, github_controller.handle_hook)
+    app.router.add_post(Routes.REGISTER.route, pipeline_controller.handle_register)
+    app.router.add_post(Routes.STATUS.route, pipeline_controller.handle_status)
+    app.router.add_post(Routes.COMMENT.route, pipeline_controller.handle_comment)
+    app.router.add_get(Routes.HEALTH.route, health_controller.handle_health_check)
+    app.router.add_get(Routes.MISSING.route, pipeline_controller.handle_missing)
+    app.router.add_post(Routes.DEREGISTER.route, pipeline_controller.handle_deregister)
+    app.router.add_post(Routes.CLEAR.route, pipeline_controller.handle_clear)
+    app.router.add_post(Routes.DEPLOYMENT.route, pipeline_controller.handle_deployment)
+    app.router.add_post(Routes.DEPLOYMENT_STATUS.route, pipeline_controller.handle_deployment_status)
 
     web.run_app(app)
 

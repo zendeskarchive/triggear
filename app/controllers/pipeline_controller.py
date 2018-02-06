@@ -18,7 +18,6 @@ from app.request_schemes.deployment_status_request_data import DeploymentStatusR
 from app.request_schemes.deregister_request_data import DeregisterRequestData
 from app.request_schemes.register_request_data import RegisterRequestData
 from app.request_schemes.status_request_data import StatusRequestData
-from app.utilities.auth_validation import validate_auth_header
 from app.utilities.err_handling import handle_exceptions
 
 
@@ -35,7 +34,6 @@ class PipelineController:
         return self.__gh_client
 
     @handle_exceptions()
-    @validate_auth_header()
     async def handle_register(self, request: aiohttp.web_request.Request) -> aiohttp.web.Response:
         data: Dict = await request.json()
         logging.warning(f"Register REQ received: {data}")
@@ -45,7 +43,6 @@ class PipelineController:
         return aiohttp.web.Response(text='Register ACK')
 
     @handle_exceptions()
-    @validate_auth_header()
     async def handle_missing(self, request: aiohttp.web_request.Request) -> aiohttp.web.Response:
         event_type = request.match_info.get('eventType')
         logging.warning(f"Missing REQ received for: {event_type}")
@@ -54,7 +51,6 @@ class PipelineController:
         return aiohttp.web.Response(text=','.join(await self.__mongo_client.get_missed_info(event_type)))
 
     @handle_exceptions()
-    @validate_auth_header()
     async def handle_deregister(self, request: aiohttp.web_request.Request) -> aiohttp.web.Response:
         data: Dict = await request.json()
         logging.warning(f"Deregister REQ received: {data}")
@@ -65,7 +61,6 @@ class PipelineController:
                                          f'for {data[DeregisterRequestData.event_type]} succeeded')
 
     @handle_exceptions()
-    @validate_auth_header()
     async def handle_clear(self, request: aiohttp.web_request.Request) -> aiohttp.web.Response:
         data: Dict = await request.json()
         logging.warning(f"Clear REQ received: {data}")
@@ -76,7 +71,6 @@ class PipelineController:
         return aiohttp.web.Response(text=f'Clear of {clear_query.job_name} missed counter succeeded')
 
     @handle_exceptions()
-    @validate_auth_header()
     async def handle_status(self, request: aiohttp.web_request.Request) -> aiohttp.web.Response:
         data = await request.json()
         if not StatusRequestData.is_valid_status_data(data):
@@ -93,7 +87,6 @@ class PipelineController:
         return aiohttp.web.Response(text='Status ACK')
 
     @handle_exceptions()
-    @validate_auth_header()
     async def handle_comment(self, request: aiohttp.web_request.Request):
         data = await request.json()
         if not CommentRequestData.is_valid_comment_data(data):
@@ -107,7 +100,6 @@ class PipelineController:
         return aiohttp.web.Response(text='Comment ACK')
 
     @handle_exceptions()
-    @validate_auth_header()
     async def handle_deployment(self, request: aiohttp.web_request.Request) -> aiohttp.web.Response:
         data: Dict = await request.json()
         logging.warning(f'Deployment request received: {data}')
@@ -120,7 +112,6 @@ class PipelineController:
         return aiohttp.web.Response(text='Deployment ACK')
 
     @handle_exceptions()
-    @validate_auth_header()
     async def handle_deployment_status(self, request: aiohttp.web_request.Request) -> aiohttp.web.Response:
         data: Dict = await request.json()
         logging.warning(f'Deployment status request received: {data}')

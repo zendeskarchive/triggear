@@ -1,5 +1,4 @@
 import asyncio
-import hmac
 import logging
 from typing import Dict
 from typing import Optional
@@ -24,7 +23,6 @@ from app.utilities.err_handling import handle_exceptions
 
 class GithubController:
     GITHUB_EVENT_HEADER = 'X-GitHub-Event'
-    GITHUB_SIGNATURE_HEADER = 'X-Hub-Signature'
 
     def __init__(self,
                  config: TriggearConfig,
@@ -34,31 +32,12 @@ class GithubController:
         self.__github_client = github_client
         self.__triggear_heart = triggear_heart
 
-    async def validate_webhook_secret(self, req):
-        header_signature = req.headers.get(self.GITHUB_SIGNATURE_HEADER)
-
-        if header_signature is None:
-            return 401, 'Unauthorized'
-        sha_name, signature = header_signature.split('=')
-        if sha_name != 'sha1':
-            return 501, "Only SHA1 auth supported"
-
-        req_body = await req.read()
-        mac = hmac.new(bytearray(self.config.triggear_token, 'utf-8'), msg=req_body, digestmod='sha1')
-        if not hmac.compare_digest(str(mac.hexdigest()), str(signature)):
-            return 401, 'Unauthorized'
-        return 'AUTHORIZED'
-
     @staticmethod
     async def get_request_json(request: aiohttp.web_request.Request) -> Dict:
         return await request.json()
 
     @handle_exceptions()
     async def handle_hook(self, request: aiohttp.web_request.Request) -> Optional[Response]:
-        validation = await self.validate_webhook_secret(request)
-        if validation != 'AUTHORIZED':
-            return aiohttp.web.Response(text=validation[1], status=validation[0])
-
         data = await self.get_request_json(request)
         logging.warning(f"Hook received")
 
