@@ -21,7 +21,7 @@ class TriggearHeart:
         self.__github_client: GithubClient = github_client
         self.__jenkinses_clients: JenkinsesClients = jenkinses_clients
 
-    async def trigger_registered_jobs(self, hook_details: HookDetails):
+    async def trigger_registered_jobs(self, hook_details: HookDetails) -> None:
         async for registration_cursor in self.__mongo_client.get_registered_jobs(hook_details):
             if await hook_details.should_trigger(registration_cursor, self.__github_client):
                 try:
@@ -38,7 +38,7 @@ class TriggearHeart:
 
     async def trigger_registered_job(self,
                                      hook_details: HookDetails,
-                                     registration_cursor: RegistrationCursor):
+                                     registration_cursor: RegistrationCursor) -> None:
         hook_details.setup_final_param_values(registration_cursor)
         job_params = HookParamsParser.get_requested_parameters_values(hook_details, registration_cursor)
         jenkins_client = self.__jenkinses_clients.get_jenkins(registration_cursor.jenkins_url)
@@ -56,7 +56,8 @@ class TriggearHeart:
                                                                   state="error",
                                                                   url=await jenkins_client.get_job_url(registration_cursor.job_name),
                                                                   description=f"Job {registration_cursor.jenkins_url}:{registration_cursor.job_name} "
-                                                                              f"did not accept requested parameters {job_params.keys()}",
+                                                                              f"did not accept requested parameters "
+                                                                              f"{job_params.keys() if job_params is not None else None}",
                                                                   context=registration_cursor.job_name)
             return
 
@@ -82,12 +83,16 @@ class TriggearHeart:
             logging.warning(f"Creating build status for {registration_cursor.jenkins_url}:{registration_cursor.job_name} #{next_build_number} - "
                             f"verdict: {final_build_state}.")
 
-            await self.__github_client.create_github_build_status(repo=registration_cursor.repo,
-                                                                  sha=hook_details.get_ref(),
-                                                                  state=final_build_state.state,
-                                                                  url=build_info['url'],
-                                                                  description=final_build_state.description,
-                                                                  context=registration_cursor.job_name)
+            if build_info is not None:
+                await self.__github_client.create_github_build_status(repo=registration_cursor.repo,
+                                                                      sha=hook_details.get_ref(),
+                                                                      state=final_build_state.state,
+                                                                      url=build_info['url'],
+                                                                      description=final_build_state.description,
+                                                                      context=registration_cursor.job_name)
+            else:
+                logging.warning(f'Could not create status for {registration_cursor.jenkins_url}:{registration_cursor.job_name} #{next_build_number} '
+                                f'as build info was null')
         else:
             logging.exception(f"Triggear was not able to find build number {next_build_number} for job "
                               f"{registration_cursor.jenkins_url}:{registration_cursor.job_name}. Task aborted.")

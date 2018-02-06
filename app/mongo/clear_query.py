@@ -13,7 +13,7 @@ class ClearQuery:
         self.job_name = job_name
         self.event_type = event_type
 
-    def get_clear_query(self):
+    def get_clear_query(self) -> Dict[str, str]:
         return {
             RegistrationFields.JOB: self.job_name,
             RegistrationFields.JENKINS_URL: self.jenkins_url

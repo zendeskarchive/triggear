@@ -8,7 +8,7 @@ from app.request_schemes.register_request_data import RegisterRequestData
 
 
 class PrOpenedHookDetails(HookDetails):
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<PrOpenedHookDetails " \
                f"repository: {self.repository} " \
                f"branch: {self.branch} " \
@@ -23,7 +23,7 @@ class PrOpenedHookDetails(HookDetails):
         self.branch = branch
         self.sha = sha
 
-    def get_query(self):
+    def get_query(self) -> Dict[str, str]:
         return dict(repository=self.repository)
 
     @property
@@ -39,7 +39,7 @@ class PrOpenedHookDetails(HookDetails):
     def get_ref(self) -> str:
         return self.sha
 
-    def setup_final_param_values(self, registration_cursor: RegistrationCursor):
+    def setup_final_param_values(self, registration_cursor: RegistrationCursor) -> None:
         pass
 
     async def should_trigger(self, cursor: RegistrationCursor, github_client: GithubClient) -> bool:

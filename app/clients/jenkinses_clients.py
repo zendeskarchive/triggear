@@ -18,9 +18,9 @@ class JenkinsesClients:
         if client is None:
             logging.warning(f'Missing client for {url} - will create one')
             self.setup_jenkins_client(url)
-        return self.__jenkins_clients.get(url)
+        return self.__jenkins_clients[url]
 
-    def setup_jenkins_client(self, url: str):
+    def setup_jenkins_client(self, url: str) -> None:
         if self.config.jenkins_instances.get(url) is None:
             logging.warning(f'Missing Jenkins {url} in current config. Will reload the config to check for new instances')
             try:
@@ -33,4 +33,4 @@ class JenkinsesClients:
                 logging.exception('Exception caught when trying to reconfigure for new Jenkins instance in GithubController.'
                                   'Please check validity of provided config. Sticking with old one for now.')
                 raise
-        self.__jenkins_clients[url] = JenkinsClient(self.config.jenkins_instances.get(url))
+        self.__jenkins_clients[url] = JenkinsClient(self.config.jenkins_instances[url])

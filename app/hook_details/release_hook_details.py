@@ -8,7 +8,7 @@ from app.request_schemes.register_request_data import RegisterRequestData
 
 
 class ReleaseHookDetails(HookDetails):
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<PrOpenedHookDetails " \
                f"repository: {self.repository} " \
                f"tag: {self.tag} " \
@@ -26,7 +26,7 @@ class ReleaseHookDetails(HookDetails):
         self.release_target = release_target
         self.is_prerelease = is_prerelease
 
-    def get_query(self):
+    def get_query(self) -> Dict[str, str]:
         return dict(repository=self.repository)
 
     def get_allowed_parameters(self) -> Dict[str, Union[str, bool]]:
@@ -42,7 +42,7 @@ class ReleaseHookDetails(HookDetails):
     def get_ref(self) -> str:
         return self.release_target
 
-    def setup_final_param_values(self, registration_cursor: RegistrationCursor):
+    def setup_final_param_values(self, registration_cursor: RegistrationCursor) -> None:
         pass
 
     async def should_trigger(self, cursor: RegistrationCursor, github_client: GithubClient) -> bool:

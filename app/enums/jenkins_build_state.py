@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Dict
+from typing import Dict, Optional
 
 
 class JenkinsBuildState(Enum):
@@ -14,14 +14,15 @@ class JenkinsBuildState(Enum):
         self.description = description
 
     @staticmethod
-    def get_by_build_info(build_info: Dict) -> 'JenkinsBuildState':
-        result = build_info['result']
-        if result == 'SUCCESS':
-            return JenkinsBuildState.SUCCESS
-        elif result == "UNSTABLE":
-            return JenkinsBuildState.UNSTABLE
-        elif result == "FAILURE":
-            return JenkinsBuildState.FAILURE
-        elif result == "ABORTED":
-            return JenkinsBuildState.ABORTED
+    def get_by_build_info(build_info: Optional[Dict]) -> 'JenkinsBuildState':
+        if build_info is not None:
+            result = build_info['result']
+            if result == 'SUCCESS':
+                return JenkinsBuildState.SUCCESS
+            elif result == "UNSTABLE":
+                return JenkinsBuildState.UNSTABLE
+            elif result == "FAILURE":
+                return JenkinsBuildState.FAILURE
+            elif result == "ABORTED":
+                return JenkinsBuildState.ABORTED
         return JenkinsBuildState.ERROR

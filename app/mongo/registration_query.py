@@ -26,7 +26,7 @@ class RegistrationQuery:
         self.change_restrictions: List[str] = change_restrictions
         self.file_restrictions: List[str] = file_restrictions
 
-    def get_registration_query(self):
+    def get_registration_query(self) -> Dict[str, str]:
         return {
             RegistrationFields.JENKINS_URL: self.jenkins_url,
             RegistrationFields.REPO: self.repository,

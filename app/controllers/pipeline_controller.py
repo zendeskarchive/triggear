@@ -80,7 +80,7 @@ class PipelineController:
         )
         return aiohttp.web.Response(text='Status ACK')
 
-    async def handle_comment(self, request: aiohttp.web_request.Request):
+    async def handle_comment(self, request: aiohttp.web_request.Request) -> aiohttp.web.Response:
         data = await request.json()
         if not CommentRequestData.is_valid_comment_data(data):
             return aiohttp.web.Response(reason='Invalid comment request params!', status=400)

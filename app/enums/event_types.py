@@ -2,6 +2,7 @@ from enum import Enum
 from typing import List, Optional
 
 from app.data_objects.github_event import GithubEvent
+from app.exceptions.triggear_error import TriggearError
 
 
 class CollectionNames:
@@ -53,7 +54,7 @@ class EventType(Enum):
                 EventType.RELEASE]
 
     @staticmethod
-    def get_by_collection_name(name: str) -> Optional['EventType']:
+    def get_by_collection_name(name: str) -> 'EventType':
         if name == CollectionNames.PUSH:
             return EventType.PUSH
         elif name == CollectionNames.OPENED:
@@ -64,4 +65,4 @@ class EventType(Enum):
             return EventType.PR_LABELED
         elif name == CollectionNames.RELEASE:
             return EventType.RELEASE
-        return None
+        raise TriggearError(f'Unsupported event type: {name}')

@@ -15,7 +15,7 @@ class DeregistrationQuery:
         self.event_type = event_type
         self.caller = caller
 
-    def get_deregistration_query(self):
+    def get_deregistration_query(self) -> Dict[str, str]:
         return {
             RegistrationFields.JOB: self.job_name,
             RegistrationFields.JENKINS_URL: self.jenkins_url

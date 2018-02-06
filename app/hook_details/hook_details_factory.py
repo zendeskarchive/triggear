@@ -11,7 +11,7 @@ from typing import Set
 
 class HookDetailsFactory:
     @staticmethod
-    def get_labeled_sync_details(data, head_branch: str, head_sha: str) -> List[LabeledHookDetails]:
+    def get_labeled_sync_details(data: Dict, head_branch: str, head_sha: str) -> List[LabeledHookDetails]:
         return [
             LabeledHookDetails(
                 repository=data['repository']['full_name'],
@@ -54,7 +54,7 @@ class HookDetailsFactory:
         return set(additions + removals + modifications)
 
     @staticmethod
-    def get_labeled_details(data) -> LabeledHookDetails:
+    def get_labeled_details(data: Dict) -> LabeledHookDetails:
         return LabeledHookDetails(
             repository=data['pull_request']['head']['repo']['full_name'],
             branch=data['pull_request']['head']['ref'],
@@ -71,7 +71,7 @@ class HookDetailsFactory:
         )
 
     @staticmethod
-    def get_release_details(data: Dict):
+    def get_release_details(data: Dict) -> ReleaseHookDetails:
         return ReleaseHookDetails(
             repository=data['repository']['full_name'],
             tag=data['release']['tag_name'],

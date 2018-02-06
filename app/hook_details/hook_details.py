@@ -1,4 +1,4 @@
-from typing import Dict, Union
+from typing import Dict, Union, Any
 
 from app.clients.github_client import GithubClient
 from app.enums.event_types import EventType
@@ -15,7 +15,7 @@ class HookDetails:
     def get_allowed_parameters(self) -> Dict[str, Union[str, bool]]:
         raise NotImplementedError()
 
-    def get_query(self):
+    def get_query(self) -> Dict[str, Any]:
         raise NotImplementedError()
 
     def get_ref(self) -> str:

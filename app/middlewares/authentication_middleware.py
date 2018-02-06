@@ -11,6 +11,9 @@ from app.config.triggear_config import TriggearConfig
 from app.routes import Routes
 
 
+RequestHandlerType = Callable[[aiohttp.web_request.Request], Awaitable[aiohttp.web.Response]]
+
+
 class AuthenticationPolicy(Enum):
     GITHUB = auto()
     TOKEN = auto()
@@ -44,7 +47,7 @@ class AuthenticationMiddleware:
         self.config = config
 
     @cached_property
-    def expected_token(self):
+    def expected_token(self) -> str:
         return 'Token ' + self.config.triggear_token
 
     @cached_property
@@ -83,7 +86,7 @@ class AuthenticationMiddleware:
         return AuthenticationResult.AUTHENTICATED
 
     @web.middleware
-    async def authentication(self, request: aiohttp.web_request.Request, handler):
+    async def authentication(self, request: aiohttp.web_request.Request, handler: RequestHandlerType) -> aiohttp.web.Response:
         route_id = request.path.split('/')[1]
         authentication_result: AuthenticationResult = await self.policy_handlers[authentication_policies[route_id]](request)
         if authentication_result == AuthenticationResult.UNAUTHORIZED:

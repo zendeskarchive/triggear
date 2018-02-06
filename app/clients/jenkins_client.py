@@ -2,7 +2,7 @@ import asyncio
 import base64
 import logging
 import time
-from typing import List, Tuple, Dict, Union
+from typing import List, Tuple, Dict, Union, Optional
 
 from aiohttp import ClientResponse
 
@@ -86,7 +86,7 @@ class JenkinsClient:
     async def get_build_info_data(self,
                                   job_path: str,
                                   build_number: int,
-                                  timeout: float=30.0) -> Union[Dict, None]:
+                                  timeout: float=30.0) -> Optional[Dict]:
         timeout = time.monotonic() + timeout
         while time.monotonic() < timeout:
             try:

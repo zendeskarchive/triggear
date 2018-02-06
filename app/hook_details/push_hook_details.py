@@ -9,7 +9,7 @@ from app.utilities.functions import get_all_starting_with, any_starts_with
 
 
 class PushHookDetails(HookDetails):
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<PrOpenedHookDetails " \
                f"repository: {self.repository} " \
                f"branch: {self.branch} " \
@@ -37,7 +37,7 @@ class PushHookDetails(HookDetails):
             RegisterRequestData.RequestedParams.changes: self.get_changes_as_string()
         }
 
-    def get_query(self):
+    def get_query(self) -> Dict[str, str]:
         return dict(repository=self.repository)
 
     def get_event_type(self) -> EventType:
@@ -46,8 +46,9 @@ class PushHookDetails(HookDetails):
     def get_ref(self) -> str:
         return self.sha
 
-    def setup_final_param_values(self, registration_cursor: RegistrationCursor):
-        self.changes = get_all_starting_with(self.changes, registration_cursor.change_restrictions)
+    def setup_final_param_values(self, registration_cursor: RegistrationCursor) -> None:
+        if registration_cursor.change_restrictions:
+            self.changes = get_all_starting_with(self.changes, registration_cursor.change_restrictions)
 
     async def should_trigger(self, cursor: RegistrationCursor, github_client: GithubClient) -> bool:
         if cursor.change_restrictions and not any_starts_with(any_list=self.changes, starts_with_list=cursor.change_restrictions):

@@ -8,7 +8,7 @@ from app.request_schemes.register_request_data import RegisterRequestData
 
 
 class TagHookDetails(HookDetails):
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<PrOpenedHookDetails " \
                f"repository: {self.repository} " \
                f"tag: {self.tag} " \
@@ -23,7 +23,7 @@ class TagHookDetails(HookDetails):
         self.sha = sha
         self.tag = tag
 
-    def get_query(self):
+    def get_query(self) -> Dict[str, str]:
         return dict(repository=self.repository)
 
     def get_allowed_parameters(self) -> Dict[str, Union[str, bool]]:
@@ -38,7 +38,7 @@ class TagHookDetails(HookDetails):
     def get_ref(self) -> str:
         return self.sha
 
-    def setup_final_param_values(self, registration_cursor: RegistrationCursor):
+    def setup_final_param_values(self, registration_cursor: RegistrationCursor) -> None:
         pass
 
     async def should_trigger(self, cursor: RegistrationCursor, github_client: GithubClient) -> bool:

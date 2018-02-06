@@ -16,7 +16,7 @@ from app.routes import Routes
 from app.triggear_heart import TriggearHeart
 
 
-def main():
+def main() -> None:
     app_config = TriggearConfig()
 
     motor_mongo = motor.motor_asyncio.AsyncIOMotorClient() if not os.environ.get('COMPOSE') == 'true' \
