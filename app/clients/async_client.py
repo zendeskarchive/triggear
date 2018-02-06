@@ -1,6 +1,6 @@
 from typing import Dict, Union, Tuple, Optional
 
-import aiohttp
+from aiohttp import ClientSession, ClientResponse
 
 PayloadType = Union[Dict[str, Union[bool, str]], Tuple[Union[str, bool], ...]]
 
@@ -39,12 +39,12 @@ class AsyncClient:
                  session_headers: Dict[str, str]) -> None:
         self.base_url = base_url
         self.session_headers = session_headers
-        self.__session: aiohttp.ClientSession = None
+        self.__session: ClientSession = None
 
     @property
-    def session(self) -> aiohttp.ClientSession:
+    def session(self) -> ClientSession:
         if self.__session is None or self.__session.closed:
-            self.__session = aiohttp.ClientSession(headers=self.session_headers)
+            self.__session = ClientSession(headers=self.session_headers)
         return self.__session
 
     def build_url(self, route: str):
@@ -57,7 +57,7 @@ class AsyncClient:
                    route: str,
                    payload: Payload=None,
                    params: Payload=None,
-                   headers: Dict=None) -> aiohttp.client_reqrep.ClientResponse:
+                   headers: Dict=None) -> ClientResponse:
         async with self.session.post(self.build_url(route),
                                      json=payload.data if payload else None,
                                      headers=headers,
@@ -66,12 +66,12 @@ class AsyncClient:
 
     async def get(self,
                   route: str,
-                  params: Optional[Payload]=None) -> aiohttp.client_reqrep.ClientResponse:
+                  params: Optional[Payload]=None) -> ClientResponse:
         async with self.session.get(self.build_url(route), params=params.data if params is not None else None) as resp:
             return await self.validate_response(resp)
 
     @staticmethod
-    async def validate_response(response: aiohttp.client_reqrep.ClientResponse) -> aiohttp.client_reqrep.ClientResponse:
+    async def validate_response(response: ClientResponse) -> ClientResponse:
         if response.status == 404:
             missing_response_text: str = await response.text()
             raise AsyncClientNotFoundException(f'<AC> not found: {response.status} - {missing_response_text}', response.status)
