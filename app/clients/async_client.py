@@ -1,6 +1,8 @@
-from typing import Dict
+from typing import Dict, Union, Tuple, Optional
 
 import aiohttp
+
+PayloadType = Union[Dict[str, Union[bool, str]], Tuple[Union[str, bool], ...]]
 
 
 class AsyncClientException(Exception):
@@ -10,7 +12,7 @@ class AsyncClientException(Exception):
         self.message = message
         self.status = status
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"<AsyncClientException> message: {self.message}, status: {self.status}"
 
 
@@ -19,15 +21,15 @@ class AsyncClientNotFoundException(AsyncClientException):
 
 
 class Payload:
-    def __init__(self, data) -> None:
-        self.data = data
+    def __init__(self, data: PayloadType) -> None:
+        self.data: PayloadType = data
 
     @staticmethod
-    def from_args(*args):
+    def from_args(*args: Union[str, bool]) -> 'Payload':
         return Payload(args)
 
     @staticmethod
-    def from_kwargs(**kwargs):
+    def from_kwargs(**kwargs: Union[bool, str]) -> 'Payload':
         return Payload(kwargs)
 
 
@@ -64,7 +66,7 @@ class AsyncClient:
 
     async def get(self,
                   route: str,
-                  params: Payload=None) -> aiohttp.client_reqrep.ClientResponse:
+                  params: Optional[Payload]=None) -> aiohttp.client_reqrep.ClientResponse:
         async with self.session.get(self.build_url(route), params=params.data if params is not None else None) as resp:
             return await self.validate_response(resp)
 

@@ -16,6 +16,7 @@ pytest-cov = "*"
 mockito = "*"
 pytest-mockito = "*"
 mypy = "*"
+lxml = "*"
 
 
 [dev-packages]
