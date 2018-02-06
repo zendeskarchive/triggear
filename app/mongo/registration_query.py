@@ -33,12 +33,6 @@ class RegistrationQuery:
             RegistrationFields.JOB: self.job_name
         }
 
-    def get_deregistration_query(self):
-        return {
-            RegistrationFields.JOB: self.job_name,
-            RegistrationFields.JENKINS_URL: self.jenkins_url
-        }
-
     def get_full_document(self) -> Dict[str, str]:
         return dict({
             RegistrationFields.LABELS: self.labels,
@@ -63,12 +57,4 @@ class RegistrationQuery:
             branch_restrictions=branch_restrictions if branch_restrictions is not None else [],
             change_restrictions=change_restrictions if change_restrictions is not None else [],
             file_restrictions=file_restrictions if file_restrictions is not None else []
-        )
-
-    @staticmethod
-    def from_deregistration_request_data(data: Dict):
-        return RegistrationQuery(
-            jenkins_url=data[data[DeregisterRequestData.job_name]],
-            job_name=data[DeregisterRequestData.job_name],
-            event_type=data[DeregisterRequestData.event_type]
         )

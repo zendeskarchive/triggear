@@ -8,7 +8,8 @@ from aiohttp import ClientResponse
 from app.clients.github_client import GithubClient
 from app.clients.mongo_client import MongoClient
 from app.enums.event_types import EventType
-from app.mongo.registration_fields import RegistrationFields
+from app.mongo.clear_query import ClearQuery
+from app.mongo.deregistration_query import DeregistrationQuery
 from app.mongo.registration_query import RegistrationQuery
 from app.request_schemes.clear_request_data import ClearRequestData
 from app.request_schemes.comment_request_data import CommentRequestData
@@ -33,16 +34,6 @@ class PipelineController:
     def get_github(self) -> GithubClient:
         return self.__gh_client
 
-    async def add_or_update_registration(self, registration_query: RegistrationQuery):
-        collection = self.__mongo_client.get_registrations(EventType.get_by_collection_name(name=registration_query.event_type))
-        found_doc = await collection.find_one(registration_query.get_registration_query())
-        if not found_doc:
-            result = await collection.insert_one(registration_query.get_full_document())
-            logging.info(f"Inserted document with ID {repr(result.inserted_id)}")
-        else:
-            result = await collection.replace_one(found_doc, registration_query.get_full_document())
-            logging.info(f"Updated {repr(result.matched_count)} documents")
-
     @handle_exceptions()
     @validate_auth_header()
     async def handle_register(self, request: aiohttp.web_request.Request) -> aiohttp.web.Response:
@@ -50,8 +41,39 @@ class PipelineController:
         logging.warning(f"Register REQ received: {data}")
         if not RegisterRequestData.is_valid_register_request_data(data):
             return aiohttp.web.Response(reason='Invalid register request params!', status=400)
-        await self.add_or_update_registration(RegistrationQuery.from_registration_request_data(data))
+        await self.__mongo_client.add_or_update_registration(RegistrationQuery.from_registration_request_data(data))
         return aiohttp.web.Response(text='Register ACK')
+
+    @handle_exceptions()
+    @validate_auth_header()
+    async def handle_missing(self, request: aiohttp.web_request.Request) -> aiohttp.web.Response:
+        event_type = request.match_info.get('eventType')
+        logging.warning(f"Missing REQ received for: {event_type}")
+        if event_type not in EventType.get_allowed_registration_event_types():
+            return aiohttp.web.Response(status=400, text='Invalid eventType requested')
+        return aiohttp.web.Response(text=','.join(await self.__mongo_client.get_missed_info(event_type)))
+
+    @handle_exceptions()
+    @validate_auth_header()
+    async def handle_deregister(self, request: aiohttp.web_request.Request) -> aiohttp.web.Response:
+        data: Dict = await request.json()
+        logging.warning(f"Deregister REQ received: {data}")
+        if not DeregisterRequestData.is_valid_deregister_request_data(data):
+            return aiohttp.web.Response(reason='Invalid deregister request params!', status=400)
+        await self.__mongo_client.deregister(DeregistrationQuery.from_deregistration_request_data(data))
+        return aiohttp.web.Response(text=f'Deregistration of {data[DeregisterRequestData.job_name]} '
+                                         f'for {data[DeregisterRequestData.event_type]} succeeded')
+
+    @handle_exceptions()
+    @validate_auth_header()
+    async def handle_clear(self, request: aiohttp.web_request.Request) -> aiohttp.web.Response:
+        data: Dict = await request.json()
+        logging.warning(f"Clear REQ received: {data}")
+        if not ClearRequestData.is_valid_clear_request_data(data):
+            return aiohttp.web.Response(reason='Invalid clear request params!', status=400)
+        clear_query = ClearQuery.from_clear_request_data(data)
+        await self.__mongo_client.clear(clear_query)
+        return aiohttp.web.Response(text=f'Clear of {clear_query.job_name} missed counter succeeded')
 
     @handle_exceptions()
     @validate_auth_header()
@@ -83,51 +105,6 @@ class PipelineController:
             body=data['jobName'] + "\nComments: " + data['body'],
         )
         return aiohttp.web.Response(text='Comment ACK')
-
-    @handle_exceptions()
-    @validate_auth_header()
-    async def handle_missing(self, request: aiohttp.web_request.Request) -> aiohttp.web.Response:
-        event_type = request.match_info.get('eventType')
-        if event_type not in EventType.get_allowed_registration_event_types():
-            return aiohttp.web.Response(status=400, text='Invalid eventType requested')
-        logging.warning(f"Missing REQ received for: {event_type}")
-
-        missed_registered_jobs = []
-        async for document in self.__mongo_client.get_missed_jobs(EventType.get_by_collection_name(name=event_type)):
-            missed_registered_jobs.append(f'{document[RegistrationFields.JENKINS_URL]}:{document[RegistrationFields.JOB]}'
-                                          f'#{document[RegistrationFields.MISSED_TIMES]}')
-
-        return aiohttp.web.Response(text=','.join(missed_registered_jobs))
-
-    @handle_exceptions()
-    @validate_auth_header()
-    async def handle_deregister(self, request: aiohttp.web_request.Request) -> aiohttp.web.Response:
-        data: Dict = await request.json()
-        logging.warning(f"Deregister REQ received: {data}")
-        if not DeregisterRequestData.is_valid_deregister_request_data(data):
-            return aiohttp.web.Response(reason='Invalid deregister request params!', status=400)
-        deregistration_query = RegistrationQuery.from_deregistration_request_data(data)
-        collection = self.__mongo_client.get_registrations(EventType.get_by_collection_name(name=deregistration_query.event_type))
-        await collection.delete_one(deregistration_query.get_deregistration_query())
-        await self.__mongo_client.log_deregistration(caller=data[DeregisterRequestData.caller],
-                                                     deregistration_query=deregistration_query)
-
-        return aiohttp.web.Response(text=f'Deregistration of {data[DeregisterRequestData.job_name]} '
-                                         f'for {data[DeregisterRequestData.event_type]} succeeded')
-
-    @handle_exceptions()
-    @validate_auth_header()
-    async def handle_clear(self, request: aiohttp.web_request.Request) -> aiohttp.web.Response:
-        data: Dict = await request.json()
-        logging.warning(f"Clear REQ received: {data}")
-        if not ClearRequestData.is_valid_clear_request_data(data):
-            return aiohttp.web.Response(reason='Invalid clear request params!', status=400)
-        collection = self.__mongo_client.registered[data[RegisterRequestData.event_type]]
-        collection.update_one({RegistrationFields.JOB: data[DeregisterRequestData.job_name],
-                               RegistrationFields.JENKINS_URL: data[DeregisterRequestData.jenkins_url]},
-                              {'$set': {RegistrationFields.MISSED_TIMES: 0}})
-
-        return aiohttp.web.Response(text=f'Clear of {data[DeregisterRequestData.job_name]} missed counter succeeded')
 
     @handle_exceptions()
     @validate_auth_header()
