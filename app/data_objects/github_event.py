@@ -2,7 +2,10 @@ from typing import Optional
 
 
 class GithubEvent:
-    def __init__(self, event_header: str, action: Optional[str], ref: Optional[str]):
+    def __init__(self,
+                 event_header: str,
+                 action: Optional[str],
+                 ref: Optional[str]) -> None:
         self.event_header = event_header
         self.action = action
         self.ref = ref

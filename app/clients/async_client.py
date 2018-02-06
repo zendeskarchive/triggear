@@ -4,7 +4,9 @@ import aiohttp
 
 
 class AsyncClientException(Exception):
-    def __init__(self, message: str, status: int):
+    def __init__(self,
+                 message: str,
+                 status: int) -> None:
         self.message = message
         self.status = status
 
@@ -17,7 +19,7 @@ class AsyncClientNotFoundException(AsyncClientException):
 
 
 class Payload:
-    def __init__(self, data):
+    def __init__(self, data) -> None:
         self.data = data
 
     @staticmethod
@@ -30,10 +32,12 @@ class Payload:
 
 
 class AsyncClient:
-    def __init__(self, base_url: str, session_headers: Dict[str, str]):
+    def __init__(self,
+                 base_url: str,
+                 session_headers: Dict[str, str]) -> None:
         self.base_url = base_url
         self.session_headers = session_headers
-        self.__session = None
+        self.__session: aiohttp.ClientSession = None
 
     @property
     def session(self) -> aiohttp.ClientSession:
@@ -67,10 +71,10 @@ class AsyncClient:
     @staticmethod
     async def validate_response(response: aiohttp.client_reqrep.ClientResponse) -> aiohttp.client_reqrep.ClientResponse:
         if response.status == 404:
-            response_text: str = await response.text()
-            raise AsyncClientNotFoundException(f'<AC> not found: {response.status} - {response_text}', response.status)
+            missing_response_text: str = await response.text()
+            raise AsyncClientNotFoundException(f'<AC> not found: {response.status} - {missing_response_text}', response.status)
         if response.status >= 400:
-            response_text: str = await response.text()
-            raise AsyncClientException(f'<AC> request failed: {response.status} - {response_text}', response.status)
+            error_response_text: str = await response.text()
+            raise AsyncClientException(f'<AC> request failed: {response.status} - {error_response_text}', response.status)
         else:
             return response

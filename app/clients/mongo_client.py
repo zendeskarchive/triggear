@@ -14,7 +14,7 @@ from app.mongo.registration_query import RegistrationQuery
 
 
 class MongoClient:
-    def __init__(self, mongo: motor.motor_asyncio.AsyncIOMotorClient):
+    def __init__(self, mongo: motor.motor_asyncio.AsyncIOMotorClient) -> None:
         self.__mongo = mongo
 
     def get_registrations(self, event_type: EventType):

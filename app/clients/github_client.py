@@ -10,7 +10,7 @@ from app.exceptions.triggear_timeout_error import TriggearTimeoutError
 
 
 class GithubClient:
-    def __init__(self, token: str):
+    def __init__(self, token: str) -> None:
         self.token: str = token
         self.__async_github = None
 

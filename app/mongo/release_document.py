@@ -5,7 +5,7 @@ from app.mongo.triggerable_document import TriggerableDocument
 
 
 class ReleaseDocument(TriggerableDocument):
-    def __init__(self, cursor: RegistrationCursor, github_client: GithubClient):
+    def __init__(self, cursor: RegistrationCursor, github_client: GithubClient) -> None:
         self.cursor = cursor
         self.github_client = github_client
 

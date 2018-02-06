@@ -20,7 +20,7 @@ class PushHookDetails(HookDetails):
                  repository: str,
                  branch: str,
                  sha: str,
-                 changes: Set[str]):
+                 changes: Set[str]) -> None:
         self.repository = repository
         self.branch = branch
         self.sha = sha

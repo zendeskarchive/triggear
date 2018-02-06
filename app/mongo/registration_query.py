@@ -15,7 +15,7 @@ class RegistrationQuery:
                  requested_params: Optional[List[str]]=None,
                  branch_restrictions: Optional[List[str]]=None,
                  change_restrictions: Optional[List[str]]=None,
-                 file_restrictions: Optional[List[str]]=None):
+                 file_restrictions: Optional[List[str]]=None) -> None:
         self.event_type: str = event_type
         self.jenkins_url: str = jenkins_url
         self.job_name: str = job_name

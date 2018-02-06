@@ -9,7 +9,7 @@ class JenkinsBuildState(Enum):
     ABORTED = ('failure', 'build aborted')
     ERROR = ('error', 'build error')
 
-    def __init__(self, state, description):
+    def __init__(self, state, description) -> None:
         self.state = state
         self.description = description
 

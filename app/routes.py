@@ -13,6 +13,6 @@ class Routes(Enum):
     DEPLOYMENT = ('/deployment', 'deployment')
     DEPLOYMENT_STATUS = ('/deployment_status', 'deployment_status')
 
-    def __init__(self, route: str, route_name: str):
+    def __init__(self, route: str, route_name: str) -> None:
         self.route: str = route
         self.route_id: str = route_name

@@ -40,7 +40,7 @@ authentication_policies = {
 class AuthenticationMiddleware:
     GITHUB_SIGNATURE_HEADER = 'X-Hub-Signature'
 
-    def __init__(self, config: TriggearConfig):
+    def __init__(self, config: TriggearConfig) -> None:
         self.config = config
 
     @cached_property

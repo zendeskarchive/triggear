@@ -9,7 +9,7 @@ class DeregistrationQuery:
                  jenkins_url: str,
                  job_name: str,
                  event_type: str,
-                 caller: str):
+                 caller: str) -> None:
         self.jenkins_url = jenkins_url
         self.job_name = job_name
         self.event_type = event_type

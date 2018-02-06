@@ -6,7 +6,7 @@ from app.utilities.functions import any_starts_with
 
 
 class PushDocument(TriggerableDocument):
-    def __init__(self, cursor: RegistrationCursor, github_client: GithubClient):
+    def __init__(self, cursor: RegistrationCursor, github_client: GithubClient) -> None:
         self.cursor = cursor
         self.github_client = github_client
 

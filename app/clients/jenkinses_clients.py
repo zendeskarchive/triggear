@@ -9,7 +9,7 @@ from app.exceptions.triggear_error import TriggearError
 
 
 class JenkinsesClients:
-    def __init__(self, config: TriggearConfig):
+    def __init__(self, config: TriggearConfig) -> None:
         self.config = config
         self.__jenkins_clients: Dict[str, JenkinsClient] = {}
 

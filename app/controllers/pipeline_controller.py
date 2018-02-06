@@ -24,7 +24,7 @@ class PipelineController:
     def __init__(self,
                  github_client: GithubClient,
                  mongo_client: MongoClient,
-                 api_token: str):
+                 api_token: str) -> None:
         self.__gh_client: GithubClient = github_client
         self.__mongo_client: MongoClient = mongo_client
         self.api_token: str = api_token

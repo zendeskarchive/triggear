@@ -20,7 +20,7 @@ class RegistrationCursor:
                f"file_restrictions {self.file_restrictions} " \
                f">"
 
-    def __init__(self, event_type: EventType, cursor: motor.motor_asyncio.AsyncIOMotorCursor):
+    def __init__(self, event_type: EventType, cursor: motor.motor_asyncio.AsyncIOMotorCursor) -> None:
         self.event_type = event_type
         self.cursor = cursor
 

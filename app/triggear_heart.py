@@ -17,7 +17,7 @@ class TriggearHeart:
     def __init__(self,
                  mongo_client: MongoClient,
                  github_client: GithubClient,
-                 jenkinses_clients: JenkinsesClients):
+                 jenkinses_clients: JenkinsesClients) -> None:
         self.__mongo_client: MongoClient = mongo_client
         self.__github_client: GithubClient = github_client
         self.__jenkinses_clients: JenkinsesClients = jenkinses_clients

@@ -19,7 +19,7 @@ class ReleaseHookDetails(HookDetails):
                  repository: str,
                  tag: str,
                  release_target: str,
-                 is_prerelease: bool):
+                 is_prerelease: bool) -> None:
         self.repository = repository
         self.tag = tag
         self.release_target = release_target

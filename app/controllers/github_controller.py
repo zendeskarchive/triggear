@@ -26,7 +26,7 @@ class GithubController:
     def __init__(self,
                  config: TriggearConfig,
                  github_client: GithubClient,
-                 triggear_heart: TriggearHeart):
+                 triggear_heart: TriggearHeart) -> None:
         self.config = config
         self.__github_client = github_client
         self.__triggear_heart = triggear_heart

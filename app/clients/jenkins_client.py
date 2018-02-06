@@ -10,7 +10,7 @@ from app.clients.async_client import AsyncClient, AsyncClientException, Payload
 
 
 class JenkinsInstanceConfig:
-    def __init__(self, url, username, token):
+    def __init__(self, url, username, token) -> None:
         self.username: str = username
         self.token: str = token
         self.url = url
@@ -22,7 +22,7 @@ class JenkinsInstanceConfig:
 
 
 class JenkinsClient:
-    def __init__(self, instance_config: JenkinsInstanceConfig):
+    def __init__(self, instance_config: JenkinsInstanceConfig) -> None:
         self.config: JenkinsInstanceConfig = instance_config
         self.__async_jenkins: AsyncClient = None
         self.__crumb_header: str = None

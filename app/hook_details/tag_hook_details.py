@@ -17,7 +17,7 @@ class TagHookDetails(HookDetails):
     def __init__(self,
                  repository: str,
                  sha: str,
-                 tag: str):
+                 tag: str) -> None:
         self.repository = repository
         self.sha = sha
         self.tag = tag

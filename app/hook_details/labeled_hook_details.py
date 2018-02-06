@@ -19,7 +19,7 @@ class LabeledHookDetails(HookDetails):
                  repository: str,
                  branch: str,
                  sha: str,
-                 label: str):
+                 label: str) -> None:
         self.repository = repository
         self.branch = branch
         self.sha = sha

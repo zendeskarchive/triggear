@@ -17,7 +17,7 @@ class PrOpenedHookDetails(HookDetails):
     def __init__(self,
                  repository: str,
                  branch: str,
-                 sha: str):
+                 sha: str) -> None:
         self.repository = repository
         self.branch = branch
         self.sha = sha

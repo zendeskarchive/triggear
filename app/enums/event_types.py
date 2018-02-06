@@ -25,7 +25,7 @@ class EventType(Enum):
                  event_header: str,
                  action: str,
                  ref_prefix: str,
-                 collection_name: str):
+                 collection_name: str) -> None:
         self.event_header = event_header
         self.action = action
         self.ref_prefix = ref_prefix

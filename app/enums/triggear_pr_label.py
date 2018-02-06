@@ -5,7 +5,7 @@ class TriggearPrLabel(Enum):
     PR_SYNC = ('triggear-pr-sync', )
     LABEL_SYNC = ('triggear-label-sync', )
 
-    def __init__(self, label_name: str):
+    def __init__(self, label_name: str) -> None:
         self.label_name = label_name
 
     def __eq__(self, other):

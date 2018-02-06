@@ -7,7 +7,7 @@ from app.clients.jenkins_client import JenkinsInstanceConfig
 
 
 class TriggearConfig:
-    def __init__(self):
+    def __init__(self) -> None:
         self.jenkins_instances: Dict[str, JenkinsInstanceConfig] = {}
         self.github_token = None
         self.triggear_token = None
