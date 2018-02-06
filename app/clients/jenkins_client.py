@@ -86,7 +86,7 @@ class JenkinsClient:
     async def get_build_info_data(self,
                                   job_path: str,
                                   build_number: int,
-                                  timeout: int=30) -> Union[Dict, None]:
+                                  timeout: float=30.0) -> Union[Dict, None]:
         timeout = time.monotonic() + timeout
         while time.monotonic() < timeout:
             try:

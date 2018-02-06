@@ -1,10 +1,11 @@
-from typing import Dict, Set
+from typing import Dict, Set, Union
 
+from app.clients.github_client import GithubClient
 from app.enums.event_types import EventType
 from app.hook_details.hook_details import HookDetails
 from app.mongo.registration_cursor import RegistrationCursor
 from app.request_schemes.register_request_data import RegisterRequestData
-from app.utilities.functions import get_all_starting_with
+from app.utilities.functions import get_all_starting_with, any_starts_with
 
 
 class PushHookDetails(HookDetails):
@@ -26,11 +27,14 @@ class PushHookDetails(HookDetails):
         self.sha = sha
         self.changes = changes
 
-    def get_allowed_parameters(self) -> Dict[str, str]:
+    def get_changes_as_string(self) -> str:
+        return ','.join(self.changes)
+
+    def get_allowed_parameters(self) -> Dict[str, Union[str, bool]]:
         return {
             RegisterRequestData.RequestedParams.branch: self.branch,
             RegisterRequestData.RequestedParams.sha: self.sha,
-            RegisterRequestData.RequestedParams.changes: self.changes
+            RegisterRequestData.RequestedParams.changes: self.get_changes_as_string()
         }
 
     def get_query(self):
@@ -44,3 +48,14 @@ class PushHookDetails(HookDetails):
 
     def setup_final_param_values(self, registration_cursor: RegistrationCursor):
         self.changes = get_all_starting_with(self.changes, registration_cursor.change_restrictions)
+
+    async def should_trigger(self, cursor: RegistrationCursor, github_client: GithubClient) -> bool:
+        if cursor.change_restrictions and not any_starts_with(any_list=self.changes, starts_with_list=cursor.change_restrictions):
+            return False
+        elif cursor.branch_restrictions and self.branch not in cursor.branch_restrictions:
+            return False
+        elif cursor.file_restrictions and not await github_client.are_files_in_repo(self.repository,
+                                                                                    self.sha,
+                                                                                    cursor.file_restrictions):
+            return False
+        return True

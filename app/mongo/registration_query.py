@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 from app.mongo.registration_fields import RegistrationFields
 from app.request_schemes.deregister_request_data import DeregisterRequestData
@@ -33,7 +33,7 @@ class RegistrationQuery:
             RegistrationFields.JOB: self.job_name
         }
 
-    def get_full_document(self) -> Dict[str, str]:
+    def get_full_document(self) -> Dict[str, Union[str, List[str]]]:
         return dict({
             RegistrationFields.LABELS: self.labels,
             RegistrationFields.REQUESTED_PARAMS: self.requested_params,

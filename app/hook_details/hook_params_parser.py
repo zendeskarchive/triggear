@@ -1,4 +1,4 @@
-from typing import Optional, Dict
+from typing import Optional, Dict, Union
 
 from app.hook_details.hook_details import HookDetails
 from app.mongo.registration_cursor import RegistrationCursor
@@ -8,7 +8,7 @@ from app.utilities.functions import item_starting_with_from_list
 class HookParamsParser:
     @staticmethod
     def get_requested_parameters_values(hook_details: HookDetails,
-                                        registration_cursor: RegistrationCursor) -> Optional[Dict[str, str]]:
+                                        registration_cursor: RegistrationCursor) -> Dict[str, Union[str, bool]]:
         job_params = None
         if registration_cursor.requested_params:
             job_params = {}

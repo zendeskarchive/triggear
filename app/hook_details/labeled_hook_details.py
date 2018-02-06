@@ -1,5 +1,6 @@
-from typing import Dict
+from typing import Dict, Union
 
+from app.clients.github_client import GithubClient
 from app.enums.event_types import EventType
 from app.hook_details.hook_details import HookDetails
 from app.mongo.registration_cursor import RegistrationCursor
@@ -28,7 +29,7 @@ class LabeledHookDetails(HookDetails):
     def get_query(self):
         return dict(repository=self.repository, label=self.label)
 
-    def get_allowed_parameters(self) -> Dict[str, str]:
+    def get_allowed_parameters(self) -> Dict[str, Union[str, bool]]:
         return {
             RegisterRequestData.RequestedParams.branch: self.branch,
             RegisterRequestData.RequestedParams.sha: self.sha
@@ -42,3 +43,10 @@ class LabeledHookDetails(HookDetails):
 
     def setup_final_param_values(self, registration_cursor: RegistrationCursor):
         pass
+
+    async def should_trigger(self, cursor: RegistrationCursor, github_client: GithubClient) -> bool:
+        if cursor.file_restrictions and not await github_client.are_files_in_repo(self.repository,
+                                                                                  self.sha,
+                                                                                  cursor.file_restrictions):
+            return False
+        return True

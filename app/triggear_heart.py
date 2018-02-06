@@ -10,7 +10,6 @@ from app.mongo.registration_fields import RegistrationFields
 from app.hook_details.hook_details import HookDetails
 from app.hook_details.hook_params_parser import HookParamsParser
 from app.mongo.registration_cursor import RegistrationCursor
-from app.mongo.triggerable_document_factory import TriggerableDocumentFactory
 
 
 class TriggearHeart:
@@ -24,8 +23,7 @@ class TriggearHeart:
 
     async def trigger_registered_jobs(self, hook_details: HookDetails):
         async for registration_cursor in self.__mongo_client.get_registered_jobs(hook_details):
-            registration_document = TriggerableDocumentFactory.get_document(registration_cursor, self.__github_client)
-            if registration_document.should_be_triggered_by(hook_details):
+            if await hook_details.should_trigger(registration_cursor, self.__github_client):
                 try:
                     await self.__jenkinses_clients.get_jenkins(registration_cursor.jenkins_url)\
                         .get_jobs_next_build_number(registration_cursor.job_name)  # Raises if job does not exist on Jenkins

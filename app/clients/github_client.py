@@ -103,7 +103,7 @@ class GithubClient:
         retries = 3
         while retries:
             try:
-                await self.add_to_pr_labels(repo=repo, number=number, label=TriggearPrLabel.PR_SYNC)
+                await self.add_to_pr_labels(repo=repo, number=number, label=TriggearPrLabel.PR_SYNC.label_name)
                 return
             except AsyncClientException as gh_exception:
                 logging.exception(f'Exception when trying to set label on PR. Exception: {gh_exception}')
