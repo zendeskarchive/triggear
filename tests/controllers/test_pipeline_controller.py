@@ -1,4 +1,3 @@
-import datetime
 from typing import List, Dict
 
 import aiohttp.web
@@ -6,10 +5,9 @@ import aiohttp.web_request
 import pytest
 import motor.motor_asyncio
 from aiohttp import ClientResponse
-from mockito import mock, when, expect, captor
-from pymongo.results import UpdateResult, InsertOneResult
+from mockito import mock, when, expect
 
-from app.clients.async_client import AsyncClientException, AsyncClientNotFoundException
+from app.clients.async_client import AsyncClientNotFoundException
 from app.clients.github_client import GithubClient
 from app.clients.mongo_client import MongoClient
 from app.controllers.pipeline_controller import PipelineController
@@ -23,7 +21,7 @@ from app.request_schemes.deployment_status_request_data import DeploymentStatusR
 from app.request_schemes.deregister_request_data import DeregisterRequestData
 from app.request_schemes.register_request_data import RegisterRequestData
 from app.request_schemes.status_request_data import StatusRequestData
-from tests.async_mockito import async_value, async_iter
+from tests.async_mockito import async_value
 
 pytestmark = pytest.mark.asyncio
 

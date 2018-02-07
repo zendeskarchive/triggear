@@ -18,7 +18,7 @@ class AsyncClientException(Exception):
 
 
 class AsyncClientNotFoundException(AsyncClientException):
-    def __init__(self, message: str):
+    def __init__(self, message: str) -> None:
         super(AsyncClientNotFoundException, self).__init__(message, 404)
 
 
