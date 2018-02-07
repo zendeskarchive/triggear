@@ -228,10 +228,9 @@ class TestGithubClient:
 
     async def test__get_commit_sha1__returns_unchanged_sha__when_sha_len_is_40(self):
         github_client = GithubClient(mock())
-        response = mock(spec=ClientResponse, strict=True)
 
         sha_with_len_40 = '12312' * 8
-        expect(github_client, times=0).get_commit(repo='repo', sha=sha_with_len_40).thenReturn(async_value(response))
+        expect(github_client, times=0).get_commit(repo='repo', sha=sha_with_len_40)
 
         assert sha_with_len_40 == await github_client.get_commit_sha1('repo', sha_with_len_40)
 

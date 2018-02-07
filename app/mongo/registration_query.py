@@ -10,12 +10,12 @@ class RegistrationQuery:
                  event_type: str,
                  jenkins_url: str,
                  job_name: str,
-                 repository: Optional[str]=None,
-                 labels: Optional[List[str]]=None,
-                 requested_params: Optional[List[str]]=None,
-                 branch_restrictions: Optional[List[str]]=None,
-                 change_restrictions: Optional[List[str]]=None,
-                 file_restrictions: Optional[List[str]]=None) -> None:
+                 repository: str,
+                 labels: List[str],
+                 requested_params: List[str],
+                 branch_restrictions: List[str],
+                 change_restrictions: List[str],
+                 file_restrictions: List[str]) -> None:
         self.event_type: str = event_type
         self.jenkins_url: str = jenkins_url
         self.job_name: str = job_name
@@ -43,7 +43,7 @@ class RegistrationQuery:
         }, **self.get_registration_query())
 
     @staticmethod
-    def from_registration_request_data(data: Dict):
+    def from_registration_request_data(data: Dict) -> 'RegistrationQuery':
         branch_restrictions = data.get(RegisterRequestData.branch_restrictions)
         change_restrictions = data.get(RegisterRequestData.change_restrictions)
         file_restrictions = data.get(RegisterRequestData.file_restrictions)

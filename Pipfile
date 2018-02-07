@@ -9,14 +9,12 @@ name = "pypi"
 
 aiohttp = "*"
 motor = "*"
-pyyaml = "*"
+PyYAML = "*"
 pytest = "*"
 pytest-asyncio = "*"
 pytest-cov = "*"
 mockito = "*"
 pytest-mockito = "*"
-mypy = "*"
-lxml = "*"
 
 
 [dev-packages]

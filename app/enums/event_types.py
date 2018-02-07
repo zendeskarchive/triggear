@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from app.data_objects.github_event import GithubEvent
 from app.exceptions.triggear_error import TriggearError
@@ -32,7 +32,7 @@ class EventType(Enum):
         self.ref_prefix = ref_prefix
         self.collection_name = collection_name
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, GithubEvent):
             return self.action == other.action \
                    and self.event_header == other.event_header \

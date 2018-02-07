@@ -1,8 +1,9 @@
 from typing import Dict, Union, Tuple, Optional
 
-from aiohttp import ClientSession, ClientResponse
+import aiohttp
 
-PayloadType = Union[Dict[str, Union[bool, str]], Tuple[Union[str, bool], ...]]
+PayloadType = Union[Optional[Dict[str, Union[Optional[str], Optional[bool]]]],
+                    Optional[Tuple[Union[Optional[str], Optional[bool]], ...]]]
 
 
 class AsyncClientException(Exception):
@@ -29,7 +30,7 @@ class Payload:
         return Payload(args)
 
     @staticmethod
-    def from_kwargs(**kwargs: Union[bool, str]) -> 'Payload':
+    def from_kwargs(**kwargs: Union[Optional[bool], Optional[str]]) -> 'Payload':
         return Payload(kwargs)
 
 
@@ -39,15 +40,15 @@ class AsyncClient:
                  session_headers: Dict[str, str]) -> None:
         self.base_url = base_url
         self.session_headers = session_headers
-        self.__session: ClientSession = None
+        self.__session: aiohttp.ClientSession = None
 
     @property
-    def session(self) -> ClientSession:
+    def session(self) -> aiohttp.ClientSession:
         if self.__session is None or self.__session.closed:
-            self.__session = ClientSession(headers=self.session_headers)
+            self.__session = aiohttp.ClientSession(headers=self.session_headers)
         return self.__session
 
-    def build_url(self, route: str):
+    def build_url(self, route: str) -> str:
         if route.startswith('/'):
             return f'{self.base_url}{route}'
         else:
@@ -55,9 +56,9 @@ class AsyncClient:
 
     async def post(self,
                    route: str,
-                   payload: Payload=None,
-                   params: Payload=None,
-                   headers: Dict=None) -> ClientResponse:
+                   payload: Optional[Payload]=None,
+                   params: Optional[Payload]=None,
+                   headers: Optional[Dict]=None) -> aiohttp.ClientResponse:
         async with self.session.post(self.build_url(route),
                                      json=payload.data if payload else None,
                                      headers=headers,
@@ -66,12 +67,12 @@ class AsyncClient:
 
     async def get(self,
                   route: str,
-                  params: Optional[Payload]=None) -> ClientResponse:
+                  params: Optional[Payload]=None) -> aiohttp.ClientResponse:
         async with self.session.get(self.build_url(route), params=params.data if params is not None else None) as resp:
             return await self.validate_response(resp)
 
     @staticmethod
-    async def validate_response(response: ClientResponse) -> ClientResponse:
+    async def validate_response(response: aiohttp.ClientResponse) -> aiohttp.ClientResponse:
         if response.status == 404:
             missing_response_text: str = await response.text()
             raise AsyncClientNotFoundException(f'<AC> not found: {response.status} - {missing_response_text}', response.status)

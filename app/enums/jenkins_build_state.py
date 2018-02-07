@@ -9,9 +9,9 @@ class JenkinsBuildState(Enum):
     ABORTED = ('failure', 'build aborted')
     ERROR = ('error', 'build error')
 
-    def __init__(self, state, description) -> None:
-        self.state = state
-        self.description = description
+    def __init__(self, state: str, description: str) -> None:
+        self.state: str = state
+        self.description: str = description
 
     @staticmethod
     def get_by_build_info(build_info: Optional[Dict]) -> 'JenkinsBuildState':

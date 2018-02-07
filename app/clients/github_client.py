@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional
 
 from aiohttp import ClientResponse
 
@@ -12,11 +12,11 @@ from app.exceptions.triggear_timeout_error import TriggearTimeoutError
 class GithubClient:
     def __init__(self, token: str) -> None:
         self.token: str = token
-        self.__async_github = None
+        self.__async_github: Optional[AsyncClient] = None
 
-    def get_async_github(self):
+    def get_async_github(self) -> AsyncClient:
         if self.__async_github is None:
-            self.__async_github = AsyncClient(
+            self.__async_github: AsyncClient = AsyncClient(
                 base_url='https://api.github.com',
                 session_headers={
                     'Authorization': f'token {self.token}',
@@ -60,7 +60,7 @@ class GithubClient:
             return sha
         commit_response = await self.get_commit(repo=repo, sha=sha)
         commit_data = await commit_response.json()
-        return commit_data['sha']
+        return str(commit_data['sha'])
 
     async def get_repo_labels(self,
                               repo: str) -> List[str]:
@@ -80,18 +80,18 @@ class GithubClient:
                                     number: int) -> str:
         pr_response = await self.get_pull_request(repo=repo, number=number)
         pr_data = await pr_response.json()
-        return pr_data['head']['sha']
+        return str(pr_data['head']['sha'])
 
     async def get_pr_branch(self,
                             repo: str,
                             number: int) -> str:
         pr_response = await self.get_pull_request(repo=repo, number=number)
         pr_data = await pr_response.json()
-        return pr_data['head']['ref']
+        return str(pr_data['head']['ref'])
 
     async def set_sync_label(self,
                              repo: str,
-                             number: int):
+                             number: int) -> None:
         if TriggearPrLabel.PR_SYNC in await self.get_repo_labels(repo):
             logging.warning(f'Setting "triggear-pr-sync" label on PR {number} in repo {repo}')
             await self.set_pr_sync_label_with_retry(repo, number)
@@ -99,7 +99,7 @@ class GithubClient:
 
     async def set_pr_sync_label_with_retry(self,
                                            repo: str,
-                                           number: int):
+                                           number: int) -> None:
         retries = 3
         while retries:
             try:
@@ -114,7 +114,7 @@ class GithubClient:
     async def add_to_pr_labels(self,
                                repo: str,
                                number: int,
-                               label: str):
+                               label: str) -> ClientResponse:
         route = f'/repos/{repo}/issues/{number}/labels'
         payload = Payload.from_args(label)
         return await self.get_async_github().post(route=route, payload=payload)
@@ -163,8 +163,8 @@ class GithubClient:
 
     async def get_deployments(self,
                               repo: str,
-                              ref: str=None,
-                              environment: str=None) -> ClientResponse:
+                              ref: Optional[str]=None,
+                              environment: Optional[str]=None) -> ClientResponse:
         route = f'/repos/{repo}/deployments'
         params = Payload.from_kwargs(
             ref=ref,

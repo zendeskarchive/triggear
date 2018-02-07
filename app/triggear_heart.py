@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from typing import Optional, Dict, Union
 
 from app.clients.async_client import AsyncClientNotFoundException, AsyncClientException
 from app.clients.github_client import GithubClient
@@ -43,6 +44,7 @@ class TriggearHeart:
         job_params = HookParamsParser.get_requested_parameters_values(hook_details, registration_cursor)
         jenkins_client = self.__jenkinses_clients.get_jenkins(registration_cursor.jenkins_url)
         next_build_number = await jenkins_client.get_jobs_next_build_number(registration_cursor.job_name)
+        job_url: Optional[str] = await jenkins_client.get_job_url(registration_cursor.job_name)
         try:
             await jenkins_client.build_jenkins_job(registration_cursor.job_name, job_params)
             logging.warning(f"Scheduled build of: {registration_cursor.jenkins_url}:{registration_cursor.job_name} #{next_build_number}"
@@ -51,14 +53,7 @@ class TriggearHeart:
             logging.exception(f"Job {registration_cursor.jenkins_url}:{registration_cursor.job_name} did "
                               f"not accept {job_params} as parameters but it requested them")
 
-            await self.__github_client.create_github_build_status(repo=registration_cursor.repo,
-                                                                  sha=hook_details.get_ref(),
-                                                                  state="error",
-                                                                  url=await jenkins_client.get_job_url(registration_cursor.job_name),
-                                                                  description=f"Job {registration_cursor.jenkins_url}:{registration_cursor.job_name} "
-                                                                              f"did not accept requested parameters "
-                                                                              f"{job_params.keys() if job_params is not None else None}",
-                                                                  context=registration_cursor.job_name)
+            await self.report_unaccepted_parameters_to_github(hook_details, registration_cursor, job_url, next_build_number, job_params)
             return
 
         build_info = await jenkins_client.get_build_info_data(registration_cursor.job_name, next_build_number)
@@ -96,10 +91,40 @@ class TriggearHeart:
         else:
             logging.exception(f"Triggear was not able to find build number {next_build_number} for job "
                               f"{registration_cursor.jenkins_url}:{registration_cursor.job_name}. Task aborted.")
+            await self.report_not_found_build_to_github(hook_details, registration_cursor, job_url, next_build_number)
+
+    async def report_not_found_build_to_github(self,
+                                               hook_details: HookDetails,
+                                               registration_cursor: RegistrationCursor,
+                                               job_url: Optional[str],
+                                               next_build_number: int) -> None:
+        if job_url is not None:
             await self.__github_client.create_github_build_status(repo=registration_cursor.repo,
                                                                   sha=hook_details.get_ref(),
                                                                   state="error",
-                                                                  url=await jenkins_client.get_job_url(registration_cursor.job_name),
+                                                                  url=job_url,
                                                                   description=f"Triggear cant find build {registration_cursor.jenkins_url}"
                                                                               f":{registration_cursor.job_name} #{next_build_number}",
                                                                   context=registration_cursor.job_name)
+        else:
+            logging.error(f'Could not report error for job {registration_cursor.jenkins_url}:{registration_cursor.job_name} #{next_build_number}'
+                          f'as job URL is missing')
+
+    async def report_unaccepted_parameters_to_github(self,
+                                                     hook_details: HookDetails,
+                                                     registration_cursor: RegistrationCursor,
+                                                     job_url: Optional[str],
+                                                     next_build_number: int,
+                                                     job_params: Optional[Dict[str, Union[str, bool]]]) -> None:
+        if job_url is not None:
+            await self.__github_client.create_github_build_status(
+                repo=registration_cursor.repo,
+                sha=hook_details.get_ref(),
+                state="error",
+                url=job_url,
+                description=f"Job {registration_cursor.jenkins_url}:{registration_cursor.job_name} did not accept requested parameters "
+                            f"{job_params.keys() if job_params is not None else None}",
+                context=registration_cursor.job_name)
+        else:
+            logging.error(f'Could not report error for job {registration_cursor.jenkins_url}:{registration_cursor.job_name} #{next_build_number}'
+                          f'as job URL is missing')

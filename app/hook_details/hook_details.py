@@ -6,7 +6,7 @@ from app.mongo.registration_cursor import RegistrationCursor
 
 
 class HookDetails:
-    def __repr__(self):
+    def __repr__(self) -> str:
         raise NotImplementedError()
 
     def get_event_type(self) -> EventType:
@@ -21,7 +21,7 @@ class HookDetails:
     def get_ref(self) -> str:
         raise NotImplementedError()
 
-    def setup_final_param_values(self, registration_cursor: RegistrationCursor):
+    def setup_final_param_values(self, registration_cursor: RegistrationCursor) -> None:
         raise NotImplementedError()
 
     async def should_trigger(self, cursor: RegistrationCursor, github_client: GithubClient) -> bool:

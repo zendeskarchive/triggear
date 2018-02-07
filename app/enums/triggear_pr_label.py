@@ -8,7 +8,7 @@ class TriggearPrLabel(Enum):
     def __init__(self, label_name: str) -> None:
         self.label_name = label_name
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, str):
             return self.label_name == other
         elif isinstance(other, TriggearPrLabel):
