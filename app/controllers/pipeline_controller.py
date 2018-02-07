@@ -23,11 +23,9 @@ from app.request_schemes.status_request_data import StatusRequestData
 class PipelineController:
     def __init__(self,
                  github_client: GithubClient,
-                 mongo_client: MongoClient,
-                 api_token: str) -> None:
+                 mongo_client: MongoClient) -> None:
         self.__gh_client: GithubClient = github_client
         self.__mongo_client: MongoClient = mongo_client
-        self.api_token: str = api_token
 
     def get_github(self) -> GithubClient:
         return self.__gh_client

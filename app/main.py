@@ -27,12 +27,8 @@ def main() -> None:
     jenkinses_clients = JenkinsesClients(app_config)
     triggear_heart = TriggearHeart(mongo_client, gh_client, jenkinses_clients)
 
-    github_controller = GithubController(triggear_heart=triggear_heart,
-                                         github_client=gh_client,
-                                         config=app_config)
-    pipeline_controller = PipelineController(github_client=gh_client,
-                                             mongo_client=mongo_client,
-                                             api_token=app_config.triggear_token)
+    github_controller = GithubController(triggear_heart=triggear_heart, github_client=gh_client, config=app_config)
+    pipeline_controller = PipelineController(github_client=gh_client, mongo_client=mongo_client)
     health_controller = HealthController()
     authentication_middleware = AuthenticationMiddleware(config=app_config)
 

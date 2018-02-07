@@ -30,7 +30,7 @@ class TestPipelineController:
     API_TOKEN = 'token'
 
     async def test__when_invalid_token_is_sent_to_comment__should_return_401_response(self):
-        pipeline_controller = PipelineController(mock(), mock(), self.API_TOKEN)
+        pipeline_controller = PipelineController(mock(), mock())
 
         # given
         request = mock({'headers': {'Authorization': f'Invalid token'}}, spec=aiohttp.web_request.Request)
@@ -43,7 +43,7 @@ class TestPipelineController:
         assert response.body == b'Unauthorized'
 
     async def test__when_invalid_token_is_sent_to_status__should_return_401_response(self):
-        pipeline_controller = PipelineController(mock(), mock(), self.API_TOKEN)
+        pipeline_controller = PipelineController(mock(), mock())
 
         # given
         request = mock({'headers': {'Authorization': f'Invalid token'}}, spec=aiohttp.web_request.Request)
@@ -56,7 +56,7 @@ class TestPipelineController:
         assert response.body == b'Unauthorized'
 
     async def test__when_invalid_token_is_sent_to_register__should_return_401_response(self):
-        pipeline_controller = PipelineController(mock(), mock(), self.API_TOKEN)
+        pipeline_controller = PipelineController(mock(), mock())
 
         # given
         request = mock({'headers': {'Authorization': f'Invalid token'}}, spec=aiohttp.web_request.Request)
@@ -69,7 +69,7 @@ class TestPipelineController:
         assert response.body == b'Unauthorized'
 
     async def test__when_comment_request_data_is_invalid__should_return_400_response(self):
-        pipeline_controller = PipelineController(mock(), mock(), self.API_TOKEN)
+        pipeline_controller = PipelineController(mock(), mock())
 
         # given
         request = mock({'headers': {'Authorization': f'Token {self.API_TOKEN}'}}, spec=aiohttp.web_request.Request)
@@ -90,7 +90,7 @@ class TestPipelineController:
         request = mock({'headers': {'Authorization': f'Token {self.API_TOKEN}'}}, spec=aiohttp.web_request.Request)
         github_client = mock(spec=GithubClient)
 
-        pipeline_controller = PipelineController(github_client, mock(), self.API_TOKEN)
+        pipeline_controller = PipelineController(github_client, mock())
 
         # given
         when(request).json().thenReturn(async_value(proper_data))
@@ -105,7 +105,7 @@ class TestPipelineController:
         assert response.text == 'Comment ACK'
 
     async def test__when_status_request_data_is_not_valid__should_return_400_response(self):
-        pipeline_controller = PipelineController(mock(), mock(), self.API_TOKEN)
+        pipeline_controller = PipelineController(mock(), mock())
         request = mock({'headers': {'Authorization': f'Token {self.API_TOKEN}'}}, spec=aiohttp.web_request.Request, strict=True)
 
         # given
@@ -125,7 +125,7 @@ class TestPipelineController:
         request = mock({'headers': {'Authorization': f'Token {self.API_TOKEN}'}}, spec=aiohttp.web_request.Request, strict=True)
         github_client = mock(spec=GithubClient, strict=True)
 
-        pipeline_controller = PipelineController(github_client, mock(), self.API_TOKEN)
+        pipeline_controller = PipelineController(github_client, mock())
 
         # given
         when(request).json().thenReturn(async_value(proper_data))
@@ -152,7 +152,7 @@ class TestPipelineController:
         github_exception_data = 'PR not found'
 
         github_client: GithubClient = mock(spec=GithubClient, strict=True)
-        pipeline_controller = PipelineController(github_client, mock(), self.API_TOKEN)
+        pipeline_controller = PipelineController(github_client, mock())
 
         # given
         when(request).json().thenReturn(async_value(parameters))
@@ -178,7 +178,7 @@ class TestPipelineController:
         github_exception_data = 'Commit not found'
 
         github_client: GithubClient = mock(spec=GithubClient, strict=True)
-        pipeline_controller = PipelineController(github_client, mock(), self.API_TOKEN)
+        pipeline_controller = PipelineController(github_client, mock())
 
         # given
         when(request).json().thenReturn(async_value(parameters))
@@ -196,7 +196,7 @@ class TestPipelineController:
     async def test__when_registration_data_is_not_valid__should_return_400_response(self):
         request = mock({'headers': {'Authorization': f'Token {self.API_TOKEN}'}}, spec=aiohttp.web_request.Request, strict=True)
 
-        pipeline_controller = PipelineController(mock(), mock(), self.API_TOKEN)
+        pipeline_controller = PipelineController(mock(), mock())
 
         # given
         when(request).json().thenReturn(async_value({}))
@@ -214,7 +214,7 @@ class TestPipelineController:
                       'jobName': 'job', 'labels': ['label'], 'requested_params': ['branch']}
         request = mock({'headers': {'Authorization': f'Token {self.API_TOKEN}'}}, spec=aiohttp.web_request.Request, strict=True)
 
-        pipeline_controller = PipelineController(mock(), mock(), self.API_TOKEN)
+        pipeline_controller = PipelineController(mock(), mock())
 
         # given
         when(request).json().thenReturn(async_value(parameters))
@@ -244,7 +244,7 @@ class TestPipelineController:
         mongo_db = mock(spec=motor.motor_asyncio.AsyncIOMotorDatabase, strict=True)
         mongo_client = mock({'registered': {'pushed': mongo_db}}, spec=motor.motor_asyncio.AsyncIOMotorClient, strict=True)
 
-        pipeline_controller = PipelineController(mock(), mongo_client, self.API_TOKEN)
+        pipeline_controller = PipelineController(mock(), mongo_client)
 
         # given
         when(mongo_db).find_one({'jenkins_url': 'url', 'repository': 'repo', 'job': 'job'}).thenReturn(async_value(mongo_collection))
@@ -275,7 +275,7 @@ class TestPipelineController:
         mongo_db = mock(spec=motor.motor_asyncio.AsyncIOMotorDatabase, strict=True)
         mongo_client = mock({'registered': {'pushed': mongo_db}}, spec=motor.motor_asyncio.AsyncIOMotorClient, strict=True)
 
-        pipeline_controller = PipelineController(mock(), mongo_client, self.API_TOKEN)
+        pipeline_controller = PipelineController(mock(), mongo_client)
 
         # given
         when(mongo_db).find_one({'jenkins_url': 'url', 'repository': 'repo', 'job': 'job'}).thenReturn(async_value(None))
@@ -306,7 +306,7 @@ class TestPipelineController:
         mongo_db = mock(spec=motor.motor_asyncio.AsyncIOMotorDatabase, strict=True)
         mongo_client = mock({'registered': {'pushed': mongo_db}}, spec=motor.motor_asyncio.AsyncIOMotorClient, strict=True)
 
-        pipeline_controller = PipelineController(mock(), mongo_client, self.API_TOKEN)
+        pipeline_controller = PipelineController(mock(), mongo_client)
 
         # given
         when(mongo_db).find_one({'jenkins_url': 'url', 'repository': 'repo', 'job': 'job'}).thenReturn(async_value(None))
@@ -333,7 +333,7 @@ class TestPipelineController:
         )
 
     async def test__when_invalid_token_is_sent_to_missing__should_return_401_response(self):
-        pipeline_controller = PipelineController(mock(), mock(), self.API_TOKEN)
+        pipeline_controller = PipelineController(mock(), mock())
 
         # given
         request = mock({'headers': {'Authorization': f'Invalid token'}}, spec=aiohttp.web_request.Request)
@@ -349,7 +349,7 @@ class TestPipelineController:
         request = mock({'headers': {'Authorization': f'Token {self.API_TOKEN}'},
                         'match_info': {}}, spec=aiohttp.web_request.Request, strict=True)
 
-        pipeline_controller = PipelineController(mock(), mock(), self.API_TOKEN)
+        pipeline_controller = PipelineController(mock(), mock())
 
         result: aiohttp.web.Response = await pipeline_controller.handle_missing(request)
 
@@ -369,7 +369,7 @@ class TestPipelineController:
         mongo_client: motor.motor_asyncio.AsyncIOMotorClient = mock({'registered': {'labeled': labeled_collection, 'push': push_collection}},
                                                                     spec=motor.motor_asyncio.AsyncIOMotorClient, strict=True)
 
-        pipeline_controller = PipelineController(mock(), mongo_client, self.API_TOKEN)
+        pipeline_controller = PipelineController(mock(), mongo_client)
 
         expect(push_collection).find({RegistrationFields.MISSED_TIMES: {'$gt': 0}}).thenReturn(cursor)
         expect(labeled_collection, times=0).find({RegistrationFields.MISSED_TIMES: {'$gt': 0}})
@@ -383,7 +383,7 @@ class TestPipelineController:
             assert result.text == 'url:push_job_2#13,url:push_job_1#7'
 
     async def test__when_deregister_got_wrong_token__should_return_401(self):
-        pipeline_controller = PipelineController(mock(), mock(), self.API_TOKEN)
+        pipeline_controller = PipelineController(mock(), mock())
 
         # given
         request = mock({'headers': {'Authorization': f'Invalid token'}}, spec=aiohttp.web_request.Request)
@@ -398,7 +398,7 @@ class TestPipelineController:
     async def test__when_deregister_is_missing_parameters__should_return_400(self):
         request = mock({'headers': {'Authorization': f'Token {self.API_TOKEN}'}}, spec=aiohttp.web_request.Request, strict=True)
 
-        pipeline_controller = PipelineController(mock(), mock(), self.API_TOKEN)
+        pipeline_controller = PipelineController(mock(), mock())
 
         # given
         when(request).json().thenReturn(async_value({}))
@@ -422,7 +422,7 @@ class TestPipelineController:
                                                                      'deregistered': {'log': deregister_log_collection}},
                                                                     spec=motor.motor_asyncio.AsyncIOMotorClient, strict=True)
 
-        pipeline_controller = PipelineController(mock(), mongo_client, self.API_TOKEN)
+        pipeline_controller = PipelineController(mock(), mongo_client)
 
         # given
         when(request).json().thenReturn(async_value({'eventType': 'push', 'jobName': 'job', 'caller': 'del_job#7', 'jenkins_url': 'url'}))
@@ -446,7 +446,7 @@ class TestPipelineController:
         assert response.text == 'Deregistration of job for push succeeded'
 
     async def test__when_clear_got_wrong_token__should_return_401(self):
-        pipeline_controller = PipelineController(mock(), mock(), self.API_TOKEN)
+        pipeline_controller = PipelineController(mock(), mock())
 
         # given
         request = mock({'headers': {'Authorization': f'Invalid token'}}, spec=aiohttp.web_request.Request)
@@ -461,7 +461,7 @@ class TestPipelineController:
     async def test__when_clear_is_missing_parameters__should_return_400(self):
         request = mock({'headers': {'Authorization': f'Token {self.API_TOKEN}'}}, spec=aiohttp.web_request.Request, strict=True)
 
-        pipeline_controller = PipelineController(mock(), mock(), self.API_TOKEN)
+        pipeline_controller = PipelineController(mock(), mock())
 
         # given
         when(request).json().thenReturn(async_value({}))
@@ -483,7 +483,7 @@ class TestPipelineController:
                                                                                     'push': push_collection}},
                                                                     spec=motor.motor_asyncio.AsyncIOMotorClient, strict=True)
 
-        pipeline_controller = PipelineController(mock(), mongo_client, self.API_TOKEN)
+        pipeline_controller = PipelineController(mock(), mongo_client)
 
         # given
         when(request).json().thenReturn(async_value({'eventType': 'push', 'jobName': 'job', 'caller': 'del_job#7', 'jenkins_url': 'url'}))
@@ -498,7 +498,7 @@ class TestPipelineController:
         assert response.text == 'Clear of job missed counter succeeded'
 
     async def test__when_invalid_token_is_sent_to_deployment__should_return_401_response(self):
-        pipeline_controller = PipelineController(mock(), mock(), self.API_TOKEN)
+        pipeline_controller = PipelineController(mock(), mock())
 
         # given
         request = mock({'headers': {'Authorization': f'Invalid token'}}, spec=aiohttp.web_request.Request)
@@ -513,7 +513,7 @@ class TestPipelineController:
     async def test__when_invalid_data_is_sent_to_deployment__400_response_should_be_returned(self):
         request = mock({'headers': {'Authorization': f'Token {self.API_TOKEN}'}}, spec=aiohttp.web_request.Request, strict=True)
 
-        pipeline_controller = PipelineController(mock(), mock(), self.API_TOKEN)
+        pipeline_controller = PipelineController(mock(), mock())
 
         # given
         when(request).json().thenReturn(async_value({}))
@@ -530,7 +530,7 @@ class TestPipelineController:
         request = mock({'headers': {'Authorization': f'Token {self.API_TOKEN}'}}, spec=aiohttp.web_request.Request, strict=True)
         github_client: GithubClient = mock(spec=GithubClient, strict=True)
 
-        pipeline_controller = PipelineController(mock(), mock(), self.API_TOKEN)
+        pipeline_controller = PipelineController(mock(), mock())
 
         # given
         when(request).json().thenReturn(async_value({'repo': 'triggear',
@@ -552,7 +552,7 @@ class TestPipelineController:
         assert response.text == 'Deployment ACK'
 
     async def test__when_invalid_token_is_sent_to_deployment_status__should_return_401_response(self):
-        pipeline_controller = PipelineController(mock(), mock(), self.API_TOKEN)
+        pipeline_controller = PipelineController(mock(), mock())
 
         # given
         request = mock({'headers': {'Authorization': f'Invalid token'}}, spec=aiohttp.web_request.Request)
@@ -567,7 +567,7 @@ class TestPipelineController:
     async def test__when_invalid_data_is_sent_to_deployment_status__400_response_should_be_returned(self):
         request = mock({'headers': {'Authorization': f'Token {self.API_TOKEN}'}}, spec=aiohttp.web_request.Request, strict=True)
 
-        pipeline_controller = PipelineController(mock(), mock(), self.API_TOKEN)
+        pipeline_controller = PipelineController(mock(), mock())
 
         # given
         when(request).json().thenReturn(async_value({}))
@@ -585,7 +585,7 @@ class TestPipelineController:
         get_deployments_response = mock(spec=ClientResponse, strict=True)
         github_client: GithubClient = mock(spec=GithubClient, strict=True)
 
-        pipeline_controller = PipelineController(mock(), mock(), self.API_TOKEN)
+        pipeline_controller = PipelineController(mock(), mock())
 
         # given
         when(request).json().thenReturn(async_value({'repo': 'triggear',
@@ -650,7 +650,7 @@ class TestPipelineController:
         get_deployments_response = mock(spec=ClientResponse, strict=True)
         github_client: GithubClient = mock(spec=GithubClient, strict=True)
 
-        pipeline_controller = PipelineController(mock(), mock(), self.API_TOKEN)
+        pipeline_controller = PipelineController(mock(), mock())
 
         # given
         when(request).json().thenReturn(async_value({'repo': 'triggear',
