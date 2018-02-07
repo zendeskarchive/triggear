@@ -23,52 +23,6 @@ pytestmark = pytest.mark.asyncio
 
 @pytest.mark.usefixtures('unstub')
 class TestGithubController:
-    async def test__when_job_does_not_exist__it_should_have_missed_times_field_incremented(self):
-        hook_query = {'repository': 'repo'}
-        job_name = 'non-existing-job'
-        branch_name = 'branch'
-
-        cursor = mock(
-            spec=motor.motor_asyncio.AsyncIOMotorCommandCursor,
-            strict=True
-        )
-        collection = mock(
-            spec=motor.motor_asyncio.AsyncIOMotorCollection,
-            strict=True
-        )
-        mongo_client: motor.motor_asyncio.AsyncIOMotorClient = mock(
-            {'registered': {EventType.push: collection}},
-            spec=motor.motor_asyncio.AsyncIOMotorClient,
-            strict=True
-        )
-        hook_details = mock(
-            {'event_type': EventType.push, 'query': hook_query, 'branch': branch_name},
-            spec=HookDetails,
-            strict=True
-        )
-        jenkins_client: app.clients.jenkins_client.JenkinsClient = mock(
-            spec=app.clients.jenkins_client.JenkinsClient,
-            strict=True
-        )
-        github_controller = GithubController(github_client=mock(),
-                                             mongo_client=mongo_client,
-                                             config=mock())
-
-        # given
-        when(collection).find(hook_query).thenReturn(async_iter(cursor))
-        when(cursor).__getitem__('job').thenReturn(job_name)
-        when(cursor).__getitem__('requested_params').thenReturn(None)
-        when(cursor).__getitem__('jenkins_url').thenReturn('url')
-        when(cursor).get('branch_restrictions').thenReturn([])
-        when(cursor).get('change_restrictions').thenReturn([])
-        when(cursor).get('file_restrictions').thenReturn([])
-        when(github_controller).get_jenkins('url').thenReturn(jenkins_client)
-        when(jenkins_client).get_jobs_next_build_number(job_name).thenRaise(AsyncClientNotFoundException('not found', 404))
-        expect(collection).update_one({'job': job_name, **hook_query}, {'$inc': {'missed_times': 1}}).thenReturn(async_value(any))
-
-        # when
-        await github_controller.trigger_registered_jobs(hook_details)
-
     async def test__when_header_signature_is_not_provided__should_return_401_from_validation(self):
         github_controller = GithubController(github_client=mock(),
                                              mongo_client=mock(),

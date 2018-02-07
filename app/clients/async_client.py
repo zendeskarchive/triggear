@@ -18,7 +18,8 @@ class AsyncClientException(Exception):
 
 
 class AsyncClientNotFoundException(AsyncClientException):
-    pass
+    def __init__(self, message: str):
+        super(AsyncClientNotFoundException, self).__init__(message, 404)
 
 
 class Payload:
@@ -75,7 +76,7 @@ class AsyncClient:
     async def validate_response(response: aiohttp.ClientResponse) -> aiohttp.ClientResponse:
         if response.status == 404:
             missing_response_text: str = await response.text()
-            raise AsyncClientNotFoundException(f'<AC> not found: {response.status} - {missing_response_text}', response.status)
+            raise AsyncClientNotFoundException(f'<AC> not found: {response.status} - {missing_response_text}')
         if response.status >= 400:
             error_response_text: str = await response.text()
             raise AsyncClientException(f'<AC> request failed: {response.status} - {error_response_text}', response.status)
