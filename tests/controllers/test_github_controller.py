@@ -1,21 +1,14 @@
 import asyncio
 import logging
 
-import os
 import pytest
-import motor.motor_asyncio
 import aiohttp.web_request
 import aiohttp.web
 from mockito import mock, when, expect, captor
 
-import app.config.triggear_config
-import app.clients.jenkins_client
-from app.clients.async_client import AsyncClientException, AsyncClient
 from app.clients.github_client import GithubClient
 from app.controllers.github_controller import GithubController
 from app.data_objects.github_event import GithubEvent
-from app.enums.event_types import EventType
-from app.exceptions.triggear_error import TriggearError
 from app.hook_details.hook_details import HookDetails
 from app.hook_details.hook_details_factory import HookDetailsFactory
 from app.hook_details.labeled_hook_details import LabeledHookDetails
@@ -24,7 +17,7 @@ from app.hook_details.push_hook_details import PushHookDetails
 from app.hook_details.release_hook_details import ReleaseHookDetails
 from app.hook_details.tag_hook_details import TagHookDetails
 from app.triggear_heart import TriggearHeart
-from tests.async_mockito import async_iter, async_value
+from tests.async_mockito import async_value
 
 pytestmark = pytest.mark.asyncio
 
@@ -226,7 +219,8 @@ class TestGithubController:
         mock(logging)
 
         data = mock(strict=True)
-        hook_details: PushHookDetails = mock({'branch': 'master', 'sha': '0000000000000000000000000000000000000000'}, spec=PushHookDetails, strict=True)
+        hook_details: PushHookDetails = mock({'branch': 'master', 'sha': '0000000000000000000000000000000000000000'},
+                                             spec=PushHookDetails, strict=True)
         triggear_heart: TriggearHeart = mock(spec=TriggearHeart, strict=True)
         github_controller = GithubController(mock(), mock(), triggear_heart)
 
