@@ -49,3 +49,17 @@ class TestAuthenticationMiddleware:
         response: aiohttp.web.Response = await AuthenticationMiddleware(triggear_config).authentication(request, github_controller.handle_hook)
         assert response.status == 501
         assert response.text == 'Unsupported authentication method'
+
+    async def test__github__when_valid_signature_is_sent__should_return_value_from_handler(self):
+        triggear_config: TriggearConfig = mock({'triggear_token': 'api_token'}, spec=TriggearConfig, strict=True)
+        github_controller: GithubController = mock(spec=GithubController, strict=True)
+
+        request = mock({'path': '/github', 'headers': {'X-Hub-Signature': 'sha1=95f4e9f69093927bc664b433f7255486b698537c'}},
+                       spec=aiohttp.web_request.Request, strict=True)
+        response = mock(spec=aiohttp.web.Response, strict=True)
+
+        when(request).read().thenReturn(async_value(b"valid_data"))
+        expect(github_controller).handle_hook(request).thenReturn(async_value(response))
+
+        actual_response: aiohttp.web.Response = await AuthenticationMiddleware(triggear_config).authentication(request, github_controller.handle_hook)
+        assert response == actual_response

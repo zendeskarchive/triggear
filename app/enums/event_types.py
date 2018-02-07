@@ -34,9 +34,10 @@ class EventType(Enum):
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, GithubEvent):
-            return self.action == other.action \
+            result = self.action == other.action \
                    and self.event_header == other.event_header \
-                   and other.ref.startswith(self.ref_prefix) if other.ref is not None else self.ref_prefix == other.ref
+                   and (other.ref.startswith(self.ref_prefix) if other.ref is not None else self.ref_prefix == other.ref)
+            return result
         elif isinstance(other, EventType):
             return self.action == other.action \
                    and self.event_header == other.event_header \

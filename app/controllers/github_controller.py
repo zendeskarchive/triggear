@@ -33,22 +33,22 @@ class GithubController:
 
     async def handle_hook(self, request: aiohttp.web_request.Request) -> Optional[Response]:
         data = await request.json()
-        logging.warning(f"Hook received")
         github_event = GithubEvent(event_header=request.headers.get(self.GITHUB_EVENT_HEADER),
                                    action=data.get('action'),
                                    ref=data.get('ref'))
-        handler_task = await self.get_event_handler_task(data, github_event)
+        logging.warning(f"Hook received: {github_event}")
+        handler_task = self.get_event_handler_task(data, github_event)
         if handler_task is not None:
             asyncio.get_event_loop().create_task(handler_task)
         return aiohttp.web.Response(text='Hook ACK')
 
-    async def get_event_handler_task(self, data: Dict, github_event: GithubEvent) -> Optional[Awaitable]:
+    def get_event_handler_task(self, data: Dict, github_event: GithubEvent) -> Optional[Awaitable]:
         if github_event == EventType.PR_LABELED:
             return self.handle_labeled(data)
         elif github_event == EventType.SYNCHRONIZE:
             return self.handle_synchronize(data)
         elif github_event == EventType.ISSUE_COMMENT:
-            await self.handle_comment(data)
+            return self.handle_comment(data)
         elif github_event == EventType.PR_OPENED:
             return self.handle_pr_opened(data)
         elif github_event == EventType.PUSH:
@@ -64,7 +64,7 @@ class GithubController:
 
     async def handle_pr_opened(self, data: Dict) -> None:
         hook_details: PrOpenedHookDetails = HookDetailsFactory.get_pr_opened_details(data)
-        await self.__github_client.set_sync_label(hook_details.repository, number=data['pull_request']['number'])
+        await self.__github_client.set_sync_label(repo=hook_details.repository, number=data['pull_request']['number'])
         await self.__triggear_heart.trigger_registered_jobs(hook_details)
 
     async def handle_tagged(self, data: Dict) -> None:
