@@ -23,24 +23,6 @@ pytestmark = pytest.mark.asyncio
 
 @pytest.mark.usefixtures('unstub')
 class TestGithubController:
-    async def test__when_header_signature_is_not_provided__should_return_401_from_validation(self):
-        github_controller = GithubController(github_client=mock(),
-                                             mongo_client=mock(),
-                                             config=mock())
-
-        request = mock({'headers': {}}, spec=aiohttp.web_request.Request, strict=True)
-
-        assert await github_controller.validate_webhook_secret(request) == (401, 'Unauthorized')
-
-    async def test__when_auth_different_then_sha1_is_received__should_return_501(self):
-        github_controller = GithubController(github_client=mock(),
-                                             mongo_client=mock(),
-                                             config=mock())
-
-        request = mock({'headers': {'X-Hub-Signature': 'different=token'}}, spec=aiohttp.web_request.Request, strict=True)
-
-        assert await github_controller.validate_webhook_secret(request) == (501, "Only SHA1 auth supported")
-
     async def test__when_invalid_signature_is_sent__should_return_401_from_validation(self):
         triggear_config = mock({'triggear_token': 'api_token'}, spec=app.config.triggear_config.TriggearConfig, strict=True)
         github_controller = GithubController(github_client=mock(),
