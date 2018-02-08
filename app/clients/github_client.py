@@ -195,9 +195,9 @@ class GithubClient:
             return False
         return True
 
-    async def get_pr_comment_branch_and_sha(self, data: Dict) -> Tuple[str, str]:
-        repository_name = data['repository']['full_name']
-        pr_number = data['issue']['number']
+    async def get_pr_comment_branch_and_sha(self, issue_comment_hook_data: Dict) -> Tuple[str, str]:
+        repository_name = issue_comment_hook_data['repository']['full_name']
+        pr_number = issue_comment_hook_data['issue']['number']
         head_branch = await self.get_pr_branch(repository_name, pr_number)
         head_sha = await self.get_latest_commit_sha(repository_name, pr_number)
         return head_branch, head_sha
