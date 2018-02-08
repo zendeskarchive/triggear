@@ -5,10 +5,10 @@ def starts_with_item_from_list(string: str, list_of_strings: List[str]) -> bool:
     return any([string.startswith(restriction) for restriction in list_of_strings])
 
 
-def string_if_starts_with_item_from_list(string: str, set_of_strings: Set[str]) -> Optional[str]:
+def item_if_string_starts_with_item_from_list(string: str, set_of_strings: Set[str]) -> Optional[str]:
     for item in set_of_strings:
         if string.startswith(item):
-            return string
+            return item
     return None
 
 
