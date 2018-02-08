@@ -3,7 +3,6 @@ from typing import List, Dict
 import aiohttp.web
 import aiohttp.web_request
 import pytest
-import motor.motor_asyncio
 from aiohttp import ClientResponse
 from mockito import mock, when, expect
 
@@ -11,8 +10,8 @@ from app.clients.async_client import AsyncClientNotFoundException
 from app.clients.github_client import GithubClient
 from app.clients.mongo_client import MongoClient
 from app.controllers.pipeline_controller import PipelineController
+from app.mongo.clear_query import ClearQuery
 from app.mongo.deregistration_query import DeregistrationQuery
-from app.mongo.registration_fields import RegistrationFields
 from app.mongo.registration_query import RegistrationQuery
 from app.request_schemes.clear_request_data import ClearRequestData
 from app.request_schemes.comment_request_data import CommentRequestData
@@ -261,23 +260,21 @@ class TestPipelineController:
         assert response.status == 400
         assert response.reason == 'Invalid clear request params!'
 
-    # TODO: finished here
     async def test__when_clear_request_is_valid__should_set_missed_count_to_0(self):
+        mock(ClearQuery, strict=True)
+        mock(ClearRequestData, strict=True)
+
         request = mock(spec=aiohttp.web_request.Request, strict=True)
-
-        labeled_collection: motor.motor_asyncio.AsyncIOMotorCollection = mock(spec=motor.motor_asyncio.AsyncIOMotorCollection, strict=True)
-        push_collection: motor.motor_asyncio.AsyncIOMotorCollection = mock(spec=motor.motor_asyncio.AsyncIOMotorCollection, strict=True)
-        mongo_client: motor.motor_asyncio.AsyncIOMotorClient = mock({'registered': {'labeled': labeled_collection,
-                                                                                    'push': push_collection}},
-                                                                    spec=motor.motor_asyncio.AsyncIOMotorClient, strict=True)
-
+        clear_query = mock({'job_name': 'job'}, spec=ClearQuery, strict=True)
+        mongo_client: MongoClient = mock(spec=MongoClient, strict=True)
         pipeline_controller = PipelineController(mock(), mongo_client)
 
         # given
-        when(request).json().thenReturn(async_value({'eventType': 'push', 'jobName': 'job', 'caller': 'del_job#7', 'jenkins_url': 'url'}))
-        expect(push_collection).update_one({RegistrationFields.JOB: 'job', RegistrationFields.JENKINS_URL: 'url'}, {'$set': {'missed_times': 0}})
-        expect(labeled_collection, times=0).update_one({RegistrationFields.JOB: 'jobName', RegistrationFields.JENKINS_URL: 'url'},
-                                                       {'$set': {'missed_count': 0}})
+        data = mock(strict=True)
+        when(request).json().thenReturn(async_value(data))
+        when(ClearRequestData).is_valid_clear_request_data(data).thenReturn(True)
+        when(ClearQuery).from_clear_request_data(data).thenReturn(clear_query)
+        expect(mongo_client).clear(clear_query).thenReturn(async_value(None))
 
         # when
         response: aiohttp.web.Response = await pipeline_controller.handle_clear(request)
