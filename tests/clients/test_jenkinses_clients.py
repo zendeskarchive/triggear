@@ -10,6 +10,7 @@ from app.exceptions.triggear_error import TriggearError
 pytestmark = pytest.mark.asyncio
 
 
+@pytest.mark.usefixtures('unstub')
 class TestJenkinsesClients:
     async def test__when_jenkins_for_url_is_not_in_config__should_raise(self):
         triggear_config: TriggearConfig = mock({'jenkins_instances': {}}, spec=TriggearConfig, strict=True)
