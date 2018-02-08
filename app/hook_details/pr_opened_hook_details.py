@@ -26,7 +26,6 @@ class PrOpenedHookDetails(HookDetails):
     def get_query(self) -> Dict[str, str]:
         return dict(repository=self.repository)
 
-    @property
     def get_allowed_parameters(self) -> Dict[str, Union[str, bool]]:
         return {
             RegisterRequestData.RequestedParams.branch: self.branch,
