@@ -1,7 +1,8 @@
 import pytest
 
 from app.data_objects.github_event import GithubEvent
-from app.enums.event_types import EventType
+from app.enums.event_types import EventType, CollectionNames
+from app.exceptions.triggear_error import TriggearError
 
 pytestmark = pytest.mark.asyncio
 
@@ -27,3 +28,17 @@ class TestEventTypes:
     ])
     async def test__eq_operator__should_return_true_for_proper_github_events(self, event_type: EventType, github_event: GithubEvent):
         assert event_type == github_event
+
+    @pytest.mark.parametrize("name, expected_event", [
+        (CollectionNames.PUSH, EventType.PUSH),
+        (CollectionNames.TAGGED, EventType.TAGGED),
+        (CollectionNames.RELEASE, EventType.RELEASE),
+        (CollectionNames.LABELED, EventType.PR_LABELED),
+        (CollectionNames.OPENED, EventType.PR_OPENED)
+    ])
+    async def test__get_event_type_by_collection_name__returns_event_type__when_collection_name_is_valid(self, name: str, expected_event: EventType):
+        assert EventType.get_by_collection_name(name) == expected_event
+
+    async def test__get_event_type_by_collection_name__raises__when_collection_name_is_invalid(self):
+        with pytest.raises(TriggearError):
+            EventType.get_by_collection_name('invalid')

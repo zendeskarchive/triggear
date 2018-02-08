@@ -2,7 +2,7 @@ from typing import Optional, Dict, Union
 
 from app.hook_details.hook_details import HookDetails
 from app.mongo.registration_cursor import RegistrationCursor
-from app.utilities.functions import item_starting_with_from_list
+from app.utilities.functions import string_if_starts_with_item_from_list
 
 
 class HookParamsParser:
@@ -13,7 +13,7 @@ class HookParamsParser:
         if registration_cursor.requested_params:
             job_params = {}
             for param in registration_cursor.requested_params:
-                allowed_parameter = item_starting_with_from_list(param, set(hook_details.get_allowed_parameters().keys()))
+                allowed_parameter = string_if_starts_with_item_from_list(param, set(hook_details.get_allowed_parameters().keys()))
                 if allowed_parameter is not None:
                     requested_param_name = HookParamsParser._get_parsed_param_key(allowed_parameter, param)
                     job_params[requested_param_name] = hook_details.get_allowed_parameters()[allowed_parameter]

@@ -3,7 +3,7 @@ from typing import Dict
 
 import pytest
 import yaml
-from mockito import when
+from mockito import when, expect
 
 from app.config.triggear_config import TriggearConfig
 from app.clients.jenkins_client import JenkinsInstanceConfig
@@ -63,3 +63,16 @@ class TestTriggearConfig:
         assert second_instance.url == second_instance_url
         assert second_instance.username == "other_user"
         assert second_instance.token == "other_api_token"
+
+    async def test__when_properties_are_not_set__setter_is_called(self):
+        triggear_config = TriggearConfig()
+        expect(triggear_config).read_credentials_file().thenReturn(('gh_token', 'token', {}))
+        assert triggear_config.github_token == 'gh_token'
+
+        triggear_config = TriggearConfig()
+        expect(triggear_config).read_credentials_file().thenReturn(('token', 'triggear_token', {}))
+        assert triggear_config.jenkins_instances == {}
+
+        triggear_config = TriggearConfig()
+        expect(triggear_config).read_credentials_file().thenReturn(('token', 'triggear_token', {}))
+        assert triggear_config.triggear_token == 'triggear_token'
