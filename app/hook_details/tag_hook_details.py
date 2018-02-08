@@ -1,4 +1,4 @@
-from typing import Dict, Union, Collection
+from typing import Dict, Union
 
 from app.clients.github_client import GithubClient
 from app.enums.event_types import EventType
