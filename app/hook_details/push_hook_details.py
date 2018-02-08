@@ -10,10 +10,10 @@ from app.utilities.functions import get_all_starting_with, any_starts_with
 
 class PushHookDetails(HookDetails):
     def __repr__(self) -> str:
-        return f"<PrOpenedHookDetails " \
-               f"repository: {self.repository} " \
-               f"branch: {self.branch} " \
-               f"sha: {self.sha} " \
+        return f"<PushHookDetails " \
+               f"repository: {self.repository}, " \
+               f"branch: {self.branch}, " \
+               f"sha: {self.sha}, " \
                f"changes: {self.changes} " \
                f">"
 

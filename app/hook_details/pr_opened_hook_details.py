@@ -10,8 +10,8 @@ from app.request_schemes.register_request_data import RegisterRequestData
 class PrOpenedHookDetails(HookDetails):
     def __repr__(self) -> str:
         return f"<PrOpenedHookDetails " \
-               f"repository: {self.repository} " \
-               f"branch: {self.branch} " \
+               f"repository: {self.repository}, " \
+               f"branch: {self.branch}, " \
                f"sha: {self.sha} " \
                f">"
 

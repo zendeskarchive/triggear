@@ -3,7 +3,6 @@ from typing import List
 import pytest
 
 from app.enums.event_types import EventType
-from app.hook_details.hook_details import HookDetails
 from app.hook_details.hook_details_factory import HookDetailsFactory
 from app.hook_details.labeled_hook_details import LabeledHookDetails
 from app.hook_details.pr_opened_hook_details import PrOpenedHookDetails

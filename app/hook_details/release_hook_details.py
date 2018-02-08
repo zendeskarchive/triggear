@@ -9,10 +9,10 @@ from app.request_schemes.register_request_data import RegisterRequestData
 
 class ReleaseHookDetails(HookDetails):
     def __repr__(self) -> str:
-        return f"<PrOpenedHookDetails " \
-               f"repository: {self.repository} " \
-               f"tag: {self.tag} " \
-               f"release_target: {self.release_target} " \
+        return f"<ReleaseHookDetails " \
+               f"repository: {self.repository}, " \
+               f"tag: {self.tag}, " \
+               f"release_target: {self.release_target}, " \
                f"is_prerelease: {self.is_prerelease} " \
                f">"
 

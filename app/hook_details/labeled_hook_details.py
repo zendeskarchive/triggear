@@ -10,9 +10,9 @@ from app.request_schemes.register_request_data import RegisterRequestData
 class LabeledHookDetails(HookDetails):
     def __repr__(self) -> str:
         return f"<LabeledHookDetails " \
-               f"repository: {self.repository} " \
-               f"branch: {self.branch} " \
-               f"sha: {self.sha} " \
+               f"repository: {self.repository}, " \
+               f"branch: {self.branch}, " \
+               f"sha: {self.sha}, " \
                f"label: {self.label} " \
                f">"
 

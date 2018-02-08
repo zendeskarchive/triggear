@@ -9,9 +9,9 @@ from app.request_schemes.register_request_data import RegisterRequestData
 
 class TagHookDetails(HookDetails):
     def __repr__(self) -> str:
-        return f"<PrOpenedHookDetails " \
-               f"repository: {self.repository} " \
-               f"tag: {self.tag} " \
+        return f"<TagHookDetails " \
+               f"repository: {self.repository}, " \
+               f"tag: {self.tag}, " \
                f"sha: {self.sha} " \
                f">"
 
