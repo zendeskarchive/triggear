@@ -21,12 +21,12 @@ class MongoClient:
         return self.__mongo.registered[event_type.collection_name]
 
     async def get_registered_jobs(self, hook_details: HookDetails) -> AsyncGenerator[RegistrationCursor, None]:
-        collection = self.__mongo.get_registrations(hook_details.get_event_type())
+        collection = self.get_registrations(hook_details.get_event_type())
         async for cursor in collection.find(hook_details.get_query()):
             yield RegistrationCursor(cursor)
 
     async def increment_missed_counter(self, hook_details: HookDetails, registration_cursor: RegistrationCursor) -> None:
-        collection = self.__mongo.get_registrations(hook_details.get_event_type())
+        collection = self.get_registrations(hook_details.get_event_type())
         update_query = hook_details.get_query()
         update_query[RegistrationFields.JOB] = registration_cursor.job_name
         await collection.update_one(update_query, {'$inc': {RegistrationFields.MISSED_TIMES: 1}})
