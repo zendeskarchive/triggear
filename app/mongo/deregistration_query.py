@@ -24,7 +24,7 @@ class DeregistrationQuery:
     @staticmethod
     def from_deregistration_request_data(data: Dict) -> 'DeregistrationQuery':
         return DeregistrationQuery(
-            jenkins_url=data[data[DeregisterRequestData.job_name]],
+            jenkins_url=data[DeregisterRequestData.jenkins_url],
             job_name=data[DeregisterRequestData.job_name],
             event_type=data[DeregisterRequestData.event_type],
             caller=data[DeregisterRequestData.caller]
