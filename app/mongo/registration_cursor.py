@@ -8,20 +8,18 @@ from app.mongo.registration_fields import RegistrationFields
 
 class RegistrationCursor:
     def __repr__(self) -> str:
-        return f"<RegistrationCursor" \
-               f"event_type {self.event_type} " \
-               f"job_name {self.job_name} " \
-               f"repo {self.repo} " \
-               f"jenkins_url {self.jenkins_url} " \
-               f"labels {self.labels} " \
-               f"requested_params {self.requested_params} " \
-               f"change_restrictions {self.change_restrictions} " \
-               f"branch_restrictions {self.branch_restrictions} " \
-               f"file_restrictions {self.file_restrictions} " \
+        return f"<RegistrationCursor " \
+               f"job_name: {self.job_name}, " \
+               f"repo: {self.repo}, " \
+               f"jenkins_url: {self.jenkins_url}, " \
+               f"labels: {self.labels}, " \
+               f"requested_params: {self.requested_params}, " \
+               f"change_restrictions: {self.change_restrictions}, " \
+               f"branch_restrictions: {self.branch_restrictions}, " \
+               f"file_restrictions: {self.file_restrictions} " \
                f">"
 
-    def __init__(self, event_type: EventType, cursor: motor.motor_asyncio.AsyncIOMotorCursor) -> None:
-        self.event_type = event_type
+    def __init__(self, cursor: motor.motor_asyncio.AsyncIOMotorCursor) -> None:
         self.cursor = cursor
 
     @property

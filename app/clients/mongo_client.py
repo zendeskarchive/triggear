@@ -23,7 +23,7 @@ class MongoClient:
     async def get_registered_jobs(self, hook_details: HookDetails) -> AsyncGenerator[RegistrationCursor, None]:
         collection = self.__mongo.get_registrations(hook_details.get_event_type())
         async for cursor in collection.find(hook_details.get_query()):
-            yield RegistrationCursor(hook_details.get_event_type(), cursor)
+            yield RegistrationCursor(cursor)
 
     async def increment_missed_counter(self, hook_details: HookDetails, registration_cursor: RegistrationCursor) -> None:
         collection = self.__mongo.get_registrations(hook_details.get_event_type())
