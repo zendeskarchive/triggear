@@ -99,7 +99,7 @@ class TestGithubController:
         when(request).json().thenReturn(async_value({'action': 'action', 'ref': '123321'}))
         when(github_controller).get_event_handler_task({'action': 'action', 'ref': '123321'}, github_event_captor).thenReturn(event_handler)
 
-        expect(asyncio).get_event_loop().thenReturn(event_loop)
+        expect(asyncio).new_event_loop().thenReturn(event_loop)
         expect(event_loop).create_task(event_handler)
 
         await github_controller.handle_hook(request)
@@ -122,7 +122,7 @@ class TestGithubController:
         when(request).json().thenReturn(async_value({'action': 'action', 'ref': '123321'}))
         when(github_controller).get_event_handler_task({'action': 'action', 'ref': '123321'}, github_event_captor).thenReturn(None)
 
-        expect(asyncio, times=0).get_event_loop().thenReturn(event_loop)
+        expect(asyncio, times=0).new_event_loop().thenReturn(event_loop)
 
         await github_controller.handle_hook(request)
 
