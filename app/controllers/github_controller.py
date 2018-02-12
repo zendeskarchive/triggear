@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Dict, Awaitable, List
+from typing import Dict, Awaitable, List, Tuple
 from typing import Optional
 
 import aiohttp.web
@@ -39,7 +39,7 @@ class GithubController:
         logging.warning(f"Hook received: {github_event}")
         handler_task = self.get_event_handler_task(data, github_event)
         if handler_task is not None:
-            asyncio.new_event_loop().create_task(handler_task)
+            asyncio.get_event_loop().create_task(handler_task)
         return aiohttp.web.Response(text='Hook ACK')
 
     def get_event_handler_task(self, data: Dict, github_event: GithubEvent) -> Optional[Awaitable]:
