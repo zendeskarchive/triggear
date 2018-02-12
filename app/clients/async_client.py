@@ -59,18 +59,22 @@ class AsyncClient:
                    route: str,
                    payload: Optional[Payload]=None,
                    params: Optional[Payload]=None,
-                   headers: Optional[Dict]=None) -> aiohttp.ClientResponse:
+                   headers: Optional[Dict]=None) -> Dict:
         async with self.session.post(self.build_url(route),
                                      json=payload.data if payload else None,
                                      headers=headers,
                                      params=params.data if params else None) as resp:
-            return await self.validate_response(resp)
+            valid_response: aiohttp.ClientResponse = await self.validate_response(resp)
+            response_data: Dict = await valid_response.json()
+            return response_data
 
     async def get(self,
                   route: str,
-                  params: Optional[Payload]=None) -> aiohttp.ClientResponse:
+                  params: Optional[Payload]=None) -> Dict:
         async with self.session.get(self.build_url(route), params=params.data if params is not None else None) as resp:
-            return await self.validate_response(resp)
+            valid_response: aiohttp.ClientResponse = await self.validate_response(resp)
+            response_data: Dict = await valid_response.json()
+            return response_data
 
     @staticmethod
     async def validate_response(response: aiohttp.ClientResponse) -> aiohttp.ClientResponse:

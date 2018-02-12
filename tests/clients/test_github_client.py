@@ -66,12 +66,10 @@ class TestGithubClient:
     async def test__when_get_repo_labels_is_called__only_label_names_are_returned(self):
         async_github: AsyncClient = mock(spec=AsyncClient, strict=True)
         github_client = GithubClient(mock())
-        response = mock(spec=ClientResponse, strict=True)
 
         # given
         when(github_client).get_async_github().thenReturn(async_github)
-        expect(async_github).get(route='/repos/repo/labels').thenReturn(async_value(response))
-        expect(response).json().thenReturn(async_value([{'name': 'label'}, {'name': 'other_label'}]))
+        expect(async_github).get(route='/repos/repo/labels').thenReturn(async_value([{'name': 'label'}, {'name': 'other_label'}]))
 
         # when
         result: List[str] = await github_client.get_repo_labels('repo')
@@ -92,10 +90,8 @@ class TestGithubClient:
     async def test__get_pr_labels__should_return_only_label_names(self):
         labels = {'labels': [{'name': 'label'}, {'name': 'other_label'}]}
         github_client = GithubClient(mock())
-        response = mock(spec=ClientResponse, strict=True)
 
-        expect(github_client).get_issue(repo='repo', number=25).thenReturn(async_value(response))
-        expect(response).json().thenReturn(async_value(labels))
+        expect(github_client).get_issue(repo='repo', number=25).thenReturn(async_value(labels))
 
         labels: List[str] = await github_client.get_pr_labels('repo', 25)
 
@@ -103,10 +99,8 @@ class TestGithubClient:
 
     async def test__get_latest_commit_sha__should_call_proper_github_entities(self):
         github_client = GithubClient(mock())
-        response = mock(spec=ClientResponse, strict=True)
 
-        expect(github_client).get_pull_request(repo='triggear', number=32).thenReturn(async_value(response))
-        expect(response).json().thenReturn(async_value({'head': {'sha': '123zxc'}}))
+        expect(github_client).get_pull_request(repo='triggear', number=32).thenReturn(async_value({'head': {'sha': '123zxc'}}))
 
         sha: str = await github_client.get_latest_commit_sha('triggear', 32)
 
@@ -114,10 +108,8 @@ class TestGithubClient:
 
     async def test__get_pr_branch__should_call_proper_github_entities(self):
         github_client = GithubClient(mock())
-        response = mock(spec=ClientResponse, strict=True)
 
-        expect(github_client).get_pull_request(repo='triggear', number=32).thenReturn(async_value(response))
-        expect(response).json().thenReturn(async_value({'head': {'ref': 'release'}}))
+        expect(github_client).get_pull_request(repo='triggear', number=32).thenReturn(async_value({'head': {'ref': 'release'}}))
 
         sha: str = await github_client.get_pr_branch('triggear', 32)
 
@@ -126,18 +118,17 @@ class TestGithubClient:
     async def test__get_file_content__should_call_proper_github_entities(self):
         async_github: AsyncClient = mock(spec=AsyncClient, strict=True)
         github_client = GithubClient(mock())
-        response = mock(spec=ClientResponse, strict=True)
 
         # given
         when(github_client).get_async_github().thenReturn(async_github)
         arg_captor = captor()
         expect(async_github)\
             .get(route='/repos/triggear/contents/dir/file', params=arg_captor)\
-            .thenReturn(async_value(response))
+            .thenReturn(async_value('content'))
 
-        actual_response: ClientResponse = await github_client.get_file_content('triggear', '123zxc', 'dir/file')
+        actual_response = await github_client.get_file_content('triggear', '123zxc', 'dir/file')
 
-        assert actual_response == response
+        assert actual_response == 'content'
         payload: Payload = arg_captor.value
         assert isinstance(payload, Payload)
         assert payload.data.get('ref') == '123zxc'
@@ -184,45 +175,37 @@ class TestGithubClient:
     async def test__get_issue__calls_github_endpoint_properly(self):
         async_github: AsyncClient = mock(spec=AsyncClient, strict=True)
         github_client = GithubClient(mock())
-        response = mock(spec=ClientResponse, strict=True)
 
         when(github_client).get_async_github().thenReturn(async_github)
-        expect(async_github).get(route='/repos/repo/issues/23').thenReturn(async_value(response))
-        expect(response, times=0).json()
+        expect(async_github).get(route='/repos/repo/issues/23').thenReturn(async_value({}))
 
         actual_response = await github_client.get_issue('repo', 23)
-        assert actual_response == response
+        assert actual_response == {}
 
     async def test__get_pull_request__calls_github_endpoint_properly(self):
         async_github: AsyncClient = mock(spec=AsyncClient, strict=True)
         github_client = GithubClient(mock())
-        response = mock(spec=ClientResponse, strict=True)
 
         when(github_client).get_async_github().thenReturn(async_github)
-        expect(async_github).get(route='/repos/repo/pulls/23').thenReturn(async_value(response))
-        expect(response, times=0).json()
+        expect(async_github).get(route='/repos/repo/pulls/23').thenReturn(async_value({}))
 
         actual_response = await github_client.get_pull_request('repo', 23)
-        assert actual_response == response
+        assert actual_response == {}
 
     async def test__get_commit__calls_github_endpoint_properly(self):
         async_github: AsyncClient = mock(spec=AsyncClient, strict=True)
         github_client = GithubClient(mock())
-        response = mock(spec=ClientResponse, strict=True)
 
         when(github_client).get_async_github().thenReturn(async_github)
-        expect(async_github).get(route='/repos/repo/commits/123123').thenReturn(async_value(response))
-        expect(response, times=0).json()
+        expect(async_github).get(route='/repos/repo/commits/123123').thenReturn(async_value({}))
 
         actual_response = await github_client.get_commit('repo', '123123')
-        assert actual_response == response
+        assert actual_response == {}
 
     async def test__get_commit_sha1__calls_github_endpoint_properly__when_sha_len_is_not_40(self):
         github_client = GithubClient(mock())
-        response = mock(spec=ClientResponse, strict=True)
 
-        expect(github_client).get_commit(repo='repo', sha='123123').thenReturn(async_value(response))
-        expect(response).json().thenReturn(async_value({'sha': '123123123123'}))
+        expect(github_client).get_commit(repo='repo', sha='123123').thenReturn(async_value({'sha': '123123123123'}))
 
         assert '123123123123' == await github_client.get_commit_sha1('repo', '123123')
 
@@ -237,15 +220,13 @@ class TestGithubClient:
     async def test__add_to_pr_labels__calls_github_endpoint_properly(self):
         async_github: AsyncClient = mock(spec=AsyncClient, strict=True)
         github_client = GithubClient(mock())
-        response = mock(spec=ClientResponse, strict=True)
 
         when(github_client).get_async_github().thenReturn(async_github)
         arg_captor = captor()
-        expect(async_github).post(route='/repos/repo/issues/23/labels', payload=arg_captor).thenReturn(async_value(response))
-        expect(response, times=0).json()
+        expect(async_github).post(route='/repos/repo/issues/23/labels', payload=arg_captor).thenReturn(async_value({}))
 
         actual_response = await github_client.add_to_pr_labels('repo', 23, 'some-label')
-        assert actual_response == response
+        assert actual_response == {}
         assert isinstance(arg_captor.value, Payload)
         assert arg_captor.value.data == ('some-label',)
 
@@ -272,15 +253,13 @@ class TestGithubClient:
     async def test__get_deployment__calls_github_endpoint_properly(self):
         async_github: AsyncClient = mock(spec=AsyncClient, strict=True)
         github_client = GithubClient(mock())
-        response = mock(spec=ClientResponse, strict=True)
 
         when(github_client).get_async_github().thenReturn(async_github)
         arg_captor = captor()
-        expect(async_github).get(route='/repos/repo/deployments', params=arg_captor).thenReturn(async_value(response))
-        expect(response, times=0).json()
+        expect(async_github).get(route='/repos/repo/deployments', params=arg_captor).thenReturn(async_value({}))
 
         actual_response = await github_client.get_deployments('repo', '123123', 'staging')
-        assert actual_response == response
+        assert actual_response == {}
         params: Payload = arg_captor.value
         assert isinstance(params, Payload)
         assert params.data.get('ref') == '123123'

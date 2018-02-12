@@ -40,8 +40,7 @@ class JenkinsClient:
 
     async def set_crumb_header(self) -> None:
         route = 'crumbIssuer/api/json'
-        crumb_response = await self.get_async_jenkins().get(route=route)
-        crumb_data = await crumb_response.json()
+        crumb_data = await self.get_async_jenkins().get(route=route)
         self.__crumb_header = crumb_data['crumbRequestField']
         self.__crumb_value = crumb_data['crumb']
 

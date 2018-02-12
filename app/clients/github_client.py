@@ -2,8 +2,6 @@ import asyncio
 import logging
 from typing import List, Dict, Tuple, Optional
 
-from aiohttp import ClientResponse
-
 from app.clients.async_client import AsyncClient, Payload, AsyncClientException
 from app.enums.triggear_pr_label import TriggearPrLabel
 from app.exceptions.triggear_timeout_error import TriggearTimeoutError
@@ -27,26 +25,26 @@ class GithubClient:
 
     async def get_issue(self,
                         repo: str,
-                        number: int) -> ClientResponse:
+                        number: int) -> Dict:
         route = f'/repos/{repo}/issues/{number}'
         return await self.get_async_github().get(route=route)
 
     async def get_pull_request(self,
                                repo: str,
-                               number: int) -> ClientResponse:
+                               number: int) -> Dict:
         route = f'/repos/{repo}/pulls/{number}'
         return await self.get_async_github().get(route=route)
 
     async def get_commit(self,
                          repo: str,
-                         sha: str) -> ClientResponse:
+                         sha: str) -> Dict:
         route = f'/repos/{repo}/commits/{sha}'
         return await self.get_async_github().get(route=route)
 
     async def get_file_content(self,
                                repo: str,
                                ref: str,
-                               path: str) -> ClientResponse:
+                               path: str) -> Dict:
         route = f'/repos/{repo}/contents/{path}'
         params = Payload.from_kwargs(
             ref=ref
@@ -58,35 +56,31 @@ class GithubClient:
                               sha: str) -> str:
         if len(sha) == 40:
             return sha
-        commit_response = await self.get_commit(repo=repo, sha=sha)
-        commit_data = await commit_response.json()
+        commit_data = await self.get_commit(repo=repo, sha=sha)
         return str(commit_data['sha'])
 
     async def get_repo_labels(self,
                               repo: str) -> List[str]:
         route = f'/repos/{repo}/labels'
-        labels_response = await self.get_async_github().get(route=route)
-        return [label['name'] for label in await labels_response.json()]
+        labels_data = await self.get_async_github().get(route=route)
+        return [label['name'] for label in labels_data]
 
     async def get_pr_labels(self,
                             repo: str,
                             number: int) -> List[str]:
-        issue_response = await self.get_issue(repo=repo, number=number)
-        issue_data = await issue_response.json()
+        issue_data = await self.get_issue(repo=repo, number=number)
         return [label['name'] for label in issue_data['labels']]
 
     async def get_latest_commit_sha(self,
                                     repo: str,
                                     number: int) -> str:
-        pr_response = await self.get_pull_request(repo=repo, number=number)
-        pr_data = await pr_response.json()
+        pr_data = await self.get_pull_request(repo=repo, number=number)
         return str(pr_data['head']['sha'])
 
     async def get_pr_branch(self,
                             repo: str,
                             number: int) -> str:
-        pr_response = await self.get_pull_request(repo=repo, number=number)
-        pr_data = await pr_response.json()
+        pr_data = await self.get_pull_request(repo=repo, number=number)
         return str(pr_data['head']['ref'])
 
     async def set_sync_label(self,
@@ -114,7 +108,7 @@ class GithubClient:
     async def add_to_pr_labels(self,
                                repo: str,
                                number: int,
-                               label: str) -> ClientResponse:
+                               label: str) -> Dict:
         route = f'/repos/{repo}/issues/{number}/labels'
         payload = Payload.from_args(label)
         return await self.get_async_github().post(route=route, payload=payload)
@@ -122,7 +116,7 @@ class GithubClient:
     async def create_comment(self,
                              repo: str,
                              sha: str,
-                             body: str) -> ClientResponse:
+                             body: str) -> Dict:
         sha1 = await self.get_commit_sha1(repo=repo, sha=sha)
         route = f'/repos/{repo}/commits/{sha1}/comments'
         payload = Payload.from_kwargs(
@@ -136,7 +130,7 @@ class GithubClient:
                                          state: str,
                                          url: str,
                                          description: str,
-                                         context: str) -> ClientResponse:
+                                         context: str) -> Dict:
         sha1 = await self.get_commit_sha1(repo=repo, sha=sha)
         route = f'/repos/{repo}/statuses/{sha1}'
         payload = Payload.from_kwargs(
@@ -151,7 +145,7 @@ class GithubClient:
                                 repo: str,
                                 ref: str,
                                 environment: str,
-                                description: str) -> ClientResponse:
+                                description: str) -> Dict:
         route = f'/repos/{repo}/deployments'
         payload = Payload.from_kwargs(
             ref=ref,
@@ -164,7 +158,7 @@ class GithubClient:
     async def get_deployments(self,
                               repo: str,
                               ref: Optional[str]=None,
-                              environment: Optional[str]=None) -> ClientResponse:
+                              environment: Optional[str]=None) -> Dict:
         route = f'/repos/{repo}/deployments'
         params = Payload.from_kwargs(
             ref=ref,
@@ -177,7 +171,7 @@ class GithubClient:
                                        deployment_id: int,
                                        state: str,
                                        target_url: str,
-                                       description: str='') -> ClientResponse:
+                                       description: str='') -> Dict:
         route = f'/repos/{repo}/deployments/{deployment_id}/statuses'
         payload = Payload.from_kwargs(
             state=state,

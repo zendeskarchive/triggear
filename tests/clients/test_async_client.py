@@ -46,8 +46,9 @@ class TestAsyncClient:
         expect(response).__aexit__(None, None, None).thenReturn(async_value(None))
         expect(session).post('http://example.com/subpage', json=payload.data, headers=None, params=None).thenReturn(response)
         expect(async_client).validate_response(response).thenReturn(async_value(response))
+        expect(response).json().thenReturn(async_value({}))
 
-        assert await async_client.post('subpage', payload) == response
+        assert await async_client.post('subpage', payload) == {}
 
     @pytest.mark.parametrize("params, params_data", [
         (Payload.from_args('label'), ('label',)),
@@ -56,15 +57,16 @@ class TestAsyncClient:
     async def test__get__should_be_executed_on_session__and_have_response_validated(self, params: Payload, params_data: Union[None, List[str]]):
         async_client = AsyncClient('http://example.com', {'Authorization': 'token dummy'})
         response = mock(spec=aiohttp.ClientResponse, strict=True)
-        session: aiohttp.ClientSession = mock({'closed': False}, spec=aiohttp.ClientSession, strict=True)
+        session: aiohttp.ClientSession = mock({'closed': False}, spec=aiohttp.ClientSession)
 
         expect(aiohttp, times=1).ClientSession(headers={'Authorization': 'token dummy'}).thenReturn(session)
         expect(response).__aenter__().thenReturn(async_value(response))
         expect(response).__aexit__(None, None, None).thenReturn(async_value(None))
+        expect(response).json().thenReturn(async_value({}))
         expect(session).get('http://example.com/subpage', params=params_data).thenReturn(response)
         expect(async_client).validate_response(response).thenReturn(async_value(response))
 
-        assert await async_client.get('subpage', params) == response
+        assert await async_client.get('subpage', params) == {}
 
     async def test__validate_response__raises_not_found__for_status_404(self):
         response: aiohttp.ClientResponse = mock({'status': 404}, spec=aiohttp.ClientResponse, strict=True)

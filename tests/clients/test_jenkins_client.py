@@ -179,11 +179,10 @@ class TestJenkinsClient:
         jenkins_client = JenkinsClient(mock())
 
         async_client: AsyncClient = mock(spec=AsyncClient, strict=True)
-        response: ClientResponse = mock(spec=ClientResponse, strict=True)
 
         expect(jenkins_client).get_async_jenkins().thenReturn(async_client)
-        expect(async_client).get(route='crumbIssuer/api/json').thenReturn(async_value(response))
-        expect(response).json().thenReturn(async_value({'crumbRequestField': 'Jenkins-Crumb', 'crumb': '123321456654'}))
+        expect(async_client).get(route='crumbIssuer/api/json')\
+            .thenReturn(async_value({'crumbRequestField': 'Jenkins-Crumb', 'crumb': '123321456654'}))
 
         await jenkins_client.set_crumb_header()
         assert {'Jenkins-Crumb': '123321456654'} == await jenkins_client.get_crumb_header()
