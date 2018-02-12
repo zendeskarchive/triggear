@@ -190,7 +190,7 @@ class TestJenkinsClient:
         expect(jenkins_client).get_async_jenkins().thenReturn(async_client)
         arg_captor = captor()
         expect(async_client)\
-            .post(route='job/triggear/job/tests/buildWithParameters', params=arg_captor, headers=None)\
+            .post(route='job/triggear/job/tests/buildWithParameters', params=arg_captor, headers=None, content_type='text/plain')\
             .thenReturn(async_value({}))
 
         assert {} == await jenkins_client._build_jenkins_job('triggear/tests', {'param': 'value'})

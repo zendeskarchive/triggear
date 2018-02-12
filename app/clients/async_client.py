@@ -59,14 +59,18 @@ class AsyncClient:
                    route: str,
                    payload: Optional[Payload]=None,
                    params: Optional[Payload]=None,
-                   headers: Optional[Dict]=None) -> Dict:
+                   headers: Optional[Dict]=None,
+                   content_type: str='application/json') -> Dict:
         async with self.session.post(self.build_url(route),
                                      json=payload.data if payload else None,
                                      headers=headers,
                                      params=params.data if params else None) as resp:
             valid_response: aiohttp.ClientResponse = await self.validate_response(resp)
-            response_data: Dict = await valid_response.json()
-            return response_data
+            try:
+                response_data: Dict = await valid_response.json(content_type=content_type)
+                return response_data
+            except aiohttp.ContentTypeError:
+                return {}
 
     async def get(self,
                   route: str,

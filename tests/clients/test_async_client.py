@@ -46,7 +46,7 @@ class TestAsyncClient:
         expect(response).__aexit__(None, None, None).thenReturn(async_value(None))
         expect(session).post('http://example.com/subpage', json=payload.data, headers=None, params=None).thenReturn(response)
         expect(async_client).validate_response(response).thenReturn(async_value(response))
-        expect(response).json().thenReturn(async_value({}))
+        expect(response).json(content_type='application/json').thenReturn(async_value({}))
 
         assert await async_client.post('subpage', payload) == {}
 

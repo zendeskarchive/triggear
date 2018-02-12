@@ -131,4 +131,5 @@ class JenkinsClient:
         route = f'{folder_url}job/{job_name}/buildWithParameters' if parameters else f'{folder_url}job/{job_name}/build'
         return await self.get_async_jenkins().post(route=route,
                                                    params=Payload(parameters),
-                                                   headers=await self.get_crumb_header())
+                                                   headers=await self.get_crumb_header(),
+                                                   content_type='text/plain')
