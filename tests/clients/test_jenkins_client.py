@@ -3,7 +3,6 @@ import asyncio
 import pytest
 import time
 
-from aiohttp import ClientResponse
 from mockito import mock, when, expect, captor
 
 from app.clients.async_client import AsyncClientException, AsyncClient, Payload
@@ -21,11 +20,9 @@ class TestJenkinsClient:
     ])
     async def test__get_job_url__properly_calls_jenkins_client(self, job_info, expected_url):
         instance_config = JenkinsInstanceConfig('url', 'username', 'password')
-        response = mock(spec=ClientResponse, strict=True)
 
         tested_client = JenkinsClient(instance_config)
-        expect(tested_client).get_job_info('job').thenReturn(async_value(response))
-        expect(response).json().thenReturn(async_value(job_info))
+        expect(tested_client).get_job_info('job').thenReturn(async_value(job_info))
 
         assert expected_url == await tested_client.get_job_url('job')
 
@@ -81,9 +78,7 @@ class TestJenkinsClient:
             .thenReturn(0)\
             .thenReturn(15)
         tested_client = JenkinsClient(instance_config)
-        response = mock(spec=ClientResponse, strict=True)
-        expect(tested_client).get_build_info(job_path='job', build_number=23).thenReturn(async_value(response))
-        expect(response).json().thenReturn(async_value({'some': 'values'}))
+        expect(tested_client).get_build_info(job_path='job', build_number=23).thenReturn(async_value({'some': 'values'}))
 
         assert {'some': 'values'} == await tested_client.get_build_info_data('job', 23)
 
@@ -146,20 +141,16 @@ class TestJenkinsClient:
         jenkins_client = JenkinsClient(instance_config)
 
         async_client: AsyncClient = mock(spec=AsyncClient, strict=True)
-        response: ClientResponse = mock(spec=ClientResponse, strict=True)
 
         expect(jenkins_client).get_async_jenkins().thenReturn(async_client)
-        expect(async_client).get(route='job/triggear/job/tests/api/json?depth=0').thenReturn(async_value(response))
+        expect(async_client).get(route='job/triggear/job/tests/api/json?depth=0').thenReturn(async_value({}))
 
-        assert response == await jenkins_client.get_job_info('triggear/tests')
+        assert {} == await jenkins_client.get_job_info('triggear/tests')
 
     async def test__get_jobs_next_build_number__parses_job_info_properly(self):
         jenkins_client = JenkinsClient(mock())
 
-        response: ClientResponse = mock(spec=ClientResponse, strict=True)
-
-        expect(jenkins_client).get_job_info('triggear/tests').thenReturn(async_value(response))
-        expect(response).json().thenReturn(async_value({'nextBuildNumber': 231}))
+        expect(jenkins_client).get_job_info('triggear/tests').thenReturn(async_value({'nextBuildNumber': 231}))
 
         assert 231 == await jenkins_client.get_jobs_next_build_number('triggear/tests')
 
@@ -168,12 +159,11 @@ class TestJenkinsClient:
         jenkins_client = JenkinsClient(instance_config)
 
         async_client: AsyncClient = mock(spec=AsyncClient, strict=True)
-        response: ClientResponse = mock(spec=ClientResponse, strict=True)
 
         expect(jenkins_client).get_async_jenkins().thenReturn(async_client)
-        expect(async_client).get(route='job/triggear/job/tests/213/api/json?depth=0').thenReturn(async_value(response))
+        expect(async_client).get(route='job/triggear/job/tests/213/api/json?depth=0').thenReturn(async_value({}))
 
-        assert response == await jenkins_client.get_build_info('triggear/tests', 213)
+        assert {} == await jenkins_client.get_build_info('triggear/tests', 213)
 
     async def test__set_crumb__calls_proper_jenkins_endpoint__and_result_is_available_via_get(self):
         jenkins_client = JenkinsClient(mock())
@@ -196,15 +186,14 @@ class TestJenkinsClient:
         jenkins_client = JenkinsClient(instance_config)
 
         async_client: AsyncClient = mock(spec=AsyncClient, strict=True)
-        response: ClientResponse = mock(spec=ClientResponse, strict=True)
 
         expect(jenkins_client).get_async_jenkins().thenReturn(async_client)
         arg_captor = captor()
         expect(async_client)\
             .post(route='job/triggear/job/tests/buildWithParameters', params=arg_captor, headers=None)\
-            .thenReturn(async_value(response))
+            .thenReturn(async_value({}))
 
-        assert response == await jenkins_client._build_jenkins_job('triggear/tests', {'param': 'value'})
+        assert {} == await jenkins_client._build_jenkins_job('triggear/tests', {'param': 'value'})
         params: Payload = arg_captor.value
         assert params.data.get('param') == 'value'
 
