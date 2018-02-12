@@ -4,8 +4,6 @@ import logging
 import time
 from typing import List, Tuple, Dict, Union, Optional
 
-from aiohttp import ClientResponse
-
 from app.clients.async_client import AsyncClient, AsyncClientException, Payload
 
 
@@ -57,28 +55,26 @@ class JenkinsClient:
         return folder_url, job_name
 
     async def get_job_info(self,
-                           job_path: str) -> ClientResponse:
+                           job_path: str) -> Dict:
         job_folder, job_name = self.get_job_folder_and_name(job_path)
         route = f'{job_folder}job/{job_name}/api/json?depth=0'
         return await self.get_async_jenkins().get(route=route)
 
     async def get_jobs_next_build_number(self,
                                          job_path: str) -> int:
-        job_info_response = await self.get_job_info(job_path)
-        job_info = await job_info_response.json()
+        job_info = await self.get_job_info(job_path)
         return int(job_info['nextBuildNumber'])
 
     async def get_build_info(self,
                              job_path: str,
-                             build_number: int) -> ClientResponse:
+                             build_number: int) -> Dict:
         job_folder, job_name = self.get_job_folder_and_name(job_path)
         route = f'{job_folder}job/{job_name}/{build_number}/api/json?depth=0'
         return await self.get_async_jenkins().get(route=route)
 
     async def get_job_url(self,
                           job_path: str) -> Optional[str]:
-        job_info_response = await self.get_job_info(job_path)
-        job_info: Dict[str, str] = await job_info_response.json()
+        job_info = await self.get_job_info(job_path)
         return job_info.get('url')
 
     async def get_build_info_data(self,
@@ -88,9 +84,8 @@ class JenkinsClient:
         timeout = time.monotonic() + timeout
         while time.monotonic() < timeout:
             try:
-                build_info_response = await self.get_build_info(job_path=job_path,
-                                                                build_number=build_number)
-                build_info_data: Dict = await build_info_response.json()
+                build_info_data = await self.get_build_info(job_path=job_path,
+                                                            build_number=build_number)
                 return build_info_data
             except AsyncClientException as exception:
                 if exception.status == 404:
@@ -113,7 +108,7 @@ class JenkinsClient:
 
     async def build_jenkins_job(self,
                                 job_path: str,
-                                parameters: Union[None, Dict]) -> ClientResponse:
+                                parameters: Union[None, Dict]) -> Dict:
         try:
             return await self._build_jenkins_job(job_path, parameters=parameters)
         except AsyncClientException as exception:
@@ -131,7 +126,7 @@ class JenkinsClient:
 
     async def _build_jenkins_job(self,
                                  job_path: str,
-                                 parameters: Optional[Dict]) -> ClientResponse:
+                                 parameters: Optional[Dict]) -> Dict:
         folder_url, job_name = self.get_job_folder_and_name(job_path)
         route = f'{folder_url}job/{job_name}/buildWithParameters' if parameters else f'{folder_url}job/{job_name}/build'
         return await self.get_async_jenkins().post(route=route,
