@@ -1,8 +1,8 @@
-from typing import List, Set
+from typing import List, Set, Optional
 
 import pytest
 
-from app.utilities.functions import flatten_list, any_starts_with, starts_with_item_from_list, get_all_starting_with
+from app.utilities.functions import flatten_list, any_starts_with, starts_with_item_from_list, get_all_starting_with, item_if_string_starts_with_item_from_list
 
 
 def test__flatten_list():
@@ -34,3 +34,14 @@ def test__starts_with_item_from_list(string: str, list_of_prefixes: List[str], e
 ])
 def test__get_all_starting_with(collection: Set[str], list_of_prefixes: List[str], expected_result: bool):
     assert get_all_starting_with(collection, list_of_prefixes) == expected_result
+
+
+@pytest.mark.parametrize("collection, string, expected_result", [
+    ({'tr', 'fa'}, 'true', 'tr'),
+    ({'tr', 'fa'}, 'false', 'fa'),
+    ({'true', 'false'}, 'bad', None),
+    ({'true', 'false'}, 'fals', None),
+    ({}, 'true', None)
+])
+def test__string_if_starts_with_item_from_list(collection: Set[str], string: str, expected_result: Optional[str]):
+    assert item_if_string_starts_with_item_from_list(string, collection) == expected_result

@@ -1,46 +1,44 @@
 import os
-import logging
-from typing import List, Dict
+from typing import List, Dict, Tuple, Optional
 
 import yaml
 
-
-class JenkinsInstanceConfig:
-    def __init__(self, url, username, token):
-        self.username: str = username
-        self.token: str = token
-        self.url = url
+from app.clients.jenkins_client import JenkinsInstanceConfig
 
 
 class TriggearConfig:
-    RERUN_DEFAULT_TIME = 30
+    def __init__(self) -> None:
+        self.__jenkins_instances: Dict[str, JenkinsInstanceConfig] = {}
+        self.__github_token: Optional[str] = None
+        self.__triggear_token: Optional[str] = None
 
-    def __init__(self):
-        self.jenkins_instances: Dict[str, JenkinsInstanceConfig] = {}
-        self.github_token = None
-        self.triggear_token = None
-        self.rerun_time_limit = self.RERUN_DEFAULT_TIME
+    @property
+    def jenkins_instances(self) -> Dict[str, JenkinsInstanceConfig]:
+        if self.__jenkins_instances == {}:
+            self.__github_token, self.__triggear_token, self.__jenkins_instances = self.read_credentials_file()
+        return self.__jenkins_instances
 
-        self.read_credentials_from_creds()
-        self.read_rerun_time_limit_from_config()
+    @property
+    def github_token(self) -> str:
+        if self.__github_token is None:
+            self.__github_token, self.__triggear_token, self.__jenkins_instances = self.read_credentials_file()
+        return self.__github_token
 
-    def read_rerun_time_limit_from_config(self):
-        with open(os.getenv('CONFIG_PATH'), 'r') as stream:
-            try:
-                config = yaml.load(stream)
-                self.rerun_time_limit = config['rerun_time_limit']
-            except (yaml.YAMLError, KeyError) as exc:
-                logging.exception(f"Config YAML parsing error: {exc}. Setting rerun_time_limit to default value {self.RERUN_DEFAULT_TIME}")
-                self.rerun_time_limit = self.RERUN_DEFAULT_TIME
+    @property
+    def triggear_token(self) -> str:
+        if self.__triggear_token is None:
+            self.__github_token, self.__triggear_token, self.__jenkins_instances = self.read_credentials_file()
+        return self.__triggear_token
 
-    def read_credentials_from_creds(self):
-        with open(os.getenv('CREDS_PATH'), 'r') as stream:
+    @staticmethod
+    def read_credentials_file() -> Tuple[str, str, Dict[str, JenkinsInstanceConfig]]:
+        with open(os.getenv('CREDS_PATH', 'creds.yml'), 'r') as stream:
             config = yaml.load(stream)
-            instances_config: List[Dict[str, Dict]] = config['jenkins_instances']
+            instances_config: List[Dict[str, str]] = config['jenkins_instances']
+            jenkins_instances: Dict[str, JenkinsInstanceConfig] = {}
             for instance_config in instances_config:
                 url = instance_config['url']
                 user = instance_config['user']
                 token = instance_config['token']
-                self.jenkins_instances[url] = JenkinsInstanceConfig(url, user, token)
-            self.github_token = config['github_token']
-            self.triggear_token = config['triggear_token']
+                jenkins_instances[url] = JenkinsInstanceConfig(url, user, token)
+            return config['github_token'], config['triggear_token'], jenkins_instances

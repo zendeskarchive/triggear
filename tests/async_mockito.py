@@ -1,6 +1,3 @@
-from typing import List, Dict
-
-
 async def async_value(value):
     """
     Gives an object which can be used in .thenReturn for methods that are coroutines
@@ -15,7 +12,7 @@ class async_iter:
     """
     Object that can be used in async for. Specify it in .thenReturn as needed.
     """
-    def __init__(self, *items: any):
+    def __init__(self, *items: any) -> None:
         self.not_done = list(items)
         self.done = list()
 

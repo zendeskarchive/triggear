@@ -1,0 +1,10 @@
+class RegistrationFields:
+    REPO = 'repository'
+    JOB = 'job'
+    LABELS = 'labels'
+    REQUESTED_PARAMS = 'requested_params'
+    BRANCH_RESTRICTIONS = 'branch_restrictions'
+    CHANGE_RESTRICTIONS = 'change_restrictions'
+    FILE_RESTRICTIONS = 'file_restrictions'
+    MISSED_TIMES = 'missed_times'
+    JENKINS_URL = 'jenkins_url'

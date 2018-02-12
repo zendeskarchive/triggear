@@ -155,3 +155,5 @@ fabric.properties
 
 *.iml
 .idea
+configs/creds.yml
+tests_integrations/

@@ -19,9 +19,11 @@ class RegisterRequestData:
         branch = 'branch'
         sha = 'sha'
         tag = 'tag'
+        release_target = 'release_target'
+        is_prerelease = 'is_prerelease'
 
     @staticmethod
-    def __get_mandatory_fields():
+    def __get_mandatory_fields() -> List[str]:
         return [RegisterRequestData.event_type,
                 RegisterRequestData.repository,
                 RegisterRequestData.job_name,
@@ -41,14 +43,16 @@ class RegisterRequestData:
         return [RegisterRequestData.RequestedParams.branch,
                 RegisterRequestData.RequestedParams.sha,
                 RegisterRequestData.RequestedParams.tag,
-                RegisterRequestData.RequestedParams.changes]
+                RegisterRequestData.RequestedParams.changes,
+                RegisterRequestData.RequestedParams.release_target,
+                RegisterRequestData.RequestedParams.is_prerelease]
 
     @staticmethod
     def __get_allowed_requested_params_prefixes() -> List[str]:
         return [param + ':' for param in RegisterRequestData.__get_allowed_requested_params()]
 
     @staticmethod
-    def __are_requested_params_valid(data: Dict):
+    def __are_requested_params_valid(data: Dict) -> bool:
         for param in data[RegisterRequestData.requested_params]:
             if param not in RegisterRequestData.__get_allowed_requested_params() \
                     and not starts_with_item_from_list(param, RegisterRequestData.__get_allowed_requested_params_prefixes()):
@@ -56,5 +60,5 @@ class RegisterRequestData:
         return True
 
     @staticmethod
-    def is_valid_register_request_data(data: Dict):
+    def is_valid_register_request_data(data: Dict) -> bool:
         return RegisterRequestData.__has_mandatory_keys(data) and RegisterRequestData.__are_requested_params_valid(data)
