@@ -341,7 +341,6 @@ class TestPipelineController:
 
     async def test__when_deployment_status_data_is_valid__and_matching_deployment_is_found__its_status_should_be_created(self):
         request = mock(spec=aiohttp.web_request.Request, strict=True)
-        get_deployments_response = mock(spec=ClientResponse, strict=True)
         github_client: GithubClient = mock(spec=GithubClient, strict=True)
 
         pipeline_controller = PipelineController(mock(), mock())
@@ -356,9 +355,7 @@ class TestPipelineController:
         when(pipeline_controller).get_github().thenReturn(github_client)
 
         # expect
-        expect(github_client).get_deployments(repo='triggear', ref='123321', environment='prod').thenReturn(async_value(get_deployments_response))
-        expect(get_deployments_response).json()\
-            .thenReturn(async_value([
+        expect(github_client).get_deployments(repo='triggear', ref='123321', environment='prod').thenReturn(async_value([
                 {
                     'id': 123,
                     'ref': '123321',
@@ -406,7 +403,6 @@ class TestPipelineController:
     async def test__when_deployment_status_data_is_valid__and_no_matching_deployment_is_found__no_status_should_be_created(self,
                                                                                                                            deployments: List[Dict]):
         request = mock(spec=aiohttp.web_request.Request, strict=True)
-        get_deployments_response = mock(spec=ClientResponse, strict=True)
         github_client: GithubClient = mock(spec=GithubClient, strict=True)
 
         pipeline_controller = PipelineController(mock(), mock())
@@ -422,8 +418,6 @@ class TestPipelineController:
 
         # expect
         expect(github_client, times=2).get_deployments(repo='triggear', ref='123321', environment='prod')\
-            .thenReturn(async_value(get_deployments_response))
-        expect(get_deployments_response).json()\
             .thenReturn(async_value(deployments))
         expect(github_client, times=0).create_deployment_status(any)
 
