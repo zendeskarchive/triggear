@@ -1,9 +1,8 @@
 import logging
-from typing import Dict
+from typing import Dict, List
 
 import aiohttp.web
 import aiohttp.web_request
-from aiohttp import ClientResponse
 
 from app.clients.github_client import GithubClient
 from app.clients.mongo_client import MongoClient
@@ -106,11 +105,10 @@ class PipelineController:
         logging.warning(f'Deployment status request received: {data}')
         if not DeploymentStatusRequestData.is_valid_deployment_status_request_data(data):
             return aiohttp.web.Response(reason='Invalid deployment status request payload!', status=400)
-        get_deployments_response: ClientResponse = await self.get_github().get_deployments(repo=data[DeploymentRequestData.repo],
-                                                                                           ref=data[DeploymentRequestData.ref],
-                                                                                           environment=data[DeploymentRequestData.environment])
+        deployments: List = await self.get_github().get_deployments(repo=data[DeploymentRequestData.repo],
+                                                                    ref=data[DeploymentRequestData.ref],
+                                                                    environment=data[DeploymentRequestData.environment])
 
-        deployments = await get_deployments_response.json()
         deployment_matcher = {
             'environment': data[DeploymentRequestData.environment],
             'ref': data[DeploymentRequestData.ref],
