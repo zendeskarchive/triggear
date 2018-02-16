@@ -33,6 +33,21 @@ class TestJenkinsClient:
 
         assert await tested_client.is_job_building('job', 12) is None
 
+    async def test__is_job_building__returns_none__when_jenkins_returns_504(self):
+        instance_config = JenkinsInstanceConfig('url', 'username', 'password')
+        tested_client = JenkinsClient(instance_config)
+        expect(tested_client).get_build_info_data('job', 12).thenRaise(AsyncClientException('Timeout', 504))
+
+        assert await tested_client.is_job_building('job', 12) is None
+
+    async def test__is_job_building__raises__when_client_status_is_different_then_504(self):
+        instance_config = JenkinsInstanceConfig('url', 'username', 'password')
+        tested_client = JenkinsClient(instance_config)
+        expect(tested_client).get_build_info_data('job', 12).thenRaise(AsyncClientException('Timeout', 404))
+
+        with pytest.raises(AsyncClientException):
+            await tested_client.is_job_building('job', 12)
+
     async def test__get_build_info__returns_none__in_case_of_timeout(self):
         instance_config = JenkinsInstanceConfig('url', 'username', 'password')
 

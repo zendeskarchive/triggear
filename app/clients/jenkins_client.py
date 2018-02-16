@@ -101,9 +101,13 @@ class JenkinsClient:
     async def is_job_building(self,
                               job_path: str,
                               build_number: int) -> Optional[bool]:
-        build_info = await self.get_build_info_data(job_path, build_number)
-        if build_info is not None:
-            return bool(build_info['building'])
+        try:
+            build_info = await self.get_build_info_data(job_path, build_number)
+            if build_info is not None:
+                return bool(build_info['building'])
+        except AsyncClientException as client_exception:
+            if client_exception.status != 504:
+                raise
         return None
 
     async def build_jenkins_job(self,
