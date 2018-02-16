@@ -158,13 +158,13 @@ class GithubClient:
     async def get_deployments(self,
                               repo: str,
                               ref: Optional[str]=None,
-                              environment: Optional[str]=None) -> Dict:
+                              environment: Optional[str]=None) -> List:
         route = f'/repos/{repo}/deployments'
         params = Payload.from_kwargs(
             ref=ref,
             environment=environment
         )
-        return await self.get_async_github().get(route=route, params=params)
+        return list(await self.get_async_github().get(route=route, params=params))
 
     async def create_deployment_status(self,
                                        repo: str,

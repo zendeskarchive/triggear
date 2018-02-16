@@ -258,8 +258,7 @@ class TestGithubClient:
         arg_captor = captor()
         expect(async_github).get(route='/repos/repo/deployments', params=arg_captor).thenReturn(async_value({}))
 
-        actual_response = await github_client.get_deployments('repo', '123123', 'staging')
-        assert actual_response == {}
+        assert await github_client.get_deployments('repo', '123123', 'staging') == []
         params: Payload = arg_captor.value
         assert isinstance(params, Payload)
         assert params.data.get('ref') == '123123'
