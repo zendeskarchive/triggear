@@ -1,8 +1,8 @@
-from typing import Dict, Union, Tuple, Optional
+from typing import Dict, Union, Tuple, Optional, List
 
 import aiohttp
 
-PayloadType = Union[Optional[Dict[str, Union[Optional[str], Optional[bool]]]],
+PayloadType = Union[Optional[Dict[str, Union[Optional[str], Optional[bool], Optional[List]]]],
                     Optional[Tuple[Union[Optional[str], Optional[bool]], ...]]]
 
 
@@ -31,7 +31,7 @@ class Payload:
         return Payload(args)
 
     @staticmethod
-    def from_kwargs(**kwargs: Union[Optional[bool], Optional[str]]) -> 'Payload':
+    def from_kwargs(**kwargs: Union[Optional[bool], Optional[str], Optional[List]]) -> 'Payload':
         return Payload(kwargs)
 
 
