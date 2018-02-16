@@ -249,6 +249,7 @@ class TestGithubClient:
         assert not payload.data.get('auto_merge')
         assert payload.data.get('description') == 'something mildly interesting'
         assert payload.data.get('environment') == 'staging'
+        assert payload.data.get('required_contexts') == []
 
     async def test__get_deployment__calls_github_endpoint_properly(self):
         async_github: AsyncClient = mock(spec=AsyncClient, strict=True)

@@ -151,7 +151,8 @@ class GithubClient:
             ref=ref,
             auto_merge=False,
             environment=environment,
-            description=description
+            description=description,
+            required_contexts=[]
         )
         return await self.get_async_github().post(route=route, payload=payload)
 
