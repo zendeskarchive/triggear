@@ -14,7 +14,7 @@ class LabeledHookDetails(HookDetails):
                f"branch: {self.branch}, " \
                f"sha: {self.sha}, " \
                f"label: {self.label}, " \
-               f"labeler: {self.labeler}, " \
+               f"who: {self.who}, " \
                f"pr_url: {self.pr_url}" \
                f">"
 
@@ -23,13 +23,13 @@ class LabeledHookDetails(HookDetails):
                  branch: str,
                  sha: str,
                  label: str,
-                 labeler: str,
+                 who: str,
                  pr_url: str) -> None:
         self.repository = repository
         self.branch = branch
         self.sha = sha
         self.label = label
-        self.labeler = labeler
+        self.who = who
         self.pr_url = pr_url
 
     def get_query(self) -> Dict[str, str]:
@@ -39,7 +39,7 @@ class LabeledHookDetails(HookDetails):
         return {
             RegisterRequestData.RequestedParams.branch: self.branch,
             RegisterRequestData.RequestedParams.sha: self.sha,
-            RegisterRequestData.RequestedParams.labeler: self.labeler,
+            RegisterRequestData.RequestedParams.who: self.who,
             RegisterRequestData.RequestedParams.pr_url: self.pr_url
         }
 
