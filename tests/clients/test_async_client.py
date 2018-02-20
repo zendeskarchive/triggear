@@ -94,3 +94,17 @@ class TestAsyncClient:
         response: aiohttp.ClientResponse = mock({'status': status}, spec=aiohttp.ClientResponse, strict=True)
         expect(response, times=0).text()
         assert await AsyncClient.validate_response(response) == response
+
+    async def test__when_post_fails_to_parse_json_response__should_return_empty_dict(self):
+        async_client = AsyncClient('http://example.com', {'Authorization': 'token dummy'})
+        response = mock(spec=aiohttp.ClientResponse, strict=True)
+        session: aiohttp.ClientSession = mock({'closed': False}, spec=aiohttp.ClientSession, strict=True)
+        payload = Payload.from_kwargs(some='param')
+        expect(aiohttp, times=1).ClientSession(headers={'Authorization': 'token dummy'}).thenReturn(session)
+        expect(response).__aenter__().thenReturn(async_value(response))
+        expect(response).__aexit__(any, any, any).thenReturn(async_value(None))
+        expect(async_client).validate_response(response).thenReturn(async_value(response))
+        expect(session).post('http://example.com/subpage', json=payload.data, headers=None, params=None).thenReturn(response)
+        expect(response).json(content_type='application/json').thenRaise(aiohttp.ContentTypeError('', ''))
+
+        assert await async_client.post('subpage', payload) == {}
