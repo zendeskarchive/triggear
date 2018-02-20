@@ -13,15 +13,16 @@ pytestmark = pytest.mark.asyncio
 @pytest.mark.usefixtures('unstub')
 class TestLabeledHookDetails:
     async def test__repr(self):
-        assert f"{LabeledHookDetails('repo', 'master', '123321', 'custom')}" \
+        assert f"{LabeledHookDetails('repo', 'master', '123321', 'custom', 'karolgil', 'https://pr.url')}" \
                == "<LabeledHookDetails repository: repo, branch: master, sha: 123321, label: custom >"
 
     async def test__get_query(self):
-        assert LabeledHookDetails('repo', 'master', '123321', 'custom').get_query() == {'repository': 'repo', 'labels': 'custom'}
+        assert LabeledHookDetails('repo', 'master', '123321', 'custom', 'karolgil', 'https://pr.url').get_query() \
+               == {'repository': 'repo', 'labels': 'custom'}
 
     async def test__get_allowed_parameters(self):
-        assert LabeledHookDetails('repo', 'master', '123321', 'custom').get_allowed_parameters() \
-               == {'branch': 'master', 'sha': '123321'}
+        assert LabeledHookDetails('repo', 'master', '123321', 'custom', 'karolgil', 'https://pr.url').get_allowed_parameters() \
+               == {'branch': 'master', 'sha': '123321', 'labeler': 'karolgil', 'pr_url': 'https://pr.url'}
 
     async def test__get_ref(self):
         assert LabeledHookDetails('repo', 'master', '123321', 'custom').get_ref() == '123321'

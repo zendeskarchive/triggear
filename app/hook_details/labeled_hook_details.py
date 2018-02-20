@@ -13,18 +13,24 @@ class LabeledHookDetails(HookDetails):
                f"repository: {self.repository}, " \
                f"branch: {self.branch}, " \
                f"sha: {self.sha}, " \
-               f"label: {self.label} " \
+               f"label: {self.label}, " \
+               f"labeler: {self.labeler}, " \
+               f"pr_url: {self.pr_url}" \
                f">"
 
     def __init__(self,
                  repository: str,
                  branch: str,
                  sha: str,
-                 label: str) -> None:
+                 label: str,
+                 labeler: str,
+                 pr_url: str) -> None:
         self.repository = repository
         self.branch = branch
         self.sha = sha
         self.label = label
+        self.labeler = labeler
+        self.pr_url = pr_url
 
     def get_query(self) -> Dict[str, str]:
         return dict(repository=self.repository, labels=self.label)
@@ -32,7 +38,9 @@ class LabeledHookDetails(HookDetails):
     def get_allowed_parameters(self) -> Dict[str, str]:
         return {
             RegisterRequestData.RequestedParams.branch: self.branch,
-            RegisterRequestData.RequestedParams.sha: self.sha
+            RegisterRequestData.RequestedParams.sha: self.sha,
+            RegisterRequestData.RequestedParams.labeler: self.labeler,
+            RegisterRequestData.RequestedParams.pr_url: self.pr_url
         }
 
     def get_event_type(self) -> EventType:
