@@ -59,7 +59,9 @@ class HookDetailsFactory:
             repository=data['pull_request']['head']['repo']['full_name'],
             branch=data['pull_request']['head']['ref'],
             sha=data['pull_request']['head']['sha'],
-            label=data['label']['name']
+            label=data['label']['name'],
+            who=data['sender']['login'],
+            pr_url=data['pull_request']['url']
         )
 
     @staticmethod
