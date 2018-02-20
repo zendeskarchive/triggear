@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Dict, Awaitable, List, Tuple
+from typing import Dict, Awaitable, List
 from typing import Optional
 
 import aiohttp.web

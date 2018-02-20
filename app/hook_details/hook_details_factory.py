@@ -17,7 +17,9 @@ class HookDetailsFactory:
                 repository=data['repository']['full_name'],
                 branch=head_branch,
                 sha=head_sha,
-                label=label
+                label=label,
+                who=data['sender']['login'],
+                pr_url=data['pull_request']['url']
             ) for label in [label['name'] for label in data['issue']['labels']]
         ]
     
@@ -59,7 +61,9 @@ class HookDetailsFactory:
             repository=data['pull_request']['head']['repo']['full_name'],
             branch=data['pull_request']['head']['ref'],
             sha=data['pull_request']['head']['sha'],
-            label=data['label']['name']
+            label=data['label']['name'],
+            who=data['sender']['login'],
+            pr_url=data['pull_request']['url']
         )
 
     @staticmethod

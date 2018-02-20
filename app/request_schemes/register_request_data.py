@@ -21,6 +21,8 @@ class RegisterRequestData:
         tag = 'tag'
         release_target = 'release_target'
         is_prerelease = 'is_prerelease'
+        who = 'who'
+        pr_url = 'pr_url'
 
     @staticmethod
     def __get_mandatory_fields() -> List[str]:
@@ -45,7 +47,9 @@ class RegisterRequestData:
                 RegisterRequestData.RequestedParams.tag,
                 RegisterRequestData.RequestedParams.changes,
                 RegisterRequestData.RequestedParams.release_target,
-                RegisterRequestData.RequestedParams.is_prerelease]
+                RegisterRequestData.RequestedParams.is_prerelease,
+                RegisterRequestData.RequestedParams.who,
+                RegisterRequestData.RequestedParams.pr_url]
 
     @staticmethod
     def __get_allowed_requested_params_prefixes() -> List[str]:

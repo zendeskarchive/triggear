@@ -22,7 +22,7 @@ class TestRegisterRequestData:
 
     async def test__when_data_has_mandatory_keys__and_valid_requested_params__should_be_valid(self):
         data = {'eventType': '', 'repository': '', 'jobName': '', 'labels': [],
-                'requested_params': ['branch', 'sha', 'tag', 'changes'], 'jenkins_url': ''}
+                'requested_params': ['branch', 'sha', 'tag', 'changes', 'pr_url', 'who', 'release_target', 'is_prerelease'], 'jenkins_url': ''}
         assert RegisterRequestData.is_valid_register_request_data(data)
 
     async def test__when_data_has_mandatory_keys__but_invalid_requested_params__should_not_be_valid(self):
@@ -36,7 +36,9 @@ class TestRegisterRequestData:
                                                                                                      'tag:customTag',
                                                                                                      'changes:customChanges',
                                                                                                      'release_target:customRelease',
-                                                                                                     'is_prerelease:PreRelease'],
+                                                                                                     'is_prerelease:PreRelease',
+                                                                                                     'who:Label',
+                                                                                                     'pr_url:url'],
                 'jenkins_url': ''}
         assert RegisterRequestData.is_valid_register_request_data(data)
 
@@ -45,6 +47,9 @@ class TestRegisterRequestData:
                                                                                                      'sha\customSha',
                                                                                                      'tag@customTag',
                                                                                                      'changescustomChanges',
-                                                                                                     'release_targetReleaseTarget'],
+                                                                                                     'release_targetReleaseTarget',
+                                                                                                     'isPrerelease',
+                                                                                                     'who',
+                                                                                                     'pr:url'],
                 'jenkins_url': ''}
         assert not RegisterRequestData.is_valid_register_request_data(data)
