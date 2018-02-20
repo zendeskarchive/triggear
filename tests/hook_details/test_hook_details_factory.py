@@ -78,7 +78,10 @@ class TestHookDetailsFactory:
         assert hook_details.pr_url == 'pr.url'
 
     async def test__when_labeled_sync_hook_is_provided__should_return_proper_hook_details_list(self):
-        hook_data = {'repository': {'full_name': 'repo'}, 'issue': {'labels': [{'name': 'first_label'}, {'name': 'second_label'}]}}
+        hook_data = {'repository': {'full_name': 'repo'},
+                     'issue': {'labels': [{'name': 'first_label'}, {'name': 'second_label'}]},
+                     'pull_request': {'url': 'pr_url'},
+                     'sender': {'login': 'karolgil'}}
         hook_details: List[LabeledHookDetails] = HookDetailsFactory.get_labeled_sync_details(hook_data, 'master', '123456')
         assert len(hook_details) == 2
         first_hook_details = hook_details[0]
@@ -88,6 +91,8 @@ class TestHookDetailsFactory:
         assert first_hook_details.branch == 'master'
         assert first_hook_details.sha == '123456'
         assert first_hook_details.label == 'first_label'
+        assert first_hook_details.who == 'karolgil'
+        assert first_hook_details.pr_url == 'pr_url'
         second_hook_details = hook_details[1]
         assert isinstance(second_hook_details, LabeledHookDetails)
         assert second_hook_details.get_event_type() == EventType.PR_LABELED
@@ -95,6 +100,8 @@ class TestHookDetailsFactory:
         assert second_hook_details.branch == 'master'
         assert second_hook_details.sha == '123456'
         assert second_hook_details.label == 'second_label'
+        assert second_hook_details.who == 'karolgil'
+        assert second_hook_details.pr_url == 'pr_url'
 
     async def test__when_pr_sync_hook_is_provided__should_return_proper_hook_details(self):
         hook_data = {'repository': {'full_name': 'repo'}}
