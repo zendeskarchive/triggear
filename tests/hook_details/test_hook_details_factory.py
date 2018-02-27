@@ -62,7 +62,7 @@ class TestHookDetailsFactory:
         assert hook_details.branch == 'staging'
 
     async def test__when_labels_hook_is_provided__should_return_proper_hook_details(self):
-        hook_data = {'pull_request': {'url': 'pr.url',
+        hook_data = {'pull_request': {'html_url': 'pr.url',
                                       'head': {'repo': {'full_name': 'repo'},
                                                'ref': 'sandbox', 'sha': '321321'}},
                      'label': {'name': 'triggear'},

@@ -63,7 +63,7 @@ class HookDetailsFactory:
             sha=data['pull_request']['head']['sha'],
             label=data['label']['name'],
             who=data['sender']['login'],
-            pr_url=data['pull_request']['url']
+            pr_url=data['pull_request']['html_url']
         )
 
     @staticmethod
