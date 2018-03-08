@@ -308,3 +308,28 @@ class TestTriggearHeart:
         expect(asyncio).sleep(1).thenReturn(async_value(None))
 
         await triggear_heart.trigger_registered_job(hook_details, registration_cursor)
+
+    async def test__trigger_registered_job__next_build_number_is_not_available(self):
+        mock(HookParamsParser)
+        mock(asyncio)
+
+        hook_details: HookDetails = mock(spec=HookDetails, strict=True)
+        registration_cursor: RegistrationCursor = mock(
+            {'jenkins_url': 'url', 'job_name': 'job_path', 'repo': 'repo'},
+            spec=RegistrationCursor,
+            strict=True
+        )
+
+        jenkins_client: JenkinsClient = mock(spec=JenkinsClient, strict=True)
+        mongo_client: MongoClient = mock(spec=MongoClient, strict=True)
+        jenkinses_clients: JenkinsesClients = mock(spec=JenkinsesClients, strict=True)
+        github_client: GithubClient = mock(spec=GithubClient, strict=True)
+        triggear_heart = TriggearHeart(mongo_client, github_client, jenkinses_clients)
+
+        expect(hook_details).setup_final_param_values(registration_cursor)
+        expect(HookParamsParser).get_requested_parameters_values(hook_details, registration_cursor).thenReturn({})
+        expect(jenkinses_clients).get_jenkins('url').thenReturn(jenkins_client)
+        expect(jenkins_client).get_jobs_next_build_number('job_path').thenRaise(KeyError())
+        expect(jenkins_client).build_jenkins_job('job_path', {}).thenReturn(async_value(None))
+
+        await triggear_heart.trigger_registered_job(hook_details, registration_cursor)
