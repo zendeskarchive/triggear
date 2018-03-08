@@ -27,7 +27,7 @@ class TriggearHeart:
             if await hook_details.should_trigger(registration_cursor, self.__github_client):
                 try:
                     await self.__jenkinses_clients.get_jenkins(registration_cursor.jenkins_url)\
-                        .get_jobs_next_build_number(registration_cursor.job_name)  # Raises if job does not exist on Jenkins
+                        .get_job_info(registration_cursor.job_name)  # Raises if job does not exist on Jenkins
                     asyncio.get_event_loop().create_task(self.trigger_registered_job(hook_details, registration_cursor))
                 except AsyncClientNotFoundException:
                     logging.exception(f"Job {registration_cursor.jenkins_url}:{registration_cursor.job_name} was not found on Jenkins anymore - "
@@ -43,7 +43,14 @@ class TriggearHeart:
         hook_details.setup_final_param_values(registration_cursor)
         job_params = HookParamsParser.get_requested_parameters_values(hook_details, registration_cursor)
         jenkins_client = self.__jenkinses_clients.get_jenkins(registration_cursor.jenkins_url)
-        next_build_number = await jenkins_client.get_jobs_next_build_number(registration_cursor.job_name)
+        try:
+            next_build_number = await jenkins_client.get_jobs_next_build_number(registration_cursor.job_name)
+        except KeyError:
+            # INFO: KeyError means that nextBuildNumber is not available - either plugin is not installed or it's a MultiBranch pipeline
+            # In both cases we just want to run the job
+            logging.warning(f"Running job that didn't have next build number: {registration_cursor.job_name}")
+            await jenkins_client.build_jenkins_job(registration_cursor.job_name, job_params)
+            return
         job_url: Optional[str] = await jenkins_client.get_job_url(registration_cursor.job_name)
         try:
             await jenkins_client.build_jenkins_job(registration_cursor.job_name, job_params)
