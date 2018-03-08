@@ -27,7 +27,7 @@ class TriggearHeart:
             if await hook_details.should_trigger(registration_cursor, self.__github_client):
                 try:
                     await self.__jenkinses_clients.get_jenkins(registration_cursor.jenkins_url)\
-                        .get_jobs_next_build_number(registration_cursor.job_name)  # Raises if job does not exist on Jenkins
+                        .get_job_info(registration_cursor.job_name)  # Raises if job does not exist on Jenkins
                     asyncio.get_event_loop().create_task(self.trigger_registered_job(hook_details, registration_cursor))
                 except AsyncClientNotFoundException:
                     logging.exception(f"Job {registration_cursor.jenkins_url}:{registration_cursor.job_name} was not found on Jenkins anymore - "

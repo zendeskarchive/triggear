@@ -35,7 +35,7 @@ class TestTriggearHeart:
         when(mongo_client).get_registered_jobs(hook_details).thenReturn(async_iter(registration_cursor))
         when(hook_details).should_trigger(registration_cursor, github_client).thenReturn(async_value(True))
         when(jenkinses_clients).get_jenkins('url').thenReturn(jenkins_client)
-        when(jenkins_client).get_jobs_next_build_number('job_path').thenRaise(AsyncClientNotFoundException('Job not found'))
+        when(jenkins_client).get_job_info('job_path').thenRaise(AsyncClientNotFoundException('Job not found'))
 
         expect(hook_details).get_query()
         expect(mongo_client, strict=True, times=1).increment_missed_counter(hook_details, registration_cursor).thenReturn(async_value(None))
@@ -58,7 +58,7 @@ class TestTriggearHeart:
         when(mongo_client).get_registered_jobs(hook_details).thenReturn(async_iter(registration_cursor))
         when(hook_details).should_trigger(registration_cursor, github_client).thenReturn(async_value(True))
         when(jenkinses_clients).get_jenkins('url').thenReturn(jenkins_client)
-        when(jenkins_client).get_jobs_next_build_number('job_path').thenReturn(async_value(3))
+        when(jenkins_client).get_job_info('job_path').thenReturn(async_value({}))
 
         triggear_heart = TriggearHeart(mongo_client, github_client, jenkinses_clients)
         expect(triggear_heart).trigger_registered_job(hook_details, registration_cursor).thenReturn(async_value(None))
