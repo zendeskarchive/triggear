@@ -19,7 +19,7 @@ class HookDetailsFactory:
                 sha=head_sha,
                 label=label,
                 who=data['sender']['login'],
-                pr_url=data['pull_request']['url']
+                pr_url=data['issue']['pull_request']['html_url']
             ) for label in [label['name'] for label in data['issue']['labels']]
         ]
     

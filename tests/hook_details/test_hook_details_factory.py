@@ -79,8 +79,7 @@ class TestHookDetailsFactory:
 
     async def test__when_labeled_sync_hook_is_provided__should_return_proper_hook_details_list(self):
         hook_data = {'repository': {'full_name': 'repo'},
-                     'issue': {'labels': [{'name': 'first_label'}, {'name': 'second_label'}]},
-                     'pull_request': {'url': 'pr_url'},
+                     'issue': {'pull_request': {'html_url': 'pr_url'}, 'labels': [{'name': 'first_label'}, {'name': 'second_label'}]},
                      'sender': {'login': 'karolgil'}}
         hook_details: List[LabeledHookDetails] = HookDetailsFactory.get_labeled_sync_details(hook_data, 'master', '123456')
         assert len(hook_details) == 2
