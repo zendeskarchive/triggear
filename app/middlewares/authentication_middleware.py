@@ -5,7 +5,7 @@ from typing import Callable, Awaitable, Dict
 
 import aiohttp.web_request
 from aiohttp import web
-from pip.utils import cached_property
+from cached_property import cached_property
 
 from app.config.triggear_config import TriggearConfig
 from app.routes import Routes
