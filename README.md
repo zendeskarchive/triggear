@@ -190,9 +190,7 @@ var `triggearRegister`:
 
 import com.futuresimple.triggear.Request
 import com.futuresimple.triggear.TriggearClient
-import com.getbase.plumber.git.FSTechRepo
-import com.getbase.plumber.pipeline.JobParameter
-import com.getbase.plumber.pipeline.JobProperties
+import com.futuresimple.triggear.GitHubRepository
 import org.jenkinsci.plugins.workflow.libs.Library
 
 TriggearClient triggear = new TriggearClient(this, new GitHubRepository('triggear'))
