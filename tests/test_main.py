@@ -66,7 +66,7 @@ class TestMain:
             .TriggearConfig()\
             .thenReturn(triggear_config)
         expect(motor.motor_asyncio)\
-            .AsyncIOMotorClient()\
+            .AsyncIOMotorClient('localhost:27017')\
             .thenReturn(motor_client)
         expect(app.clients.github_client)\
             .GithubClient('gh_token')\

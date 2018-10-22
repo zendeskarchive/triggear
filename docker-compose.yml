@@ -4,17 +4,19 @@ services:
         build: .
         command: pipenv run python app/main.py
         depends_on:
-          - mongodb
+            - mongodb
         ports:
             - 8080:8080
         volumes:
-            - ./configs/creds.yml:/usr/src/creds/creds.yml
+            - ./configs/creds.yml:/usr/src/triggear/configs/creds.yml
+        links:
+            - 'mongodb:mongodb'
         environment:
-          - COMPOSE=true
-          - PYTHONPATH=/usr/src/triggear
+            - MONGO_URL=mongodb:27017
+            - PYTHONPATH=/usr/src/triggear
     mongodb:
         image: "bitnami/mongodb:latest"
         ports:
             - 27017:27017
         networks:
-         - default
+            - default

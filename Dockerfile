@@ -13,4 +13,5 @@ RUN pipenv install
 ENV CREDS_PATH=$APP/configs/creds.yml
 ENV CONFIG_PATH=$APP/config.yml
 
+ENV MONGO_URL="localhost:27017"
 RUN pipenv run py.test --cov-report=html --cov=app --junit-xml=report.xml .
