@@ -20,7 +20,7 @@ def main() -> None:
     app_config = TriggearConfig()
 
     motor_mongo = motor.motor_asyncio.AsyncIOMotorClient() if not os.environ.get('COMPOSE') == 'true' \
-        else motor.motor_asyncio.AsyncIOMotorClient('mongodb://mongodb:27017')
+        else motor.motor_asyncio.AsyncIOMotorClient(os.environ.get('MONGO_URL'))
 
     gh_client = GithubClient(app_config.github_token)
     mongo_client = MongoClient(mongo=motor_mongo)
