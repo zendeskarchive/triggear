@@ -34,18 +34,26 @@ class TestLabeledHookDetails:
     async def test__should_trigger(self):
         github_client = mock(spec=GithubClient, strict=True)
 
-        registration_cursor = mock({'file_restrictions': []}, spec=RegistrationCursor, strict=True)
+        registration_cursor = mock({'file_restrictions': [], 'branch_restrictions': []}, spec=RegistrationCursor, strict=True)
         assert await LabeledHookDetails('repo', 'master', '123321', 'custom', 'karolgil', 'https://pr.url')\
             .should_trigger(registration_cursor, github_client)
 
-        registration_cursor = mock({'file_restrictions': ['README.md']}, spec=RegistrationCursor, strict=True)
+        registration_cursor = mock({'file_restrictions': ['README.md'], 'branch_restrictions': []}, spec=RegistrationCursor, strict=True)
         expect(github_client).are_files_in_repo('repo', '123321', ['README.md']).thenReturn(async_value(False))
         assert not await LabeledHookDetails('repo', 'master', '123321', 'custom', 'karolgil', 'https://pr.url')\
             .should_trigger(registration_cursor, github_client)
 
-        registration_cursor = mock({'file_restrictions': ['README.md']}, spec=RegistrationCursor, strict=True)
+        registration_cursor = mock({'file_restrictions': ['README.md'], 'branch_restrictions': []}, spec=RegistrationCursor, strict=True)
         expect(github_client).are_files_in_repo('repo', '123321', ['README.md']).thenReturn(async_value(True))
         assert await LabeledHookDetails('repo', 'master', '123321', 'custom', 'karolgil', 'https://pr.url')\
+            .should_trigger(registration_cursor, github_client)
+
+        registration_cursor = mock({'file_restrictions': [], 'branch_restrictions': ['master']}, spec=RegistrationCursor, strict=True)
+        assert await LabeledHookDetails('repo', 'master', '123321', 'custom', 'karolgil', 'https://pr.url')\
+            .should_trigger(registration_cursor, github_client)
+
+        registration_cursor = mock({'file_restrictions': [], 'branch_restrictions': ['feature']}, spec=RegistrationCursor, strict=True)
+        assert not await LabeledHookDetails('repo', 'master', '123321', 'custom', 'karolgil', 'https://pr.url')\
             .should_trigger(registration_cursor, github_client)
 
     async def test__get_event_type(self):

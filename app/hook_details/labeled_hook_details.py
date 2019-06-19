@@ -53,8 +53,8 @@ class LabeledHookDetails(HookDetails):
         pass
 
     async def should_trigger(self, cursor: RegistrationCursor, github_client: GithubClient) -> bool:
-        if cursor.file_restrictions and not await github_client.are_files_in_repo(self.repository,
-                                                                                  self.sha,
-                                                                                  cursor.file_restrictions):
+        if cursor.file_restrictions and not await github_client.are_files_in_repo(self.repository, self.sha, cursor.file_restrictions):
+            return False
+        if cursor.branch_restrictions and self.branch not in cursor.branch_restrictions:
             return False
         return True
