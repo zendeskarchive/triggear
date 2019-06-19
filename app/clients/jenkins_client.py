@@ -93,6 +93,9 @@ class JenkinsClient:
                                     f"Probably because of high load on Jenkins build is stuck in pre-run state and it is "
                                     f"not available in history. We will retry for {timeout - time.monotonic()} sec more for it to appear.")
                     await asyncio.sleep(1)
+                elif exception.status == 504:
+                    logging.warning(f"Got timeout looking for #{build_number} in job {job_path}. Will retry.")
+                    await asyncio.sleep(1)
                 else:
                     logging.exception(f'Unexpected exception when looking for {job_path}#{build_number} info')
                     raise
