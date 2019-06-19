@@ -136,7 +136,8 @@ class GithubClient:
         payload = Payload.from_kwargs(
             state=state,
             target_url=url,
-            description=description,
+            # GitHub description length limit is 140 characters
+            description=description[:135] + '...' if len(description) > 135 else description,
             context=context
         )
         return await self.get_async_github().post(route=route, payload=payload)
