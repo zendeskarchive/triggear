@@ -24,7 +24,7 @@ class TestReleaseHookDetails:
                == {'tag': '1.0', 'release_target': '123321', 'is_prerelease': 'true'}
 
     async def test__get_ref(self):
-        assert ReleaseHookDetails('repo', '1.0', '123321', True).get_ref() == '123321'
+        assert ReleaseHookDetails('repo', '1.0', '123321', True).get_ref() == '1.0'
 
     async def test__setup_final_params(self):
         registration_cursor = mock(spec=RegistrationCursor, strict=True)
