@@ -40,7 +40,7 @@ class ReleaseHookDetails(HookDetails):
         return EventType.RELEASE
 
     def get_ref(self) -> str:
-        return self.release_target
+        return self.tag
 
     def setup_final_param_values(self, registration_cursor: RegistrationCursor) -> None:
         pass
