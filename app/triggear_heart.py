@@ -63,6 +63,13 @@ class TriggearHeart:
             await self.report_unaccepted_parameters_to_github(hook_details, registration_cursor, job_url, next_build_number, job_params)
             return
 
+        await self.__github_client.create_github_build_status(repo=registration_cursor.repo,
+                                                              sha=hook_details.get_ref(),
+                                                              state="pending",
+                                                              url=registration_cursor.jenkins_url,
+                                                              description="waiting for build",
+                                                              context=registration_cursor.job_name)
+
         build_info = await jenkins_client.get_build_info_data(registration_cursor.job_name, next_build_number, 3600)
         if build_info is not None:
             logging.warning(f"Creating pending status for {registration_cursor.jenkins_url}:{registration_cursor.job_name} "
