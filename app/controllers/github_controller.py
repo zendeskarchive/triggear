@@ -52,7 +52,8 @@ class GithubController:
         elif github_event == EventType.PR_OPENED:
             return self.handle_pr_opened(data)
         elif github_event == EventType.PUSH:
-            return self.handle_push(data)
+            # return self.handle_push(data)
+            return None
         elif github_event == EventType.TAGGED:
             return self.handle_tagged(data)
         elif github_event == EventType.RELEASE:
