@@ -57,7 +57,8 @@ class GithubController:
         elif github_event == EventType.TAGGED:
             return self.handle_tagged(data)
         elif github_event == EventType.RELEASE:
-            return self.handle_release(data)
+            # return self.handle_release(data)
+            return None
         return None
 
     async def handle_release(self, data: Dict) -> None:
