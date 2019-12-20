@@ -68,9 +68,7 @@ class TestGithubController:
     async def test__when_github_event__matches_push__should_return_proper_handler(self):
         github_controller = GithubController(mock(), mock(), mock())
 
-        expect(github_controller, times=1).handle_push({}).thenReturn('mock')
-
-        assert 'mock' == github_controller.get_event_handler_task({}, GithubEvent('push', None, 'refs/heads/master'))
+        assert github_controller.get_event_handler_task({}, GithubEvent('push', None, 'refs/heads/master')) is None
 
     async def test__when_github_event__matches_tagged__should_return_proper_handler(self):
         github_controller = GithubController(mock(), mock(), mock())
@@ -82,9 +80,7 @@ class TestGithubController:
     async def test__when_github_event__matches_release__should_return_proper_handler(self):
         github_controller = GithubController(mock(), mock(), mock())
 
-        expect(github_controller, times=1).handle_release({}).thenReturn('mock')
-
-        assert 'mock' == github_controller.get_event_handler_task({}, GithubEvent('release', 'published', None))
+        assert github_controller.get_event_handler_task({}, GithubEvent('release', 'published', None)) is None
 
     async def test__when_event_handle_is_not_none__should_be_scheduled_as_task(self):
         mock(asyncio, strict=True)
