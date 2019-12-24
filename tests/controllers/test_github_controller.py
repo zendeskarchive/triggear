@@ -40,16 +40,12 @@ class TestGithubController:
     async def test__when_github_event__matches_labeled__should_return_proper_handler(self):
         github_controller = GithubController(mock(), mock(), mock())
 
-        expect(github_controller, times=1).handle_labeled({}).thenReturn('mock')
-
-        assert 'mock' == github_controller.get_event_handler_task({}, GithubEvent('pull_request', 'labeled', None))
+        assert github_controller.get_event_handler_task({}, GithubEvent('pull_request', 'labeled', None)) is None
 
     async def test__when_github_event__matches_synchronize__should_return_proper_handler(self):
         github_controller = GithubController(mock(), mock(), mock())
 
-        expect(github_controller, times=1).handle_synchronize({}).thenReturn('mock')
-
-        assert 'mock' == github_controller.get_event_handler_task({}, GithubEvent('pull_request', 'synchronize', None))
+        assert github_controller.get_event_handler_task({}, GithubEvent('pull_request', 'synchronize', None)) is None
 
     async def test__when_github_event__matches_comment__should_return_proper_handler(self):
         github_controller = GithubController(mock(), mock(), mock())
@@ -61,9 +57,7 @@ class TestGithubController:
     async def test__when_github_event__matches_pr_opened__should_return_proper_handler(self):
         github_controller = GithubController(mock(), mock(), mock())
 
-        expect(github_controller, times=1).handle_pr_opened({}).thenReturn('mock')
-
-        assert 'mock' == github_controller.get_event_handler_task({}, GithubEvent('pull_request', 'opened', None))
+        assert github_controller.get_event_handler_task({}, GithubEvent('pull_request', 'opened', None)) is None
 
     async def test__when_github_event__matches_push__should_return_proper_handler(self):
         github_controller = GithubController(mock(), mock(), mock())
@@ -73,9 +67,7 @@ class TestGithubController:
     async def test__when_github_event__matches_tagged__should_return_proper_handler(self):
         github_controller = GithubController(mock(), mock(), mock())
 
-        expect(github_controller, times=1).handle_tagged({}).thenReturn('mock')
-
-        assert 'mock' == github_controller.get_event_handler_task({}, GithubEvent('push', None, 'refs/tags/1.0'))
+        assert github_controller.get_event_handler_task({}, GithubEvent('push', None, 'refs/tags/1.0')) is None
 
     async def test__when_github_event__matches_release__should_return_proper_handler(self):
         github_controller = GithubController(mock(), mock(), mock())
