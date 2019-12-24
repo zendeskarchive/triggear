@@ -58,7 +58,8 @@ class GithubController:
             # return self.handle_push(data)
             return None
         elif github_event == EventType.TAGGED:
-            return self.handle_tagged(data)
+            # return self.handle_tagged(data)
+            return None
         elif github_event == EventType.RELEASE:
             # return self.handle_release(data)
             return None
