@@ -44,13 +44,16 @@ class GithubController:
 
     def get_event_handler_task(self, data: Dict, github_event: GithubEvent) -> Optional[Awaitable]:
         if github_event == EventType.PR_LABELED:
-            return self.handle_labeled(data)
+            # return self.handle_labeled(data)
+            return None
         elif github_event == EventType.SYNCHRONIZE:
-            return self.handle_synchronize(data)
+            # return self.handle_synchronize(data)
+            return None
         elif github_event == EventType.ISSUE_COMMENT:
             return self.handle_comment(data)
         elif github_event == EventType.PR_OPENED:
-            return self.handle_pr_opened(data)
+            # return self.handle_pr_opened(data)
+            return None
         elif github_event == EventType.PUSH:
             # return self.handle_push(data)
             return None
