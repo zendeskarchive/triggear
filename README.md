@@ -1,5 +1,8 @@
 ![Triggear](./triggear.png "Triggear")
 
+## Triggear reached end of life
+We're no longer maintaining and actively developing triggear.
+
 ### Triggear
 
 __Triggear__ is a service that integrates GitHub with Jenkins pipelines. 
